@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 小组件文字颜色（夜间） -->
+    <color name="widget_title">#1A1C1E</color>
+    <color name="widget_sub">#74777F</color>
+</resources>

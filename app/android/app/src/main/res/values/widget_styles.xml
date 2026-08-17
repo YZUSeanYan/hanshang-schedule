@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 小组件课程块（彩色圆角背景由 Kotlin 端按色板 setBackgroundResource） -->
+    <style name="WidgetCourseBlock">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:layout_marginBottom">5dp</item>
+        <item name="android:paddingLeft">10dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingRight">10dp</item>
+        <item name="android:paddingBottom">6dp</item>
+        <item name="android:gravity">center_vertical</item>
+    </style>
+
+    <!-- 课程块文字（深色，名称+时间地点两行） -->
+    <style name="WidgetBlockText">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">#1A1A1A</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <!-- 周视图列 -->
+    <style name="WidgetWeekCol">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">top|center_horizontal</item>
+        <item name="android:layout_marginRight">2dp</item>
+    </style>
+
+    <!-- 列头（一~日/今天/明天） -->
+    <style name="WidgetWeekHead">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/widget_sub</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:layout_marginBottom">3dp</item>
+    </style>
+
+    <!-- 周视图/近日列内课程块（彩色圆角，Kotlin 端按色板上色） -->
+    <style name="WidgetWeekCell">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">#1A1A1A</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingLeft">6dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingRight">6dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+</resources>

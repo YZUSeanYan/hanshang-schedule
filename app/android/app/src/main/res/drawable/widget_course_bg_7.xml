@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 课程块背景（与 App 周视图同款马卡龙色 7） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#A2E1DB" />
+    <corners android:radius="10dp" />
+</shape>

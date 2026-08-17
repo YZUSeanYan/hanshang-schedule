@@ -1,0 +1,43 @@
+name: yzu_schedule
+description: 邗上课表 —— 扬州大学专属课表 App（简洁清爽、无广告）
+publish_to: "none"
+# 版本规则：versionName+versionCode，后端版本接口按 versionCode 比较
+version: 1.0.25+27
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1         # 状态管理（设计文档 2.1）
+  go_router: ^14.2.0               # 声明式路由
+  dio: ^5.7.0                      # HTTP 客户端（JWT 拦截、自动刷新）
+  flutter_secure_storage: ^10.0.0  # token 安全存储（Keychain/Keystore）
+  shared_preferences: ^2.3.0       # 轻量本地配置（忽略的版本号等）
+  package_info_plus: ^8.1.0        # 读取自身 versionCode，用于检查更新
+  device_info_plus: ^11.2.0        # 推送设备登记（品牌/型号展示）
+  url_launcher: ^6.3.0             # 打开 APK 下载链接
+  drift: ^2.20.0                   # 本地数据库（SQLite，类型安全）
+  drift_flutter: ^0.2.0            # Drift 的 Flutter 集成（自带 sqlite 原生库）
+  # 教务导入 WebView（WebVPN 登录 + JS 嗅探）。
+  # 必须用 6.2.0-beta.3+：6.1.x 的 proguard-android.txt 写法已被 AGP 9 移除，构建直接失败
+  flutter_inappwebview: ^6.2.0-beta.3
+  html: ^0.15.4                    # 课表 HTML 表格兑底解析
+  uuid: ^4.5.1                     # 同步记录的全局唯一 ID
+  cryptography: ^2.7.0             # 教务凭据客户端 AES-GCM 加密与 PBKDF2 密钥派生
+  flutter_local_notifications: ^18.0.1  # 上课提醒本地通知
+  timezone: ^0.9.4                 # 本地通知的定时时区支持
+  home_widget: ^0.7.0+1              # 桌面小组件（今日课程）
+  aliyun_push:
+    path: plugins/aliyun_push
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.13            # Drift 代码生成
+  drift_dev: ^2.20.0
+
+flutter:
+  uses-material-design: true

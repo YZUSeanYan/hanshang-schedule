@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 一周课程小组件（4x2）：7 列网格（周一~周日），每列最多 3 个彩色课程块 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_card_bg"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
+        <TextView
+            android:id="@+id/week_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="一周课程"
+            android:textColor="#158A63"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/week_open_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="→"
+            android:textColor="#158A63"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+        <LinearLayout android:id="@+id/wcol1" style="@style/WidgetWeekCol">
+            <TextView android:id="@+id/wcol1_head" style="@style/WidgetWeekHead"/>
+            <TextView android:id="@+id/wcol1_c1" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol1_c2" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol1_c3" style="@style/WidgetWeekCell"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/wcol2" style="@style/WidgetWeekCol">
+            <TextView android:id="@+id/wcol2_head" style="@style/WidgetWeekHead"/>
+            <TextView android:id="@+id/wcol2_c1" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol2_c2" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol2_c3" style="@style/WidgetWeekCell"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/wcol3" style="@style/WidgetWeekCol">
+            <TextView android:id="@+id/wcol3_head" style="@style/WidgetWeekHead"/>
+            <TextView android:id="@+id/wcol3_c1" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol3_c2" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol3_c3" style="@style/WidgetWeekCell"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/wcol4" style="@style/WidgetWeekCol">
+            <TextView android:id="@+id/wcol4_head" style="@style/WidgetWeekHead"/>
+            <TextView android:id="@+id/wcol4_c1" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol4_c2" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol4_c3" style="@style/WidgetWeekCell"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/wcol5" style="@style/WidgetWeekCol">
+            <TextView android:id="@+id/wcol5_head" style="@style/WidgetWeekHead"/>
+            <TextView android:id="@+id/wcol5_c1" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol5_c2" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol5_c3" style="@style/WidgetWeekCell"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/wcol6" style="@style/WidgetWeekCol">
+            <TextView android:id="@+id/wcol6_head" style="@style/WidgetWeekHead"/>
+            <TextView android:id="@+id/wcol6_c1" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol6_c2" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol6_c3" style="@style/WidgetWeekCell"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/wcol7" style="@style/WidgetWeekCol">
+            <TextView android:id="@+id/wcol7_head" style="@style/WidgetWeekHead"/>
+            <TextView android:id="@+id/wcol7_c1" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol7_c2" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/wcol7_c3" style="@style/WidgetWeekCell"/>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

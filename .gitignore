@@ -1,0 +1,41 @@
+# ---- 私有目录（签名密钥、内部运维文档、备份、营销素材）----
+.private/
+
+# ---- 通用 ----
+.DS_Store
+Thumbs.db
+*.log
+*.iml
+.idea/
+.vscode/
+
+# ---- Python / 后端 ----
+__pycache__/
+*.pyc
+.venv/
+venv/
+server/.env
+*.db
+*.sqlite3
+.pytest_cache/
+
+# ---- Flutter / Dart ----
+app/.dart_tool/
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+# 签名密钥绝不入库
+*.jks
+*.keystore
+*.p12
+*.pem
+app/ios/Pods/
+
+# ---- Vela 快应用（hanshang-watch）----
+hanshang-watch/node_modules/
+hanshang-watch/build/
+hanshang-watch/dist/
+hanshang-watch/sign/
