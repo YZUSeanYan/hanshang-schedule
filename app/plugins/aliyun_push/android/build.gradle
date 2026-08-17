@@ -1,0 +1,57 @@
+group 'com.aliyun.ams.push'
+version '1.0'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.0'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+
+        maven {
+            url 'https://maven.aliyun.com/nexus/content/repositories/releases/'
+        }
+        // 配置HMS Core SDK的Maven仓地址。
+        maven {
+            url 'https://developer.huawei.com/repo/'
+        }
+
+        maven {
+            url 'https://developer.hihonor.com/repo'
+        }
+
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    // The upstream Flutter wrapper still pins API 31, while its current
+    // AndroidX transitive dependencies require API 34+. Keep this vendored
+    // module aligned with the application's installed compile SDK.
+    compileSdkVersion 36
+    namespace "com.aliyun.ams.push"
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        minSdkVersion 21
+    }
+}
+
+dependencies {
+    api 'com.aliyun.ams:alicloud-android-push:3.10.1'
+    // 厂商离线通道尚未配置凭据，打包其 SDK 既不能提升送达率，又显著
+    // 增加 DEX/资源体积。当前只保留已完成真实验收的阿里云自有通道。
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_desc">显示今天的课程安排</string>
+    <string name="widget_desc_day">按节次显示今天全部课程</string>
+    <string name="widget_desc_week">一周课程网格总览</string>
+    <string name="widget_desc_twoday">今天与明天的课程对比</string>
+</resources>

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 近日课程小组件（4x2）：今天/明天两列，每列最多 3 个彩色课程块 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_card_bg"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView
+            android:id="@+id/twoday_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="近日课程"
+            android:textColor="#158A63"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/twoday_open_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="→"
+            android:textColor="#158A63"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginRight="8dp">
+            <TextView android:id="@+id/twoday_left_head" style="@style/WidgetWeekHead"/>
+            <TextView android:id="@+id/twoday_left_c1" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/twoday_left_c2" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/twoday_left_c3" style="@style/WidgetWeekCell"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView android:id="@+id/twoday_right_head" style="@style/WidgetWeekHead"/>
+            <TextView android:id="@+id/twoday_right_c1" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/twoday_right_c2" style="@style/WidgetWeekCell"/>
+            <TextView android:id="@+id/twoday_right_c3" style="@style/WidgetWeekCell"/>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
