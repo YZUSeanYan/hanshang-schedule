@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/week_calculator.dart';
+import '../../../core/widgets/liquid_glass.dart';
 import '../../update/update_checker.dart';
 import '../../share/data/share_repository.dart';
 import '../../sync/data/sync_repository.dart';
@@ -91,32 +92,42 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   Widget _buildNoSemester(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('邗上课表')),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.calendar_month_outlined,
-              size: 72,
-              color: colorScheme.outline,
-            ),
-            const SizedBox(height: 16),
-            Text('先设置一下学期吧', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              '设置开学日期后，就能自动计算今天是第几周',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: colorScheme.outline),
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              icon: const Icon(Icons.settings_outlined),
-              label: const Text('设置学期'),
-              onPressed: () => context.push('/settings/semester'),
-            ),
-          ],
+      extendBodyBehindAppBar: true,
+      appBar: buildGlassAppBar(
+        context: context,
+        title: const Text('邗上课表'),
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.calendar_month_outlined,
+                size: 72,
+                color: colorScheme.outline,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '先设置一下学期吧',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '设置开学日期后，就能自动计算今天是第几周',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: colorScheme.outline),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                icon: const Icon(Icons.settings_outlined),
+                label: const Text('设置学期'),
+                onPressed: () => context.push('/settings/semester'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -131,7 +142,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
     );
 
     return Scaffold(
-      appBar: AppBar(
+      extendBodyBehindAppBar: true,
+      appBar: buildGlassAppBar(
+        context: context,
         title: _isDayView
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,46 +262,49 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           ),
         ],
       ),
-      body: entries.isEmpty
-          ? _buildNoCourse(context)
-          : AnimatedSwitcher(
-              duration: _motionDuration(
-                context,
-                const Duration(milliseconds: 250),
-              ),
-              child: _isDayView
-                  ? PageView.builder(
-                      key: const ValueKey('day-view'),
-                      controller: _dayController,
-                      itemCount: semester.totalWeeks * 7,
-                      onPageChanged: (index) => setState(
-                        () => _displayedDate = semester.startDate.add(
-                          Duration(days: index),
+      body: SafeArea(
+        bottom: false,
+        child: entries.isEmpty
+            ? _buildNoCourse(context)
+            : AnimatedSwitcher(
+                duration: _motionDuration(
+                  context,
+                  const Duration(milliseconds: 250),
+                ),
+                child: _isDayView
+                    ? PageView.builder(
+                        key: const ValueKey('day-view'),
+                        controller: _dayController,
+                        itemCount: semester.totalWeeks * 7,
+                        onPageChanged: (index) => setState(
+                          () => _displayedDate = semester.startDate.add(
+                            Duration(days: index),
+                          ),
+                        ),
+                        itemBuilder: (context, index) => DayView(
+                          semester: semester,
+                          date: semester.startDate.add(Duration(days: index)),
+                          entries: entries,
+                          onCourseTap: (entry) =>
+                              _showCourseDetail(context, entry),
+                        ),
+                      )
+                    : PageView.builder(
+                        key: const ValueKey('week-view'),
+                        controller: _pageController,
+                        itemCount: semester.totalWeeks,
+                        onPageChanged: (index) =>
+                            setState(() => _displayedWeek = index + 1),
+                        itemBuilder: (context, index) => WeekView(
+                          semester: semester,
+                          week: index + 1,
+                          entries: entries,
+                          onCourseTap: (entry) =>
+                              _showCourseDetail(context, entry),
                         ),
                       ),
-                      itemBuilder: (context, index) => DayView(
-                        semester: semester,
-                        date: semester.startDate.add(Duration(days: index)),
-                        entries: entries,
-                        onCourseTap: (entry) =>
-                            _showCourseDetail(context, entry),
-                      ),
-                    )
-                  : PageView.builder(
-                      key: const ValueKey('week-view'),
-                      controller: _pageController,
-                      itemCount: semester.totalWeeks,
-                      onPageChanged: (index) =>
-                          setState(() => _displayedWeek = index + 1),
-                      itemBuilder: (context, index) => WeekView(
-                        semester: semester,
-                        week: index + 1,
-                        entries: entries,
-                        onCourseTap: (entry) =>
-                            _showCourseDetail(context, entry),
-                      ),
-                    ),
-            ),
+              ),
+      ),
     );
   }
 

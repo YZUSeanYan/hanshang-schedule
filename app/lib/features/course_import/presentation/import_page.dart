@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/widgets/liquid_glass.dart';
 import '../../share/data/share_repository.dart';
 import '../../sync/data/sync_repository.dart';
 
@@ -202,9 +203,19 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('导入课表')),
+      extendBodyBehindAppBar: true,
+      appBar: buildGlassAppBar(
+        context: context,
+        title: const Text('导入课表'),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        // 穿透式顶栏：视口延伸到玻璃 AppBar 后方，列表滚动穿过时实时模糊
+        padding: EdgeInsets.fromLTRB(
+          24,
+          24 + MediaQuery.paddingOf(context).top + kToolbarHeight,
+          24,
+          24 + MediaQuery.paddingOf(context).bottom,
+        ),
         children: [
           const SizedBox(height: 16),
           Icon(Icons.school_outlined, size: 72, color: colorScheme.primary),

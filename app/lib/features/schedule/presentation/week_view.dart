@@ -41,6 +41,10 @@ class WeekView extends StatelessWidget {
         Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
         Expanded(
           child: SingleChildScrollView(
+            // 底栏悬浮胶囊高度（HomeShell extendBody 注入），滚动到底不压最后一节课
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.paddingOf(context).bottom,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

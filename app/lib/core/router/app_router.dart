@@ -15,6 +15,7 @@ import '../../features/profile/presentation/notification_inbox_page.dart';
 import '../../features/profile/presentation/notification_settings_page.dart';
 import '../../features/profile/presentation/background_delivery_guide_page.dart';
 import '../notifications/push_service.dart';
+import '../widgets/liquid_glass.dart';
 import '../../features/schedule/data/schedule_repository.dart';
 import '../../features/schedule/presentation/course_edit_page.dart';
 import '../../features/schedule/presentation/semester_settings_page.dart';
@@ -202,31 +203,33 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // 内容延伸到悬浮胶囊底栏后方，实现滚动穿透毛玻璃
+      extendBody: true,
       body: _AnimatedShell(shell: widget.navigationShell),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: widget.navigationShell.currentIndex,
+      bottomNavigationBar: LiquidGlassNavBar(
+        currentIndex: widget.navigationShell.currentIndex,
+        destinations: const [
+          GlassDestination(
+            icon: Icons.calendar_month_outlined,
+            selectedIcon: Icons.calendar_month,
+            label: '课表',
+          ),
+          GlassDestination(
+            icon: Icons.download_outlined,
+            selectedIcon: Icons.download,
+            label: '导入',
+          ),
+          GlassDestination(
+            icon: Icons.person_outline,
+            selectedIcon: Icons.person,
+            label: '我的',
+          ),
+        ],
         onDestinationSelected: (index) => widget.navigationShell.goBranch(
           index,
           // 重复点当前 Tab 时回到该分支初始页
           initialLocation: index == widget.navigationShell.currentIndex,
         ),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
-            label: '课表',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.download_outlined),
-            selectedIcon: Icon(Icons.download),
-            label: '导入',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: '我的',
-          ),
-        ],
       ),
     );
   }

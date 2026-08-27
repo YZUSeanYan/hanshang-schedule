@@ -73,7 +73,12 @@ class DayView extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        24 + MediaQuery.paddingOf(context).bottom,
+      ),
       itemCount: today.length,
       itemBuilder: (context, index) {
         final (entry, slot) = today[index];

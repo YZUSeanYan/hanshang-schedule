@@ -106,25 +106,6 @@ class AppTheme {
           ),
         ),
       ),
-      navigationBarTheme: NavigationBarThemeData(
-        elevation: 0,
-        height: 68,
-        backgroundColor: scheme.surfaceContainerLow,
-        indicatorColor: scheme.secondaryContainer,
-        indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          return TextStyle(
-            fontWeight: states.contains(WidgetState.selected)
-                ? FontWeight.w700
-                : FontWeight.w500,
-            color: states.contains(WidgetState.selected)
-                ? scheme.onSecondaryContainer
-                : scheme.onSurfaceVariant,
-          );
-        }),
-      ),
       listTileTheme: ListTileThemeData(
         iconColor: scheme.primary,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20),

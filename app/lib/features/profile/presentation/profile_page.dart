@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/notifications/reminder_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/widgets/liquid_glass.dart';
 import '../../sync/data/sync_repository.dart';
 import '../../sync/presentation/sync_controller.dart';
 import '../../auth/data/auth_repository.dart';
@@ -190,8 +191,17 @@ class ProfilePage extends ConsumerWidget {
     final user = authState.valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('我的')),
+      extendBodyBehindAppBar: true,
+      appBar: buildGlassAppBar(
+        context: context,
+        title: const Text('我的'),
+      ),
       body: ListView(
+        // 穿透式顶栏：视口延伸到玻璃 AppBar 后方，列表滚动穿过时实时模糊
+        padding: EdgeInsets.only(
+          top: MediaQuery.paddingOf(context).top + kToolbarHeight,
+          bottom: MediaQuery.paddingOf(context).bottom,
+        ),
         children: [
           // ---- 账号卡片 ----
           if (user != null)
