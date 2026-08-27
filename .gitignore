@@ -39,3 +39,6 @@ hanshang-watch/node_modules/
 hanshang-watch/build/
 hanshang-watch/dist/
 hanshang-watch/sign/
+
+# ---- 本地文档/测试样本（真实教务快照含会话令牌，绝不入库）----
+/docs/

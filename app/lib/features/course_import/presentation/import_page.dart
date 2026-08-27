@@ -3,19 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../share/data/share_repository.dart';
 import '../../sync/data/sync_repository.dart';
-import '../data/credential_vault_repository.dart';
 
 /// 教务导入入口页（Tab 2）。
 ///
-/// 核心差异化功能：内置「WebVPN → 统一身份认证 → 教务系统」一键引导，
-/// 用户全程在 App 内完成登录，点一次按钮即可抓取课表。
-///
-/// 教务凭据同步默认关闭；用户主动同意后，App 只上传客户端 AES-GCM 密文。
+/// 三条路径：扬州大学 WebVPN 手动导入（推荐）、AI 通用教务导入（Beta，
+/// 任意学校教务网址 + 云端大模型兜底解析）、同学分享口令导入。
 class ImportPage extends ConsumerStatefulWidget {
   const ImportPage({super.key});
 
@@ -24,106 +20,34 @@ class ImportPage extends ConsumerStatefulWidget {
 }
 
 class _ImportPageState extends ConsumerState<ImportPage> {
-  static const _preferenceKey = 'academic_credential_sync_enabled';
-  bool _credentialSyncEnabled = false;
-  bool _preferenceLoading = true;
   final _shareCodeController = TextEditingController();
+  final _genericUrlController = TextEditingController();
   bool _claiming = false;
 
   @override
   void dispose() {
     _shareCodeController.dispose();
+    _genericUrlController.dispose();
     super.dispose();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPreference();
-  }
-
-  Future<void> _loadPreference() async {
-    final preferences = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      _credentialSyncEnabled = preferences.getBool(_preferenceKey) ?? false;
-      _preferenceLoading = false;
-    });
-  }
-
-  Future<void> _setCredentialSync(bool enabled) async {
-    if (enabled) {
-      final hasKey =
-          await ref.read(credentialVaultRepositoryProvider).hasLocalKey();
-      if (!hasKey) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('请退出并重新登录一次，以初始化本机加密密钥')),
-          );
-        }
-        return;
-      }
-      if (!mounted) return;
-      final consent = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('开启教务凭据同步？'),
-          content: const Text(
-            '仅在识别到教务系统登录页并提交登录时读取学号和密码。'
-            '数据会先在本机加密，服务器只保存无法直接读取的密文；同步后会立即进行服务器往返校验。',
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('取消')),
-            FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('同意并开启')),
-          ],
-        ),
-      );
-      if (consent != true) return;
-    }
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setBool(_preferenceKey, enabled);
-    if (mounted) setState(() => _credentialSyncEnabled = enabled);
-  }
-
-  Future<void> _deleteCredential() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除已同步的教务凭据？'),
-        content: const Text('服务器上的客户端加密密文会被永久删除。'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('删除')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await ref.read(credentialVaultRepositoryProvider).delete();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已删除教务凭据密文')),
-        );
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('删除失败：$error')),
-        );
-      }
-    }
   }
 
   bool get _shareCodeReady =>
       _shareCodeController.text.trim().length == 6 && !_claiming;
+
+  bool get _genericUrlReady => _genericUrlController.text.trim().isNotEmpty;
+
+  Future<void> _openGenericImport() async {
+    var input = _genericUrlController.text.trim();
+    if (!input.contains('://')) input = 'https://$input';
+    final uri = Uri.tryParse(input);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入正确的教务系统网址（https:// 开头）')),
+      );
+      return;
+    }
+    context.push('/import/webview-generic', extra: uri.toString());
+  }
 
   Future<void> _previewShareCode() async {
     final code = _shareCodeController.text.trim().toUpperCase();
@@ -290,7 +214,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
               textAlign: TextAlign.center),
           const SizedBox(height: 12),
           Text(
-            '推荐在 App 内打开 WebVPN 手动完成登录与导入；也可以试用服务器代为建立一次短时会话。',
+            '扬州大学推荐用 WebVPN 手动导入；其他学校可试用 AI 通用导入（Beta）。',
             textAlign: TextAlign.center,
             style: Theme.of(context)
                 .textTheme
@@ -304,38 +228,62 @@ class _ImportPageState extends ConsumerState<ImportPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('VPN 手动导入（推荐）',
+                  Text('扬州大学 · VPN 手动导入（推荐）',
                       style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Text(
+                    '仅适用扬州大学（经 WebVPN 进教务系统）。'
                     '登录过程完全显示在 App 内，遇到验证码或二次验证也能由你本人继续操作。',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 12),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    secondary: const Icon(Icons.key_outlined),
-                    title: const Text('同步教务登录信息（实验）'),
-                    subtitle: const Text('登录时在本机加密后同步；下次只自动填入，不自动登录'),
-                    value: _credentialSyncEnabled,
-                    onChanged: _preferenceLoading ? null : _setCredentialSync,
-                  ),
-                  if (_credentialSyncEnabled)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.verified_user_outlined),
-                      title: const Text('端到端加密已开启'),
-                      subtitle: const Text('保存后会下载解密并逐字比对，验证服务器往返完整性'),
-                      trailing: TextButton(
-                        onPressed: _deleteCredential,
-                        child: const Text('删除云端密文'),
-                      ),
-                    ),
-                  const SizedBox(height: 8),
                   FilledButton.icon(
                     onPressed: () => context.push('/import/webview'),
                     icon: const Icon(Icons.vpn_lock),
                     label: const Text('打开 WebVPN 手动导入'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.auto_awesome, color: colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text('AI 通用教务导入（Beta）',
+                          style: Theme.of(context).textTheme.titleMedium),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '适用任意学校：输入你学校教务系统网址，在 App 内登录到课表页后抓取，'
+                    '识别不出结构时由服务器 AI 大模型兜底解析（需你确认后才会上传页面内容）。',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _genericUrlController,
+                    keyboardType: TextInputType.url,
+                    autocorrect: false,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      hintText: '例如 https://jwgl.example.edu.cn',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.link),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    onPressed: _genericUrlReady ? _openGenericImport : null,
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('打开教务系统'),
                   ),
                 ],
               ),

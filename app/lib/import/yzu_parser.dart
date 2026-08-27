@@ -341,6 +341,7 @@ class YzuParser {
     'weeks',
     'zc',
     'skzc',
+    'skzcs',
     'weekText',
     'zcs',
     'weekStr',
@@ -363,6 +364,8 @@ class YzuParser {
       final name = _pickString(item, _nameKeys);
       if (name == null || name.isEmpty) continue;
       final teacher = _pickString(item, _teacherKeys) ?? '';
+      // 移动版结构里周次（skzcs）挂在课程级而非时间段级，时间段缺省时继承
+      final courseWeeks = _pickString(item, _weeksKeys) ?? '';
       final nestedSlots = item['timeAndPlaceList'];
       var usedNestedSlots = false;
       if (nestedSlots is List) {
@@ -373,6 +376,7 @@ class YzuParser {
                 name: name,
                 teacher: teacher,
                 slot: value,
+                fallbackWeeks: courseWeeks,
               ) ||
               usedNestedSlots;
         }
@@ -394,12 +398,13 @@ class YzuParser {
     required String name,
     required String teacher,
     required Map<String, dynamic> slot,
+    String fallbackWeeks = '',
   }) {
     final day = _parseDay(slot);
     final sections = _parseSections(slot);
     if (day == null || sections == null) return false;
 
-    final weeksText = _pickString(slot, _weeksKeys) ?? '';
+    final weeksText = _pickString(slot, _weeksKeys) ?? fallbackWeeks;
     final (weeksType, customWeeks) = parseWeeksText(weeksText);
     final key = '$name|$teacher';
     final course = courses.putIfAbsent(
@@ -422,11 +427,26 @@ class YzuParser {
   static List<Map<String, dynamic>>? _findCourseList(Object? node) {
     if (node is List) {
       if (node.isNotEmpty &&
-          node.every((e) => e is Map<String, dynamic>) &&
-          node.cast<Map<String, dynamic>>().any((m) =>
-              _nameKeys.any(m.containsKey) &&
-              (_parseDay(m) != null || _hasNestedSchedule(m)))) {
-        return node.cast<Map<String, dynamic>>();
+          node.every((e) => e is Map<String, dynamic>)) {
+        final maps = node.cast<Map<String, dynamic>>();
+        if (maps.any((m) =>
+            _nameKeys.any(m.containsKey) &&
+            (_parseDay(m) != null || _hasNestedSchedule(m)))) {
+          return maps;
+        }
+        // 扬大移动版：课程列表是"列表里套一个按课程号索引的大字典"
+        // （xkxx: [{ "21031003_01": {...课程...}, ... }]），拆平一层再识别。
+        final flattened = [
+          for (final m in maps)
+            for (final v in m.values)
+              if (v is Map<String, dynamic>) v,
+        ];
+        if (flattened.isNotEmpty &&
+            flattened.any((m) =>
+                _nameKeys.any(m.containsKey) &&
+                (_parseDay(m) != null || _hasNestedSchedule(m)))) {
+          return flattened;
+        }
       }
       for (final e in node) {
         final found = _findCourseList(e);
@@ -508,9 +528,11 @@ class YzuParser {
     final end =
         _pickNum(item, _endSectionKeys) ?? _pickNum(idFields, _endSectionKeys);
     if (start != null && end != null && end >= start) return (start, end);
-    // 扬大 URP：id.skjc 是起始节次，cxjc 是连续节数。
+    // 扬大 URP：id.skjc 是起始节次，cxjc 是连续节数（可能在 item 或 id 上）。
     final count = _pickNum(
-        item, const ['cxjc', 'continuingSession', 'sectionCount', 'duration']);
+            item, const ['cxjc', 'continuingSession', 'sectionCount', 'duration']) ??
+        _pickNum(idFields,
+            const ['cxjc', 'continuingSession', 'sectionCount', 'duration']);
     if (start != null && count != null && count > 0) {
       return (start, start + count - 1);
     }

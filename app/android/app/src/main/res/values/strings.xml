@@ -2,6 +2,7 @@
 <resources>
     <string name="widget_desc">显示今天的课程安排</string>
     <string name="widget_desc_day">按节次显示今天全部课程</string>
+    <string name="widget_desc_day_large">大尺寸的日视图，满课日显示更多课程</string>
     <string name="widget_desc_week">一周课程网格总览</string>
     <string name="widget_desc_twoday">今天与明天的课程对比</string>
 </resources>

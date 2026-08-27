@@ -12,6 +12,7 @@ import '../../../import/sniffer_js.dart';
 import '../../../import/yzu_parser.dart';
 import '../data/credential_vault_repository.dart';
 import '../data/school_url_policy.dart';
+import 'import_failed_page.dart';
 
 /// 教务导入 WebView 页（设计文档 4.1 核心差异化功能）。
 ///
@@ -27,7 +28,20 @@ import '../data/school_url_policy.dart';
 /// - 嗅探脚本只缓存"疑似课表"的响应体，不碰密码输入框；
 /// - 抓取结果仅用于本地解析，解析完成后即丢弃原始 HTML。
 class ImportWebViewPage extends ConsumerStatefulWidget {
-  const ImportWebViewPage({super.key});
+  const ImportWebViewPage({super.key})
+      : genericStartUrl = null,
+        isGenericMode = false;
+
+  /// 通用模式（AI 通用教务导入）：任意学校教务系统。
+  ///
+  /// 与扬大模式的差异：起始页由用户输入、导航白名单放宽到任意 HTTPS 站点；
+  /// 凭据同步/自动填入仍只在内建的 *.yzu.edu.cn 判断下生效，通用模式天然不触发。
+  const ImportWebViewPage.generic({super.key, required String startUrl})
+      : genericStartUrl = startUrl,
+        isGenericMode = true;
+
+  final String? genericStartUrl;
+  final bool isGenericMode;
 
   /// 扬大 WebVPN 入口（深信服）
   static const String webVpnUrl = 'https://webvpn.yzu.edu.cn/';
@@ -37,6 +51,11 @@ class ImportWebViewPage extends ConsumerStatefulWidget {
       '③ 在「常用服务」点「班级课表」，选择对应班级后点「课表信息」\n'
       '④ 课表完整显示后，点底部「抓取课表」\n'
       '如已主动开启实验性凭据同步，登录信息会先在本机加密，再以密文同步并做往返校验';
+
+  static const String genericGuideText = '① 在下方页面登录你学校的教务系统\n'
+      '② 进入「课表查询 / 我的课表」页面\n'
+      '③ 课表完整显示后，点底部「抓取课表」\n'
+      '本地识别不出时会提供 AI 云端解析（经你确认后才上传页面内容）';
 
   @override
   ConsumerState<ImportWebViewPage> createState() => _ImportWebViewPageState();
@@ -227,7 +246,8 @@ class _ImportWebViewPageState extends ConsumerState<ImportWebViewPage> {
       if (result.isSuccess) {
         context.push('/import/preview', extra: result);
       } else {
-        _goFailed(result.detail);
+        // 本地解析失败时把抓取包一并带到失败页，用户可选择 AI 云端兜底解析
+        _goFailed(result.detail, capture);
       }
     } catch (e) {
       _goFailed('抓取异常：$e');
@@ -252,11 +272,12 @@ class _ImportWebViewPageState extends ConsumerState<ImportWebViewPage> {
     super.dispose();
   }
 
-  void _goFailed(String detail) {
+  void _goFailed(String detail, [Map<String, dynamic>? capture]) {
     if (!mounted) {
       return;
     }
-    context.push('/import/failed', extra: detail);
+    context.push('/import/failed',
+        extra: ImportFailedPayload(detail: detail, capture: capture));
   }
 
   @override
@@ -287,7 +308,9 @@ class _ImportWebViewPageState extends ConsumerState<ImportWebViewPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        ImportWebViewPage.guideText,
+                        widget.isGenericMode
+                            ? ImportWebViewPage.genericGuideText
+                            : ImportWebViewPage.guideText,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -303,8 +326,11 @@ class _ImportWebViewPageState extends ConsumerState<ImportWebViewPage> {
           if (_loading) const LinearProgressIndicator(),
           Expanded(
             child: InAppWebView(
-              initialUrlRequest:
-                  URLRequest(url: WebUri(ImportWebViewPage.webVpnUrl)),
+              initialUrlRequest: URLRequest(
+                url: WebUri(
+                  widget.genericStartUrl ?? ImportWebViewPage.webVpnUrl,
+                ),
+              ),
               // 必须在 document-start 安装。课表页会在 DOM 加载完成前发起
               // AJAX；若等 onLoadStop 才 hook，移动端经常已经错过响应。
               initialUserScripts: UnmodifiableListView([
@@ -338,6 +364,13 @@ class _ImportWebViewPageState extends ConsumerState<ImportWebViewPage> {
                   return NavigationActionPolicy.ALLOW;
                 }
                 final url = navigationAction.request.url;
+                // 通用模式面向任意学校教务系统，放行所有 HTTPS 导航；
+                // 扬大模式维持 *.yzu.edu.cn 白名单。
+                if (widget.isGenericMode) {
+                  return (url?.scheme == 'https' || url?.scheme == 'about')
+                      ? NavigationActionPolicy.ALLOW
+                      : NavigationActionPolicy.CANCEL;
+                }
                 if (isAllowedSchoolUri(url) || url?.scheme == 'about') {
                   return NavigationActionPolicy.ALLOW;
                 }

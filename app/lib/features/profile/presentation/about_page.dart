@@ -154,11 +154,12 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                       '邗上课表仅为提供账号登录、课表导入与同步、课程提醒、账户通知和故障排查而处理必要信息。\n\n'
                       '1. 账号与课表：保存用户名、邮箱、加密登录会话及用户主动创建或导入的学期、课程和时间安排。\n\n'
                       '2. 教务凭据：仅在用户主动开启凭据同步后处理；密码先在设备端使用 AES-GCM 加密，服务端只保存密文，管理员无法读取明文。\n\n'
-                      '3. 通知：只有在用户明确同意并授予系统通知权限后，才初始化阿里云移动研发平台 EMAS 移动推送 SDK，并将不可读的内部用户编号与当前设备绑定，用于向该账户的设备发送通知。SDK 可能按其个人信息处理规则处理设备标识、应用信息、网络信息和推送日志。拒绝通知不影响课表基本功能。\n\n'
-                      '4. 权限：网络权限用于登录与同步；通知权限用于课程和账户消息。我们不会索取通讯录、定位、相机或麦克风权限。\n\n'
-                      '5. 保存与共享：数据仅在实现功能和安全审计所需期限内保存；除云服务基础设施和依法要求外，不出售或向无关第三方共享个人信息。\n\n'
-                      '6. 用户权利：可在 App 内退出登录、关闭通知，并可联系管理员申请查询、更正或删除账号及云端数据。注销后依法需要保留的安全日志除外，其余关联数据将删除。\n\n'
-                      '7. 联系方式：admin@hanshang.seanyan.store。政策发生重大变化时将通过 App、网站或通知提示。',
+                      '3. AI 智能解析：使用「AI 通用教务导入」时，经你明确确认后，当前课表页面内容会经服务器交由第三方大模型（小米 MiMo）解析一次；服务器仅清洗后用于当次解析，不保存原文、不写入日志。\n\n'
+                      '4. 通知：只有在用户明确同意并授予系统通知权限后，才初始化阿里云移动研发平台 EMAS 移动推送 SDK，并将不可读的内部用户编号与当前设备绑定，用于向该账户的设备发送通知。SDK 可能按其个人信息处理规则处理设备标识、应用信息、网络信息和推送日志。拒绝通知不影响课表基本功能。\n\n'
+                      '5. 权限：网络权限用于登录与同步；通知权限用于课程和账户消息。我们不会索取通讯录、定位、相机或麦克风权限。\n\n'
+                      '6. 保存与共享：数据仅在实现功能和安全审计所需期限内保存；除云服务基础设施和依法要求外，不出售或向无关第三方共享个人信息。\n\n'
+                      '7. 用户权利：可在 App 内退出登录、关闭通知，并可联系管理员申请查询、更正或删除账号及云端数据。注销后依法需要保留的安全日志除外，其余关联数据将删除。\n\n'
+                      '8. 联系方式：admin@hanshang.seanyan.store。政策发生重大变化时将通过 App、网站或通知提示。',
                       style: TextStyle(height: 1.6),
                     ),
                   ],
@@ -194,6 +195,26 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                   ),
                 ),
               ],
+              if (data.icpBeian.isNotEmpty) ...[
+                const SizedBox(height: 28),
+                GestureDetector(
+                  onTap: () async {
+                    final uri = Uri.tryParse('https://beian.miit.gov.cn');
+                    if (uri != null) {
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  child: Text(
+                    data.icpBeian,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: colors.outline),
+                  ),
+                ),
+              ],
             ],
           );
         },
@@ -209,6 +230,7 @@ class _AboutContent {
     required this.websiteUrl,
     required this.avatarMedia,
     required this.paymentQrMedia,
+    required this.icpBeian,
   });
 
   factory _AboutContent.fromJson(Map<String, dynamic> json) => _AboutContent(
@@ -217,6 +239,7 @@ class _AboutContent {
         websiteUrl: json['website_url'] as String? ?? '',
         avatarMedia: json['avatar_media'] as String? ?? '',
         paymentQrMedia: json['payment_qr_media'] as String? ?? '',
+        icpBeian: json['icp_beian'] as String? ?? '',
       );
 
   final String displayName;
@@ -224,4 +247,5 @@ class _AboutContent {
   final String websiteUrl;
   final String avatarMedia;
   final String paymentQrMedia;
+  final String icpBeian;
 }

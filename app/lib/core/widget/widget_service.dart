@@ -16,7 +16,7 @@ import '../utils/week_calculator.dart';
 /// 每次课程数据变化后，把各小组件摘要写入 home_widget 共享存储，
 /// 并通知原生 Provider 刷新。数据契约（与原生 Kotlin 一致）：
 /// - today_title / today_courses_json    「今日课程」（2x2/4x2）
-/// - day_title / day_courses_json        「日视图」（4x2，带节次）
+/// - day_title / day_courses_json        「日视图」（4x2，带节次）与「日视图（大）」（4x4）共用
 /// - week_title / week_grid_json         「一周课程」（4x2 网格）
 /// - twoday_title / twoday_json          「近日课程」（今天/明天两列）
 class WidgetService {
@@ -30,8 +30,14 @@ class WidgetService {
   static const providerName =
       'cn.yzu.schedule.yzu_schedule.TodayWidgetProvider';
 
+  /// iOS WidgetKit 扩展经 App Group 共享数据；kind 必须与 SwiftUI 侧一致。
+  static const _iosAppGroupId = 'group.cn.yzu.schedule.yzuSchedule';
+  static const _iosTodayWidgetName = 'TodayCoursesWidget';
+
   /// 刷新全部小组件（今日/日视图/一周/近日）
   Future<void> refresh() async {
+    // iOS 侧 saveWidgetData 依赖 App Group；Android 上此调用为空操作。
+    await HomeWidget.setAppGroupId(_iosAppGroupId);
     final today = DateTime.now();
 
     final semester = await (_db.select(_db.semesters)
@@ -81,13 +87,18 @@ class WidgetService {
       }),
     );
 
-    // 通知四个 Provider 刷新
+    // 通知四个 Provider 刷新（iOS：今日课程 WidgetKit 同源数据，kind 对应
+    // TodayCoursesWidget.swift 的 widgetKind）
     await HomeWidget.updateWidget(
       qualifiedAndroidName: providerName,
       androidName: 'TodayWidgetProvider',
+      iOSName: _iosTodayWidgetName,
     );
     await HomeWidget.updateWidget(
       androidName: 'DayWidgetProvider',
+    );
+    await HomeWidget.updateWidget(
+      androidName: 'DayLargeWidgetProvider',
     );
     await HomeWidget.updateWidget(
       androidName: 'WeekWidgetProvider',

@@ -67,17 +67,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/import/webview',
         builder: (context, state) => const ImportWebViewPage(),
       ),
+      // 全屏页面：AI 通用教务导入（extra 传用户输入的教务系统网址）
+      GoRoute(
+        path: '/import/webview-generic',
+        builder: (context, state) =>
+            ImportWebViewPage.generic(startUrl: state.extra as String),
+      ),
       // 全屏页面：导入预览（extra 传 ParseResult）
       GoRoute(
         path: '/import/preview',
         builder: (context, state) =>
             ImportPreviewPage(result: state.extra as ParseResult),
       ),
-      // 全屏页面：导入失败（extra 传诊断信息）
+      // 全屏页面：导入失败（extra 传 ImportFailedPayload：诊断信息 + 抓取包）
       GoRoute(
         path: '/import/failed',
         builder: (context, state) =>
-            ImportFailedPage(detail: state.extra as String),
+            ImportFailedPage(payload: state.extra as ImportFailedPayload),
       ),
       GoRoute(
         path: '/about',
