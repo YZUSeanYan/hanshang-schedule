@@ -6,6 +6,8 @@ allprojects {
         maven { url = uri("https://maven.aliyun.com/repository/google") }
         maven { url = uri("https://maven.aliyun.com/repository/central") }
         maven { url = uri("https://maven.aliyun.com/repository/public") }
+        // 穿山甲广告 SDK 仅在其官方 maven 发布
+        maven { url = uri("https://artifact.bytedance.com/repository/pangle/") }
     }
 }
 

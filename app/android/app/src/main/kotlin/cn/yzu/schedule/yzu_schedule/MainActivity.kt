@@ -85,6 +85,12 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        // 激励视频广告（看广告支持作者）
+        val rewardChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hanshang/reward_ad")
+        rewardChannel.setMethodCallHandler { call, result ->
+            RewardAdPlugin.handle(this, call, result)
+        }
+
         // 课前提醒通知快捷操作（勿扰模式开关）
         val reminderChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hanshang/reminder_action")
         reminderChannel.setMethodCallHandler { call, result ->

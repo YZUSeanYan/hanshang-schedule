@@ -101,4 +101,6 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // 穿山甲（Pangle）广告 SDK：激励视频「看广告支持作者」。版本以官方接入中心披露为准。
+    implementation("com.pangle.cn:ads-sdk-pro:7.7.1.4")
 }

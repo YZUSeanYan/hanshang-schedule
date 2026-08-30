@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
+import '../../auth/data/auth_repository.dart';
+import '../data/reward_ad_service.dart';
 
 class AboutPage extends ConsumerStatefulWidget {
   const AboutPage({super.key});
@@ -32,6 +34,55 @@ class _AboutPageState extends ConsumerState<AboutPage> {
 
   String _mediaUrl(String name) =>
       '${AppConfig.apiBaseUrl}/api/about/media/${Uri.encodeComponent(name)}';
+
+  /// 「看广告免费支持作者」确认弹窗 → 激励视频 → 感谢反馈。
+  Future<void> _showRewardConfirm(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('看广告支持作者'),
+        content: const Text(
+          '将播放一段由第三方广告联盟提供的短视频广告，看完即可完成一次对作者的免费支持。\n\n'
+          '广告内容与邗上课表无关，播放过程中产生的数据处理遵循广告平台的隐私政策。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('再想想'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('开始观看'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final user = ref.read(authStateProvider).valueOrNull;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('广告加载中，请稍候…'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    try {
+      final rewarded = await RewardAdService.show(
+        userId: user?.id.toString() ?? '',
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(rewarded ? '感谢支持，你的鼓励收到啦！' : '看完整个广告才算支持成功，期待下次见面'),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('广告没能播放出来，稍后再试试（$e）')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +210,8 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                       '5. 权限：网络权限用于登录与同步；通知权限用于课程和账户消息。我们不会索取通讯录、定位、相机或麦克风权限。\n\n'
                       '6. 保存与共享：数据仅在实现功能和安全审计所需期限内保存；除云服务基础设施和依法要求外，不出售或向无关第三方共享个人信息。\n\n'
                       '7. 用户权利：可在 App 内退出登录、关闭通知，并可联系管理员申请查询、更正或删除账号及云端数据。注销后依法需要保留的安全日志除外，其余关联数据将删除。\n\n'
-                      '8. 联系方式：admin@hanshang.seanyan.store。政策发生重大变化时将通过 App、网站或通知提示。',
+                      '8. 激励视频广告：仅在你在「支持作者」中主动确认后，App 才初始化穿山甲广告联盟 SDK 并播放激励视频广告；广告由第三方投放，其内容不代表本应用立场，播放过程中 SDK 可能按其隐私政策处理设备标识、应用信息与网络信息。不观看广告不影响任何功能。\n\n'
+                      '9. 联系方式：admin@hanshang.seanyan.store。政策发生重大变化时将通过 App、网站或通知提示。',
                       style: TextStyle(height: 1.6),
                     ),
                   ],
@@ -190,6 +242,14 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                         const SizedBox(height: 10),
                         Text('请在确认收款人信息后自愿支持',
                             style: TextStyle(color: colors.outline)),
+                        if (RewardAdService.isConfigured) ...[
+                          const SizedBox(height: 16),
+                          FilledButton.tonalIcon(
+                            icon: const Icon(Icons.volunteer_activism_outlined),
+                            label: const Text('看广告免费支持作者'),
+                            onPressed: () => _showRewardConfirm(context),
+                          ),
+                        ],
                       ],
                     ),
                   ),

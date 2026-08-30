@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- 网络访问：登录、同步、检查更新 -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- 上课提醒：Android 13+ 通知权限 / 重启后重挂闹钟 -->
@@ -18,7 +19,8 @@
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:resizeableActivity="true"
-        android:networkSecurityConfig="@xml/network_security_config">
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:replace="android:allowBackup,android:label">
         <!-- 正式构建的 network-security-config 全局拒绝明文流量。 -->
         <activity
             android:name=".MainActivity"
