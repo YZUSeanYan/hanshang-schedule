@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yzu_schedule/app.dart';
 import 'package:yzu_schedule/core/network/api_client.dart';
 import 'package:yzu_schedule/core/notifications/push_service.dart';
-import 'package:yzu_schedule/core/storage/credential_vault_key_storage.dart';
 import 'package:yzu_schedule/core/storage/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -67,9 +66,6 @@ void main() {
       ProviderScope(
         overrides: [
           tokenStorageProvider.overrideWithValue(MemoryTokenStorage()),
-          credentialVaultKeyStorageProvider.overrideWithValue(
-            MemoryCredentialVaultKeyStorage(),
-          ),
           dioProvider.overrideWithValue(dio),
           pushServiceProvider.overrideWithValue(push),
         ],

@@ -1,4 +1,4 @@
-/// 只允许扬州大学 HTTPS 站点承载教务登录、凭据捕获与自动填入。
+/// 只允许扬州大学 HTTPS 站点作为扬大模式的教务导入导航白名单。
 bool isAllowedSchoolUri(Uri? uri) {
   if (uri?.scheme.toLowerCase() != 'https') return false;
   final host = uri?.host.toLowerCase() ?? '';

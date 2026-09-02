@@ -69,6 +69,36 @@ void main() {
     });
   });
 
+  group('stripIdentityInfo（合规红线：姓名/学号不出设备）', () {
+    test('抹除标签式与 JSON 式身份信息，课程数据不受影响', () {
+      const raw = '<div>姓名：张三</div><div>学号: 2113401234</div>'
+          '{"xm":"李四","xh":"2113401234","kcmc":"高等数学","name":"高等数学"}'
+          '联系电话 13800001111';
+      final stripped = stripIdentityInfo(raw);
+
+      expect(stripped.contains('张三'), isFalse);
+      expect(stripped.contains('李四'), isFalse);
+      expect(stripped.contains('2113401234'), isFalse);
+      expect(stripped.contains('13800001111'), isFalse);
+      // 课程名与通用 name 键（课程名）必须保留
+      expect('高等数学'.allMatches(stripped).length, 2);
+      expect(stripped.contains('"kcmc":"高等数学"'), isTrue);
+    });
+
+    test('标签与值分处相邻单元格时也能抹除', () {
+      const raw = '<tr><td>姓名</td><td>王五</td></tr>'
+          '<tr><td>学号</td><td>2098012345</td></tr>';
+      final stripped = stripIdentityInfo(raw);
+      expect(stripped.contains('王五'), isFalse);
+      expect(stripped.contains('2098012345'), isFalse);
+    });
+
+    test('8 位以内课程代码、周次、节次原样保留', () {
+      const raw = '高等数学 1-16周 第1-2节 文津楼N107 10021001 2026-2027';
+      expect(stripIdentityInfo(raw), raw);
+    });
+  });
+
   group('mapCoursesResponse', () {
     test('标准契约映射为 ParsedCourse，周次文本展开为 customWeeks', () {
       final courses = LlmImportRepository.mapCoursesResponse([

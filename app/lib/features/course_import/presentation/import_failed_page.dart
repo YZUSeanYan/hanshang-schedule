@@ -39,15 +39,16 @@ class _ImportFailedPageState extends ConsumerState<ImportFailedPage> {
     if (capture == null || _llmParsing) return;
 
     // 隐私披露：页面内容需上传服务器并交由第三方大模型解析一次，
-    // 明确告知并获得用户确认后再发起。
+    // 明确告知脱敏规则并获得用户确认后再发起。
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('AI 智能解析'),
         content: const Text(
           '将把当前课表页面的内容上传到服务器，由 AI 大模型（小米 MiMo）解析一次。\n\n'
-          '页面可能包含姓名、学号等信息；服务器清洗后仅用于本次解析，'
-          '不保存原文、不写日志。解析过程约需 30 秒。',
+          '上传前会在你的设备上自动抹除姓名、学号等身份信息，服务器收到后会再次脱敏检查；'
+          '清洗后的内容仅用于本次解析，不保存原文、不写日志，也不接收任何教务密码。'
+          '解析过程约需 30 秒。',
         ),
         actions: [
           TextButton(
@@ -117,7 +118,7 @@ class _ImportFailedPageState extends ConsumerState<ImportFailedPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              '适用于非扬大教务系统或页面结构改版；页面内容将上传服务器由 AI 解析一次',
+              '适用于非扬大教务系统或页面结构改版；上传前自动抹除姓名学号，服务器不保存页面原文',
               style: Theme.of(context).textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),

@@ -8,6 +8,8 @@ import '../../../import/yzu_parser.dart';
 ///
 /// 上传内容与隐私边界：
 /// - 只上传当前课表页 HTML 与嗅探到的接口响应体，不碰 Cookie、密码框；
+/// - 上传前在本机抹除姓名、学号等身份信息（[stripIdentityInfo]），
+///   服务端收到后会再做一轮同样的脱敏作为纵深防御；
 /// - 服务端清洗后交由第三方大模型（小米 MiMo）解析一次，原文不落库、不写日志；
 /// - 需要登录态（JWT），每用户每天限 10 次。
 class LlmImportRepository {
@@ -41,11 +43,11 @@ class LlmImportRepository {
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/education-import/llm-parse',
       data: {
-        'html': _cap(docs.first, _maxHtmlChars),
+        'html': stripIdentityInfo(_cap(docs.first, _maxHtmlChars)),
         'captured': [
           ...collectCapturedBodies(capture),
           for (final extra in docs.skip(1).take(2))
-            _cap(extra, _maxCapturedChars),
+            stripIdentityInfo(_cap(extra, _maxCapturedChars)),
         ],
         'page_url': _safeUrl(capture['url']),
       },
@@ -98,7 +100,7 @@ class LlmImportRepository {
         if (resp is Map &&
             resp['body'] is String &&
             (resp['body'] as String).isNotEmpty)
-          _cap(resp['body'] as String, _maxCapturedChars),
+          stripIdentityInfo(_cap(resp['body'] as String, _maxCapturedChars)),
     ];
   }
 
@@ -165,3 +167,34 @@ class LlmImportException implements Exception {
 final llmImportRepositoryProvider = Provider<LlmImportRepository>(
   (ref) => LlmImportRepository(ref.read(dioProvider)),
 );
+
+// ---------------------------------------------------------------------------
+// 合规红线（2026-09-02）：姓名、学号等身份信息和教务密码绝不上传。
+// 以下规则与服务端 app/services/llm_schedule_import.py 的
+// strip_identity_info 保持一致；服务端收到后会再执行一轮作为纵深防御。
+// ---------------------------------------------------------------------------
+
+/// 教务 JSON 接口常见身份字段键名（故意不含通用 "name"，那是课程名字段）。
+final RegExp _identityJsonRe = RegExp(
+  r'("(?:xm|xsm|xingming|studentname|stuname|realname|xh|xuehao|studentid'
+  r'|student_id|zjh|sfzh|sfzhm|ksbh|idcard)"\s*:\s*")[^"]*(")',
+  caseSensitive: false,
+);
+
+/// 页面文本里的「标签: 值」形式，值与标签之间最多隔几个 HTML 标签。
+final RegExp _identityLabelRe = RegExp(
+  '(?:姓名|学号|考生号|证件号|身份证号|学生编号)["\']?\\s*[:：]?\\s*["\']?'
+  '(?:<[^>]*>\\s*){0,3}'
+  '(?:[一-龥·]{2,4}(?=\\s*<|\$|[，,；;、\\s])|\\d{6,20}|[A-Za-z]{0,3}\\d{6,20})',
+);
+
+/// 9 位及以上纯数字串：学号/身份证/手机号。课程代码多含字母或不超过 8 位。
+final RegExp _longNumberRe = RegExp(r'\d{9,}');
+
+/// 在上传内容离开设备前抹除姓名、学号等身份信息。
+String stripIdentityInfo(String text) {
+  if (text.isEmpty) return text;
+  var out = text.replaceAllMapped(_identityJsonRe, (m) => '${m[1]}***${m[2]}');
+  out = out.replaceAll(_identityLabelRe, '***');
+  return out.replaceAll(_longNumberRe, '*********');
+}

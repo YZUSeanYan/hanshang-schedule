@@ -6,11 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../import/sniffer_js.dart';
 import '../../../import/yzu_parser.dart';
-import '../data/credential_vault_repository.dart';
 import '../data/school_url_policy.dart';
 import 'import_failed_page.dart';
 
@@ -22,11 +20,9 @@ import 'import_failed_page.dart';
 /// 3. 常用服务 → 班级课表 → 选择班级 → 课表信息；
 /// 4. 点底部"抓取课表"→ 注入嗅探脚本 → 解析 → 导入预览。
 ///
-/// 凭据同步仅在用户主动开启后生效：
-/// - 只在识别到教务登录页并提交时读取一次，立即在本机加密；
-/// - 服务端只保存 AES-GCM 密文，自动填入前在本机解密且绝不自动提交；
-/// - 嗅探脚本只缓存"疑似课表"的响应体，不碰密码输入框；
-/// - 抓取结果仅用于本地解析，解析完成后即丢弃原始 HTML。
+/// 合规红线（2026-09-02）：教务账号密码只存在于本设备与学校系统之间——
+/// 不读取密码框、不上传、不同步（原实验性凭据同步已彻底移除，服务端接口已下线）；
+/// 嗅探脚本只缓存"疑似课表"的响应体，抓取结果仅用于本地解析，完成后即丢弃。
 class ImportWebViewPage extends ConsumerStatefulWidget {
   const ImportWebViewPage({super.key})
       : genericStartUrl = null,
@@ -34,8 +30,7 @@ class ImportWebViewPage extends ConsumerStatefulWidget {
 
   /// 通用模式（AI 通用教务导入）：任意学校教务系统。
   ///
-  /// 与扬大模式的差异：起始页由用户输入、导航白名单放宽到任意 HTTPS 站点；
-  /// 凭据同步/自动填入仍只在内建的 *.yzu.edu.cn 判断下生效，通用模式天然不触发。
+  /// 与扬大模式的差异仅在于：起始页由用户输入、导航白名单放宽到任意 HTTPS 站点。
   const ImportWebViewPage.generic({super.key, required String startUrl})
       : genericStartUrl = startUrl,
         isGenericMode = true;
@@ -50,173 +45,23 @@ class ImportWebViewPage extends ConsumerStatefulWidget {
       '② 进入 校内资源 → 教务系统（学生端）\n'
       '③ 在「常用服务」点「班级课表」，选择对应班级后点「课表信息」\n'
       '④ 课表完整显示后，点底部「抓取课表」\n'
-      '如已主动开启实验性凭据同步，登录信息会先在本机加密，再以密文同步并做往返校验';
+      '你的账号密码只保存在本机与学校系统之间，邗上课表不读取、不上传';
 
   static const String genericGuideText = '① 在下方页面登录你学校的教务系统\n'
       '② 进入「课表查询 / 我的课表」页面\n'
       '③ 课表完整显示后，点底部「抓取课表」\n'
-      '本地识别不出时会提供 AI 云端解析（经你确认后才上传页面内容）';
+      '本地识别不出时会提供 AI 云端解析（自动抹除姓名学号，经你确认后才上传）';
 
   @override
   ConsumerState<ImportWebViewPage> createState() => _ImportWebViewPageState();
 }
 
 class _ImportWebViewPageState extends ConsumerState<ImportWebViewPage> {
-  static const _preferenceKey = 'academic_credential_sync_enabled';
   InAppWebViewController? _controller;
   bool _loading = true;
   bool _capturing = false;
   String _currentTitle = '';
   bool _guideCollapsed = false;
-  bool _credentialSyncEnabled = false;
-  bool _autofillNotified = false;
-  String _lastCredentialFingerprint = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCredentialPreference();
-  }
-
-  Future<void> _loadCredentialPreference() async {
-    final preferences = await SharedPreferences.getInstance();
-    _credentialSyncEnabled = preferences.getBool(_preferenceKey) ?? false;
-    final controller = _controller;
-    if (_credentialSyncEnabled && controller != null) {
-      final url = await controller.getUrl();
-      await _installCredentialCapture(controller, url);
-      await _autofillCredential(controller, url);
-    }
-  }
-
-  Future<void> _handleCredentialCapture(List<dynamic> arguments) async {
-    if (!_credentialSyncEnabled ||
-        arguments.isEmpty ||
-        arguments.first is! Map) {
-      return;
-    }
-    final controller = _controller;
-    if (controller == null || !isAllowedSchoolUri(await controller.getUrl())) {
-      return;
-    }
-    final payload = Map<String, dynamic>.from(arguments.first as Map);
-    final frameOrigin = Uri.tryParse(payload['origin'] as String? ?? '');
-    if (!isAllowedSchoolUri(frameOrigin)) return;
-    final studentId = (payload['studentId'] as String? ?? '').trim();
-    final password = payload['password'] as String? ?? '';
-    if (studentId.length < 4 ||
-        studentId.length > 32 ||
-        password.isEmpty ||
-        password.length > 128) {
-      return;
-    }
-    final fingerprint = '$studentId\u0000$password';
-    if (fingerprint == _lastCredentialFingerprint) {
-      return;
-    }
-    _lastCredentialFingerprint = fingerprint;
-    try {
-      final result =
-          await ref.read(credentialVaultRepositoryProvider).saveAndVerify(
-                studentId: studentId,
-                password: password,
-              );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('教务凭据已加密同步，服务器往返校验通过（${result.studentIdHint}）')),
-        );
-      }
-    } catch (error) {
-      _lastCredentialFingerprint = '';
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('教务凭据同步失败：$error')),
-        );
-      }
-    }
-  }
-
-  Future<void> _installCredentialCapture(
-      InAppWebViewController controller, WebUri? url) async {
-    if (!_credentialSyncEnabled || !isAllowedSchoolUri(url)) {
-      return;
-    }
-    await controller.evaluateJavascript(source: r'''
-(() => {
-  if (window.__hanshangCredentialCaptureInstalled) return;
-  const host = location.hostname.toLowerCase();
-  if (!(host === 'yzu.edu.cn' || host.endsWith('.yzu.edu.cn'))) return;
-  const marker = `${location.href} ${document.title}`.toLowerCase();
-  if (!/(教务|jwgl|jwc|urp|jsxsd|student)/i.test(marker)) return;
-  if (/(统一身份|authserver)/i.test(marker)) return;
-  window.__hanshangCredentialCaptureInstalled = true;
-  const capture = () => {
-    const passwordInput = document.querySelector('input[type="password"]');
-    if (!passwordInput || !passwordInput.value) return;
-    const usernameInput = document.querySelector(
-      'input[autocomplete="username"],input[name*="user" i],input[id*="user" i],input[name*="account" i],input[id*="account" i],input[name*="xh" i],input[id*="xh" i],input[type="text"]'
-    );
-    const studentId = (usernameInput?.value || '').trim();
-    if (!studentId) return;
-    window.flutter_inappwebview.callHandler('credentialCapture', {
-      studentId,
-      password: passwordInput.value,
-      origin: location.origin,
-    });
-  };
-  document.addEventListener('submit', capture, true);
-  document.addEventListener('click', (event) => {
-    if (event.target?.closest?.('button,input[type="submit"]')) setTimeout(capture, 0);
-  }, true);
-})();
-''');
-  }
-
-  Future<void> _autofillCredential(
-      InAppWebViewController controller, WebUri? url) async {
-    if (!_credentialSyncEnabled || !isAllowedSchoolUri(url)) {
-      return;
-    }
-    try {
-      final credential =
-          await ref.read(credentialVaultRepositoryProvider).load();
-      if (credential == null) {
-        return;
-      }
-      final result = await controller.evaluateJavascript(source: '''
-(() => {
-  const host = location.hostname.toLowerCase();
-  if (!(host === 'yzu.edu.cn' || host.endsWith('.yzu.edu.cn'))) return false;
-  const marker = `\${location.href} \${document.title}`.toLowerCase();
-  if (!/(教务|jwgl|jwc|urp|jsxsd|student)/i.test(marker) || /(统一身份|authserver)/i.test(marker)) return false;
-  const passwordInput = document.querySelector('input[type="password"]');
-  const usernameInput = document.querySelector('input[autocomplete="username"],input[name*="user" i],input[id*="user" i],input[name*="account" i],input[id*="account" i],input[name*="xh" i],input[id*="xh" i],input[type="text"]');
-  if (!passwordInput || !usernameInput) return false;
-  const setValue = (input, value) => {
-    input.value = value;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  };
-  if (!usernameInput.value) setValue(usernameInput, ${jsonEncode(credential.studentId)});
-  if (!passwordInput.value) setValue(passwordInput, ${jsonEncode(credential.password)});
-  return true;
-})();
-''');
-      if (result == true && !_autofillNotified && mounted) {
-        _autofillNotified = true;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已从云端密文解密并自动填入，请确认后手动登录')),
-        );
-      }
-    } catch (error) {
-      if (mounted && !_autofillNotified) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('教务凭据自动填入失败：$error')),
-        );
-      }
-    }
-  }
 
   Future<void> _capture() async {
     final controller = _controller;
@@ -354,10 +199,6 @@ class _ImportWebViewPageState extends ConsumerState<ImportWebViewPage> {
               ),
               onWebViewCreated: (controller) {
                 _controller = controller;
-                controller.addJavaScriptHandler(
-                  handlerName: 'credentialCapture',
-                  callback: _handleCredentialCapture,
-                );
               },
               shouldOverrideUrlLoading: (controller, navigationAction) async {
                 if (navigationAction.isForMainFrame != true) {
@@ -380,8 +221,6 @@ class _ImportWebViewPageState extends ConsumerState<ImportWebViewPage> {
                 // 兼容不支持 document-start 注入的旧 WebView；脚本可重复执行。
                 await controller.evaluateJavascript(
                     source: kYzuSnifferInjectJs);
-                await _installCredentialCapture(controller, url);
-                await _autofillCredential(controller, url);
                 final title = await controller.getTitle();
                 if (mounted) {
                   setState(() {

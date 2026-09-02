@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/token_storage.dart';
-import '../../../core/storage/credential_vault_key_storage.dart';
 import '../../../core/notifications/push_service.dart';
 
 /// 当前登录用户
@@ -45,8 +44,6 @@ class AuthRepository {
 
   Dio get _dio => _ref.read(dioProvider);
   TokenStorage get _storage => _ref.read(tokenStorageProvider);
-  CredentialVaultKeyStorage get _vaultKeyStorage =>
-      _ref.read(credentialVaultKeyStorageProvider);
 
   /// 启动时恢复会话：有 refresh token 则换新并拉取个人信息，否则视为未登录。
   Future<AuthUser?> restore() async {
@@ -83,7 +80,6 @@ class AuthRepository {
     await _saveTokens(data);
     final user = AuthUser.fromJson(data['user'] as Map<String, dynamic>);
     await _cacheUser(user);
-    await _vaultKeyStorage.deriveAndSave(password: password, userId: user.id);
     return user;
   }
 
@@ -97,7 +93,6 @@ class AuthRepository {
     await _saveTokens(data);
     final user = AuthUser.fromJson(data['user'] as Map<String, dynamic>);
     await _cacheUser(user);
-    await _vaultKeyStorage.deriveAndSave(password: password, userId: user.id);
     return user;
   }
 
@@ -118,7 +113,6 @@ class AuthRepository {
 
   Future<void> logout() async {
     await _storage.clear();
-    await _vaultKeyStorage.clear();
   }
 
   Future<AuthUser> _fetchProfile() async {
