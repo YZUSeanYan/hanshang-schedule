@@ -5,13 +5,8 @@
     <!-- 上课提醒：Android 13+ 通知权限 / 重启后重挂闹钟 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-    <!-- 手表 BLE 课表传输（Android 12+ 蓝牙扫描/连接/广播权限；12 以下沿用传统权限） -->
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
-    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
+    <!-- 2026-09-02 合规：手表 BLE 功能未发布，移除蓝牙/定位权限声明，
+         与隐私政策「不索取定位权限」保持一致；功能上线时再补回。 -->
     <application
         android:label="邗上课表"
         android:name="${applicationName}"
