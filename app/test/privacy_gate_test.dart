@@ -24,10 +24,14 @@ void main() {
     expect(await PrivacyConsent().hasConsented(), isTrue);
   });
 
-  test('已同意的老用户（升级场景）门禁直接放行', () async {
+  test('v1 旧版同意记录在政策更新后失效，需重新同意', () async {
+    // 第 2 版政策（2026-09-02）起 key 带版本号：存量用户启动时需重新同意
     SharedPreferences.setMockInitialValues({
       'privacy_consented_at': 1700000000000,
     });
+    expect(await PrivacyConsent().hasConsented(), isFalse);
+
+    await PrivacyConsent().agree();
     expect(await PrivacyConsent().hasConsented(), isTrue);
   });
 

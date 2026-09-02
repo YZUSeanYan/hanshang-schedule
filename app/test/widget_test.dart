@@ -15,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   // 隐私门禁：所有 widget 测试预置“已同意”，直接进入业务路由
   setUpAll(() {
-    SharedPreferences.setMockInitialValues({'privacy_consented_at': 1});
+    SharedPreferences.setMockInitialValues({'privacy_consented_at_v2': 1});
   });
 
   /// 未登录时（空 token 存储），路由守卫应把用户带到登录页
