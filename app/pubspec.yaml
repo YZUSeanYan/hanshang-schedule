@@ -2,7 +2,7 @@ name: yzu_schedule
 description: 邗上课表 —— 扬州大学专属课表 App（简洁清爽、无广告）
 publish_to: "none"
 # 版本规则：versionName+versionCode，后端版本接口按 versionCode 比较
-version: 1.0.32+32
+version: 1.0.33+33
 
 environment:
   sdk: ^3.4.0
