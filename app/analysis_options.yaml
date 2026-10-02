@@ -1,11 +1,22 @@
-# Dart 静态检查规则：沿用官方推荐集合并按需收紧
+# 统一分析入口（review R34）。
+#
+# 项目此前声明了 flutter_lints 却没有本文件，dart analyze 一直走默认规则，
+# 异步/订阅类问题拦不住。这里启用推荐集；范围只覆盖 App 本体：
+# - app_database.g.dart 是 drift 生成文件，不分析；
+# - plugins/aliyun_push 是本地插件，自带 example 的依赖解析会污染全目录
+#   分析（106 条诊断的来源），让它维持自己的入口。
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
   exclude:
-    - plugins/aliyun_push/example/**
+    - lib/core/database/app_database.g.dart
+    - build/**
+    - plugins/**
 
 linter:
   rules:
-    prefer_single_quotes: true
+    # 高价值规则：异步上下文与订阅释放是本项目历史上最容易出问题的地方
+    unawaited_futures: true
+    cancel_subscriptions: true
     always_declare_return_types: true
+    prefer_single_quotes: true

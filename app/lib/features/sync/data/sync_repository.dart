@@ -27,16 +27,44 @@ class SyncRepository {
   final Dio _dio;
 
   static const _cursorKey = 'sync_cursor';
+  static const _eventSyncInitializedKey = 'event_sync_initialized_v1';
   static const _lastSyncKey = 'sync_last_at';
+  static const _sessionEpochKey = 'session_epoch';
+
+  /// 本轮同步开始时的会话代次（review R01）。
+  ///
+  /// 账号切换会重置 settings 并写入新的 session_epoch（auth_repository）。
+  /// 在途同步在每个提交点（push 发送、pull 应用、游标写入）核对代次，
+  /// 不一致立即放弃本轮同步——迟到响应绝不能把旧账号数据写进新账号
+  /// 的库，更不能用旧游标跳过新账号的历史增量。
+  int? _capturedEpoch;
+
+  Future<int?> _readSessionEpoch() async =>
+      int.tryParse(await _getSetting(_sessionEpochKey) ?? '');
+
+  Future<bool> _sessionUnchanged() async =>
+      await _readSessionEpoch() == _capturedEpoch;
 
   // ---------- 对外入口 ----------
 
+  Future<String>? _inFlight;
+
   /// 执行一次完整同步（push → pull）。返回人类可读的结果摘要。
-  Future<String> sync() async {
+  ///
+  /// single-flight（review R10）：多路触发（数据变化/登录就绪/退避重试）
+  /// 并发调用时共享同一轮同步，不叠加请求；会话代次校验保证跨账号安全。
+  Future<String> sync() => _inFlight ??= _syncImpl().whenComplete(() {
+        _inFlight = null;
+      });
+
+  Future<String> _syncImpl() async {
     // 先修复旧版本可能遗留的重复“当前学期”，避免把脏状态再次上传。
     await _db.transaction(_normalizeCurrentSemesters);
+    _capturedEpoch = await _readSessionEpoch();
     final pushSummary = await _push();
     final pullSummary = await _pull();
+    // 账号在同步过程中切换：本轮作废，新账号首次同步会全量重拉。
+    if (!await _sessionUnchanged()) return '会话已切换，本轮同步放弃';
     final now = DateTime.now();
     await _setSetting(_lastSyncKey, now.toIso8601String());
     return '上传 $pushSummary，下载 $pullSummary';
@@ -53,6 +81,8 @@ class SyncRepository {
     final semesters = await _db.select(_db.semesters).get();
     final courses = await _db.select(_db.courses).get();
     final schedules = await _db.select(_db.schedules).get();
+    final events = await _db.select(_db.localEvents).get();
+    final overrides = await _db.select(_db.scheduleOverrides).get();
     final deletions = await _db.select(_db.pendingDeletions).get();
 
     // uuid → 记录，用于给墓碑补 parent 字段
@@ -74,6 +104,7 @@ class SyncRepository {
           'uuid': c.uuid,
           'semester_uuid': semesterUuidById[c.semesterId] ?? '',
           'name': c.name,
+          'short_name': c.shortName,
           'teacher': c.teacher,
           'color': c.color,
           'note': c.note,
@@ -98,8 +129,55 @@ class SyncRepository {
     final courseItems = [for (final c in courses) courseToJson(c)];
     final scheduleItems = [for (final s in schedules) scheduleToJson(s)];
 
+    // 个人日程（AI 日程 2.0）：字段名与后端 sync_events 列一一对应。
+    Map<String, dynamic> eventToJson(LocalEvent e) => {
+          'uuid': e.uuid,
+          'title': e.title,
+          'short_title': e.shortTitle,
+          'event_type': e.eventType,
+          'date': e.date,
+          'weekday': e.weekday,
+          'start_time': e.startTime,
+          'end_time': e.endTime,
+          'start_section': e.startSection,
+          'end_section': e.endSection,
+          'busy_sections': e.busySections,
+          'location': e.location,
+          'note': e.note,
+          'color': e.color,
+          'remind_minutes': e.remindMinutes,
+          'source': e.source,
+          'updated_at': e.updatedAt.millisecondsSinceEpoch,
+          'deleted': false,
+        };
+    final eventItems = [for (final e in events) eventToJson(e)];
+    final overrideItems = [
+      for (final o in overrides)
+        {
+          'uuid': o.uuid,
+          'date': o.date,
+          'kind': o.kind,
+          'weekday': o.weekday,
+          'note': o.note,
+          'updated_at': o.updatedAt.millisecondsSinceEpoch,
+          'deleted': false,
+        },
+    ];
+
     // 墓碑：按实体类型塞进对应列表（deleted=true，字段用最小合法值）
     for (final d in deletions) {
+      if (d.entity == 'override') {
+        overrideItems.add({
+          'uuid': d.uuid,
+          'date': '2000-01-01',
+          'kind': 'off',
+          'weekday': 0,
+          'note': '',
+          'updated_at': d.deletedAt.millisecondsSinceEpoch,
+          'deleted': true,
+        });
+        continue;
+      }
       final tombstone = {
         'uuid': d.uuid,
         'updated_at': d.deletedAt.millisecondsSinceEpoch,
@@ -134,21 +212,48 @@ class SyncRepository {
             'custom_weeks': '',
             'location': '',
           });
+        case 'event':
+          eventItems.add({
+            ...tombstone,
+            'title': '',
+            'event_type': 'event',
+            'date': '',
+            'weekday': 0,
+            'start_time': '',
+            'end_time': '',
+            'start_section': 0,
+            'end_section': 0,
+            'busy_sections': '',
+            'location': '',
+            'note': '',
+            'color': 0,
+            'remind_minutes': -1,
+            'source': 'manual',
+          });
       }
     }
 
     // 服务端对每类记录设置单次 500 条上限，避免异常客户端用超大 JSON
     // 占满内存。正常用户通常只需一批；数据较多时透明分批，不改变同步语义。
+    // 批次总数必须覆盖全部实体列表（含 overrides）——只数四类会让
+    // overrides 超出部分永远发不出去，对应墓碑还会被清掉（review R06）。
     const batchSize = 500;
-    final maxItems = math.max(
-      1,
-      math.max(
-        semesterItems.length,
-        math.max(courseItems.length, scheduleItems.length),
-      ),
-    );
+    var maxItems = 1;
+    for (final list in [
+      semesterItems,
+      courseItems,
+      scheduleItems,
+      eventItems,
+      overrideItems,
+    ]) {
+      if (list.length > maxItems) maxItems = list.length;
+    }
+    // 墓碑快照：只确认本轮真正发送出去的删除（review R03）。
+    // push 期间用户新建的删除属于下一轮，绝不能被整表清空吞掉。
+    final pushedTombstoneIds = [for (final d in deletions) d.id];
     var total = 0;
     for (var start = 0; start < maxItems; start += batchSize) {
+      if (!await _sessionUnchanged()) return '0 条（会话已切换）';
       List<Map<String, dynamic>> batch(List<Map<String, dynamic>> items) =>
           start >= items.length
               ? <Map<String, dynamic>>[]
@@ -159,17 +264,25 @@ class SyncRepository {
           'semesters': batch(semesterItems),
           'courses': batch(courseItems),
           'schedules': batch(scheduleItems),
+          'events': batch(eventItems),
+          'overrides': batch(overrideItems),
         },
       );
       final data = resp.data?['data'] as Map<String, dynamic>?;
       final applied = data?['applied'] as Map<String, dynamic>?;
       total += ((applied?['semesters'] as num?)?.toInt() ?? 0) +
           ((applied?['courses'] as num?)?.toInt() ?? 0) +
-          ((applied?['schedules'] as num?)?.toInt() ?? 0);
+          ((applied?['schedules'] as num?)?.toInt() ?? 0) +
+          ((applied?['events'] as num?)?.toInt() ?? 0) +
+          ((applied?['overrides'] as num?)?.toInt() ?? 0);
     }
 
-    // 推送成功后清除墓碑队列
-    await (_db.delete(_db.pendingDeletions)).go();
+    // 全部批次成功后，只清除本轮快照里的墓碑
+    if (pushedTombstoneIds.isNotEmpty) {
+      await (_db.delete(_db.pendingDeletions)
+            ..where((d) => d.id.isIn(pushedTombstoneIds)))
+          .go();
+    }
 
     return '$total 条';
   }
@@ -177,7 +290,12 @@ class SyncRepository {
   // ---------- pull ----------
 
   Future<String> _pull() async {
-    final cursor = int.tryParse(await _getSetting(_cursorKey) ?? '0') ?? 0;
+    final savedCursor = int.tryParse(await _getSetting(_cursorKey) ?? '0') ?? 0;
+    // 2.0 首次同步从 0 拉一次：旧客户端会推进全局 cursor，却忽略当时
+    // 不认识的 events 字段。一次幂等全量拉取避免其他设备已建日程永久漏失。
+    final eventSyncInitialized =
+        await _getSetting(_eventSyncInitializedKey) == 'true';
+    final cursor = eventSyncInitialized ? savedCursor : 0;
     final resp = await _dio.get<Map<String, dynamic>>(
       '/api/sync/pull',
       queryParameters: {'since': cursor},
@@ -187,13 +305,22 @@ class SyncRepository {
 
     var changes = 0;
     var repaired = 0;
+    // 账号切换后设置表会被重置，代次对不上就整体放弃本轮 pull，
+    // 不写任何业务表、不推进游标（review R01）
+    if (!await _sessionUnchanged()) return '0 条（会话已切换）';
     await _db.transaction(() async {
       changes += await _applySemesters(data['semesters'] as List? ?? []);
       changes += await _applyCourses(data['courses'] as List? ?? []);
       changes += await _applySchedules(data['schedules'] as List? ?? []);
+      changes += await _applyEvents(data['events'] as List? ?? []);
+      changes += await _applyOverrides(data['overrides'] as List? ?? []);
       repaired = await _normalizeCurrentSemesters();
     });
+    if (!await _sessionUnchanged()) return '0 条（会话已切换）';
     await _setSetting(_cursorKey, '${data['cursor'] ?? cursor}');
+    if (!eventSyncInitialized) {
+      await _setSetting(_eventSyncInitializedKey, 'true');
+    }
     // 兼容尚未升级的服务端：若拉取本身带来了重复状态，把本地修复立即
     // 回传云端，而不是等待下一次自动同步。
     if (repaired > 0) await _push();
@@ -210,7 +337,30 @@ class SyncRepository {
             (s) => OrderingTerm.desc(s.id),
           ]))
         .get();
-    if (current.length <= 1) return 0;
+
+    // 零个当前学期也要修：课表页、课前提醒、桌面小组件都按 is_current 取学期
+    // （schedule_repository / reminder_service / widget_service 三处），一个都
+    // 没有时整个课表空白，用户自己也没有入口能恢复。服务端会做同样的修复，
+    // 这里先让本机立刻可用，不必等一轮同步往返。
+    if (current.isEmpty) {
+      final fallback = await (_db.select(_db.semesters)
+            ..orderBy([
+              (s) => OrderingTerm.desc(s.updatedAt),
+              (s) => OrderingTerm.desc(s.id),
+            ])
+            ..limit(1))
+          .getSingleOrNull();
+      if (fallback == null) return 0;
+      await (_db.update(_db.semesters)
+            ..where((s) => s.id.equals(fallback.id)))
+          .write(SemestersCompanion(
+        isCurrent: const Value(true),
+        updatedAt: Value(DateTime.now()),
+      ));
+      return 1;
+    }
+
+    if (current.length == 1) return 0;
 
     var repairMillis = DateTime.now().millisecondsSinceEpoch;
     for (final semester in current) {
@@ -242,7 +392,8 @@ class SyncRepository {
             ..where((s) => s.uuid.equals(uuid)))
           .getSingleOrNull();
       if (map['deleted'] == true) {
-        if (local != null) {
+        // 墓碑也是带版本的状态：旧墓碑不得删掉更新的本地修改（review R04）
+        if (local != null && remoteUpdated.isAfter(local.updatedAt)) {
           await (_db.delete(_db.semesters)..where((s) => s.id.equals(local.id)))
               .go();
           changes++;
@@ -285,7 +436,8 @@ class SyncRepository {
             ..where((c) => c.uuid.equals(uuid)))
           .getSingleOrNull();
       if (map['deleted'] == true) {
-        if (local != null) {
+        // 墓碑也是带版本的状态：旧墓碑不得删掉更新的本地修改（review R04）
+        if (local != null && remoteUpdated.isAfter(local.updatedAt)) {
           await (_db.delete(_db.courses)..where((c) => c.id.equals(local.id)))
               .go();
           changes++;
@@ -302,6 +454,7 @@ class SyncRepository {
               uuid: Value(uuid),
               semesterId: semester.id,
               name: map['name'] as String,
+              shortName: Value(map['short_name'] as String? ?? ''),
               teacher: Value(map['teacher'] as String? ?? ''),
               color: (map['color'] as num?)?.toInt() ?? 0,
               note: Value(map['note'] as String? ?? ''),
@@ -312,6 +465,7 @@ class SyncRepository {
         await (_db.update(_db.courses)..where((c) => c.id.equals(local.id)))
             .write(CoursesCompanion(
           name: Value(map['name'] as String),
+          shortName: Value(map['short_name'] as String? ?? ''),
           teacher: Value(map['teacher'] as String? ?? ''),
           color: Value((map['color'] as num?)?.toInt() ?? 0),
           note: Value(map['note'] as String? ?? ''),
@@ -334,7 +488,8 @@ class SyncRepository {
             ..where((s) => s.uuid.equals(uuid)))
           .getSingleOrNull();
       if (map['deleted'] == true) {
-        if (local != null) {
+        // 墓碑也是带版本的状态：旧墓碑不得删掉更新的本地修改（review R04）
+        if (local != null && remoteUpdated.isAfter(local.updatedAt)) {
           await (_db.delete(_db.schedules)..where((s) => s.id.equals(local.id)))
               .go();
           changes++;
@@ -371,6 +526,168 @@ class SyncRepository {
               Value(WeeksType.values[(map['weeks_type'] as num).toInt()]),
           customWeeks: Value(jsonEncode(weeksList)),
           location: Value(map['location'] as String? ?? ''),
+          updatedAt: Value(remoteUpdated),
+        ));
+        changes++;
+      }
+    }
+    return changes;
+  }
+
+  // ---------- overrides（调休课表） ----------
+
+  Future<int> _applyOverrides(List items) async {
+    var changes = 0;
+    for (final item in items) {
+      final map = item as Map;
+      final uuid = map['uuid'] as String;
+      final deleted = map['deleted'] == true;
+      final remoteUpdated =
+          DateTime.fromMillisecondsSinceEpoch((map['updated_at'] as num).toInt());
+      final local = await (_db.select(_db.scheduleOverrides)
+            ..where((o) => o.uuid.equals(uuid)))
+          .getSingleOrNull();
+      if (deleted) {
+        // 墓碑也是带版本的状态：旧墓碑不得删掉更新的本地修改（review R04）
+        if (local != null && remoteUpdated.isAfter(local.updatedAt)) {
+          await (_db.delete(_db.scheduleOverrides)
+                ..where((o) => o.id.equals(local.id)))
+              .go();
+          changes++;
+        }
+        continue;
+      }
+      final remoteDate = map['date'] as String;
+      final remoteKind = map['kind'] as String;
+      final remoteWeekday = (map['weekday'] as num?)?.toInt() ?? 0;
+      final remoteNote = map['note'] as String? ?? '';
+      if (local == null) {
+        // 调休的业务唯一键是账号内的 date（review R07）：不同设备为同一天
+        // 创建的记录 uuid 不同，直接插入会留下两行互相打架。同日已有记录
+        // 时按 LWW 裁决：远端更新则顶替（沿用本地行，换上远端 uuid）；
+        // 本地更新则给远端 uuid 记墓碑，防止它下轮被重新拉回来复活。
+        final sameDate = await (_db.select(_db.scheduleOverrides)
+              ..where((o) => o.date.equals(remoteDate)))
+            .get();
+        if (sameDate.isEmpty) {
+          await _db.into(_db.scheduleOverrides).insert(
+                ScheduleOverridesCompanion.insert(
+                  uuid: Value(uuid),
+                  date: remoteDate,
+                  kind: remoteKind,
+                  weekday: Value(remoteWeekday),
+                  note: Value(remoteNote),
+                  updatedAt: remoteUpdated,
+                ),
+              );
+          changes++;
+          continue;
+        }
+        final keeper = sameDate.reduce((a, b) =>
+            a.updatedAt.isAfter(b.updatedAt) ? a : b);
+        if (remoteUpdated.isAfter(keeper.updatedAt)) {
+          await (_db.update(_db.scheduleOverrides)
+                ..where((o) => o.id.equals(keeper.id)))
+              .write(ScheduleOverridesCompanion(
+            uuid: Value(uuid),
+            kind: Value(remoteKind),
+            weekday: Value(remoteWeekday),
+            note: Value(remoteNote),
+            updatedAt: Value(remoteUpdated),
+          ));
+          changes++;
+        } else if (keeper.uuid != uuid) {
+          await _db.into(_db.pendingDeletions).insert(
+                PendingDeletionsCompanion.insert(
+                  entity: 'override',
+                  uuid: uuid,
+                  parentUuid: const Value(''),
+                  deletedAt: DateTime.now(),
+                ),
+              );
+        }
+        continue;
+      }
+      if (remoteUpdated.isAfter(local.updatedAt)) {
+        await (_db.update(_db.scheduleOverrides)
+              ..where((o) => o.id.equals(local.id)))
+            .write(ScheduleOverridesCompanion(
+          date: Value(remoteDate),
+          kind: Value(remoteKind),
+          weekday: Value(remoteWeekday),
+          note: Value(remoteNote),
+          updatedAt: Value(remoteUpdated),
+        ));
+        changes++;
+      }
+    }
+    return changes;
+  }
+
+  // ---------- events（AI 日程 2.0） ----------
+
+  /// 应用远端日程（AI 日程 2.0）。日程不挂学期，无父级对账，比课程简单。
+  Future<int> _applyEvents(List items) async {
+    var changes = 0;
+    for (final item in items) {
+      final map = item as Map<String, dynamic>;
+      final uuid = map['uuid'] as String;
+      final remoteUpdated = DateTime.fromMillisecondsSinceEpoch(
+          (map['updated_at'] as num).toInt());
+      final local = await (_db.select(_db.localEvents)
+            ..where((e) => e.uuid.equals(uuid)))
+          .getSingleOrNull();
+      if (map['deleted'] == true) {
+        // 墓碑也是带版本的状态：旧墓碑不得删掉更新的本地修改（review R04）
+        if (local != null && remoteUpdated.isAfter(local.updatedAt)) {
+          await (_db.delete(_db.localEvents)
+                ..where((e) => e.id.equals(local.id)))
+              .go();
+          changes++;
+        }
+        continue;
+      }
+      if (local == null) {
+        await _db.into(_db.localEvents).insert(LocalEventsCompanion.insert(
+              uuid: Value(uuid),
+              title: map['title'] as String? ?? '',
+              shortTitle: Value(map['short_title'] as String? ?? ''),
+              eventType: Value(map['event_type'] as String? ?? 'event'),
+              date: Value(map['date'] as String? ?? ''),
+              weekday: Value((map['weekday'] as num?)?.toInt() ?? 0),
+              startTime: Value(map['start_time'] as String? ?? ''),
+              endTime: Value(map['end_time'] as String? ?? ''),
+              startSection: Value((map['start_section'] as num?)?.toInt() ?? 0),
+              endSection: Value((map['end_section'] as num?)?.toInt() ?? 0),
+              busySections: Value(map['busy_sections'] as String? ?? ''),
+              location: Value(map['location'] as String? ?? ''),
+              note: Value(map['note'] as String? ?? ''),
+              color: Value((map['color'] as num?)?.toInt() ?? 0),
+              remindMinutes:
+                  Value((map['remind_minutes'] as num?)?.toInt() ?? -1),
+              source: Value(map['source'] as String? ?? 'manual'),
+              updatedAt: remoteUpdated,
+            ));
+        changes++;
+      } else if (remoteUpdated.isAfter(local.updatedAt)) {
+        await (_db.update(_db.localEvents)
+              ..where((e) => e.id.equals(local.id)))
+            .write(LocalEventsCompanion(
+          title: Value(map['title'] as String? ?? ''),
+          shortTitle: Value(map['short_title'] as String? ?? ''),
+          eventType: Value(map['event_type'] as String? ?? 'event'),
+          date: Value(map['date'] as String? ?? ''),
+          weekday: Value((map['weekday'] as num?)?.toInt() ?? 0),
+          startTime: Value(map['start_time'] as String? ?? ''),
+          endTime: Value(map['end_time'] as String? ?? ''),
+          startSection: Value((map['start_section'] as num?)?.toInt() ?? 0),
+          endSection: Value((map['end_section'] as num?)?.toInt() ?? 0),
+          busySections: Value(map['busy_sections'] as String? ?? ''),
+          location: Value(map['location'] as String? ?? ''),
+          note: Value(map['note'] as String? ?? ''),
+          color: Value((map['color'] as num?)?.toInt() ?? 0),
+          remindMinutes: Value((map['remind_minutes'] as num?)?.toInt() ?? -1),
+          source: Value(map['source'] as String? ?? 'manual'),
           updatedAt: Value(remoteUpdated),
         ));
         changes++;

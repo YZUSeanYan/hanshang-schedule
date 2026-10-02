@@ -6,10 +6,16 @@ import 'package:yzu_schedule/core/notifications/reminder_service.dart';
 import 'package:yzu_schedule/features/profile/presentation/profile_page.dart';
 
 class _FakeReminderService implements ReminderServiceApi {
-  _FakeReminderService({required this.enabled, required this.minutes});
+  _FakeReminderService({
+    required this.enabled,
+    required this.minutes,
+    this.exactAllowed = true,
+  });
 
   bool enabled;
   int minutes;
+  bool exactAllowed;
+  int exactPermissionRequests = 0;
   Completer<void>? enabledSave;
   Completer<void>? minutesSave;
 
@@ -42,6 +48,14 @@ class _FakeReminderService implements ReminderServiceApi {
 
   @override
   Future<void> sendTestNotification() async {}
+
+  @override
+  Future<bool> canExactSchedule() async => exactAllowed;
+
+  @override
+  Future<void> requestExactAlarmPermission() async {
+    exactPermissionRequests += 1;
+  }
 }
 
 void main() {
@@ -84,5 +98,41 @@ void main() {
 
     service.minutesSave!.complete();
     await tester.pump();
+  });
+
+  testWidgets('精确闹钟已授权时不显示受限提示', (tester) async {
+    final service = _FakeReminderService(enabled: true, minutes: 15);
+    await tester.pumpWidget(subject(service));
+    await tester.pump();
+
+    expect(find.textContaining('提醒可能不准时'), findsNothing);
+  });
+
+  testWidgets('精确闹钟未授权时显示受限提示,点击触发授权引导', (tester) async {
+    final service = _FakeReminderService(
+      enabled: true,
+      minutes: 15,
+      exactAllowed: false,
+    );
+    await tester.pumpWidget(subject(service));
+    await tester.pump();
+
+    expect(find.textContaining('提醒可能不准时'), findsOneWidget);
+
+    await tester.tap(find.textContaining('提醒可能不准时'));
+    await tester.pump();
+    expect(service.exactPermissionRequests, 1);
+  });
+
+  testWidgets('关闭提醒时不显示受限提示', (tester) async {
+    final service = _FakeReminderService(
+      enabled: false,
+      minutes: 15,
+      exactAllowed: false,
+    );
+    await tester.pumpWidget(subject(service));
+    await tester.pump();
+
+    expect(find.textContaining('提醒可能不准时'), findsNothing);
   });
 }

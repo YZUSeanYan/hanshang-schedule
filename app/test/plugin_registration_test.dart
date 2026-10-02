@@ -91,11 +91,24 @@ void main() {
     },
   );
 
-  test('forced update dialog blocks system back navigation', () {
+  test('forced update can never block the app (R30 product rule)', () {
     final source = File(
       'lib/features/update/update_checker.dart',
     ).readAsStringSync();
-    expect(source, contains('PopScope('));
-    expect(source, contains('canPop: !isForce'));
+    // 产品铁律：服务端强制更新标志不得在客户端产生任何阻断形态。
+    // 阻断弹窗相关代码必须整体缺席（2026-10-01 review R30 后移除）。
+    expect(source, isNot(contains('_showForcedUpdateDialog')));
+    expect(source, isNot(contains('PopScope(')));
+    expect(source, isNot(contains('barrierDismissible: false')));
+    expect(source, isNot(contains('canPop: false')));
+  });
+
+  test('optional update stays silent on launch and keeps the manual detail route', () {
+    final source = File(
+      'lib/features/update/update_checker.dart',
+    ).readAsStringSync();
+    expect(source, isNot(contains("label: '查看'")));
+    expect(source, contains('if (manual)'));
+    expect(source, contains("context.push('/update')"));
   });
 }

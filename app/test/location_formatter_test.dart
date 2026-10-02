@@ -49,4 +49,60 @@ void main() {
       );
     });
   });
+
+  group('parseCourseLocation', () {
+    test('splits arrow-separated campus>>building>>room', () {
+      final parts = parseCourseLocation('扬子津东校区>>文津楼>>N204');
+      expect(parts.campus, '扬子津东校区');
+      expect(parts.building, '文津楼');
+      expect(parts.room, 'N204');
+      expect(parts.formatted, '文津楼N204 · 扬子津东校区');
+    });
+
+    test('splits concatenated campus+building+room', () {
+      final parts = parseCourseLocation('@扬子津东校区文经楼N202');
+      expect(parts.campus, '扬子津东校区');
+      expect(parts.building, '文经楼');
+      expect(parts.room, 'N202');
+    });
+
+    test('splits building+room without campus', () {
+      final parts = parseCourseLocation('文津楼101');
+      expect(parts.campus, '');
+      expect(parts.building, '文津楼');
+      expect(parts.room, '101');
+    });
+
+    test('room-only location keeps room prominent', () {
+      final parts = parseCourseLocation('E206');
+      expect(parts.room, 'E206');
+      expect(parts.building, '');
+    });
+
+    test('building-only location has no room', () {
+      final parts = parseCourseLocation('瘦西湖校区>>昭文馆');
+      expect(parts.campus, '瘦西湖校区');
+      expect(parts.building, '昭文馆');
+      expect(parts.room, '');
+    });
+
+    test('already-formatted string with campus suffix parses structurally', () {
+      // 分享/网页端写回的展示格式：「文津楼N204 · 扬子津东校区」
+      final parts = parseCourseLocation('文津楼N204 · 扬子津东校区');
+      expect(parts.campus, '扬子津东校区');
+      expect(parts.building, '文津楼');
+      expect(parts.room, 'N204');
+    });
+
+    test('free-form location falls back to formatted string', () {
+      final parts = parseCourseLocation('线上课程');
+      expect(parts.room, '');
+      expect(parts.building, '');
+      expect(parts.formatted, '线上课程');
+    });
+
+    test('empty input stays empty', () {
+      expect(parseCourseLocation('  ').isEmpty, isTrue);
+    });
+  });
 }

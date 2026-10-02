@@ -35,10 +35,31 @@ void main() {
     expect(await PrivacyConsent().hasConsented(), isTrue);
   });
 
+  test('v3 已同意用户升级到新增麦克风权限的 v4 时需重新同意', () async {
+    SharedPreferences.setMockInitialValues({
+      'privacy_consented_at_v3': 1700000000000,
+    });
+
+    expect(await PrivacyConsent().hasConsented(), isFalse);
+    await PrivacyConsent().agree();
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('privacy_consented_at_v4'), isTrue);
+  });
+
   test('privacyGateProvider 读取同意状态', () async {
     SharedPreferences.setMockInitialValues({});
     final container = ProviderContainer();
     addTearDown(container.dispose);
     expect(await container.read(privacyGateProvider.future), isFalse);
+  });
+
+  test('服务器下发的新政策使用独立同意记录', () async {
+    SharedPreferences.setMockInitialValues({});
+    final consent = PrivacyConsent();
+    await consent.agree();
+    expect(await consent.hasConsented(), isTrue);
+    expect(await consent.hasConsented(policyId: 'privacy-v5'), isFalse);
+    await consent.agree(policyId: 'privacy-v5');
+    expect(await consent.hasConsented(policyId: 'privacy-v5'), isTrue);
   });
 }

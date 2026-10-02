@@ -7,7 +7,7 @@
 ///   的同一规律前移半小时推得，⚠️ 待秋冬季样本核对。
 ///
 /// 结构：12 小节，下标 0 = 第 1 小节。大节 = 相邻小节（1-2、3-4，最多 6-8 三节连排）。
-/// 后续会做成学期级可配置（settings 表存 JSON），当前先内置常量。
+/// 自定义作息由 SectionTimeConfig 管理，此处仅保存默认模板。
 class SectionTimes {
   SectionTimes._();
 
@@ -44,12 +44,16 @@ class SectionTimes {
     ('16:45', '17:30'),
     ('17:40', '18:25'),
     ('19:00', '19:45'),
-    ('19:50', '20:35'),
+    ('19:55', '20:40'),
   ];
 
   /// 按月份取当前适用的一套（5-9 月视为春夏季）
   static List<(String, String)> get current {
-    final month = DateTime.now().month;
+    return forDate(DateTime.now());
+  }
+
+  static List<(String, String)> forDate(DateTime date) {
+    final month = date.month;
     return (month >= 5 && month <= 9) ? springSummer : autumnWinter;
   }
 

@@ -4,16 +4,22 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/settings/schedule_display_settings.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/week_calculator.dart';
 import '../../../core/widgets/liquid_glass.dart';
 import '../../update/update_checker.dart';
+import '../../ai_schedule/presentation/event_detail_sheet.dart';
 import '../../share/data/share_repository.dart';
 import '../../sync/data/sync_repository.dart';
+import '../data/event_repository.dart';
 import '../data/schedule_repository.dart';
 import 'course_detail_sheet.dart';
 import 'day_view.dart';
 import 'week_view.dart';
+import 'schedule_display_sheet.dart';
+import '../../../core/remote_features/remote_feature_manifest.dart';
+import '../../../core/remote_features/remote_feature_widgets.dart';
 
 /// 周视图主页：横向滑动切周，顶部显示"第X周"+日期范围。
 class SchedulePage extends ConsumerStatefulWidget {
@@ -96,6 +102,11 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       appBar: buildGlassAppBar(
         context: context,
         title: const Text('邗上课表'),
+        actions: const [
+          RemoteFeatureMenuButton(
+            placement: RemoteFeaturePlacement.scheduleTools,
+          ),
+        ],
       ),
       body: SafeArea(
         bottom: false,
@@ -136,6 +147,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   Widget _buildScheduleScaffold(BuildContext context, Semester semester) {
     final currentWeek = ref.watch(currentWeekProvider);
     final entries = ref.watch(courseEntriesProvider).valueOrNull ?? [];
+    final events = ref.watch(eventsProvider).valueOrNull ?? [];
+    final display = ref.watch(scheduleDisplayOptionsProvider).valueOrNull ??
+        const ScheduleDisplayOptions();
     final motionDuration = _motionDuration(
       context,
       const Duration(milliseconds: 220),
@@ -171,8 +185,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                   Text(
                     _daySubtitle(semester, _displayedDate),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                   ),
                 ],
               )
@@ -200,12 +214,15 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                   Text(
                     _weekRangeText(semester, _displayedWeek),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
                   ),
                 ],
               ),
         actions: [
+          const RemoteFeatureMenuButton(
+            placement: RemoteFeaturePlacement.scheduleTools,
+          ),
           // 周/日视图切换
           IconButton(
             icon: AnimatedSwitcher(
@@ -257,14 +274,14 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: '学期设置',
-            onPressed: () => context.push('/settings/semester'),
+            tooltip: '课表显示与学期设置',
+            onPressed: () => showScheduleDisplaySheet(context),
           ),
         ],
       ),
       body: SafeArea(
         bottom: false,
-        child: entries.isEmpty
+        child: entries.isEmpty && events.isEmpty
             ? _buildNoCourse(context)
             : AnimatedSwitcher(
                 duration: _motionDuration(
@@ -285,8 +302,11 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                           semester: semester,
                           date: semester.startDate.add(Duration(days: index)),
                           entries: entries,
+                          events: events,
                           onCourseTap: (entry) =>
                               _showCourseDetail(context, entry),
+                          onEventTap: (event) =>
+                              showEventDetailSheet(context, event),
                         ),
                       )
                     : PageView.builder(
@@ -296,11 +316,16 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                         onPageChanged: (index) =>
                             setState(() => _displayedWeek = index + 1),
                         itemBuilder: (context, index) => WeekView(
+                          showWeekends: display.showWeekends,
+                          trimEmptyEvenings: display.trimEmptyEvenings,
                           semester: semester,
                           week: index + 1,
                           entries: entries,
+                          events: events,
                           onCourseTap: (entry) =>
                               _showCourseDetail(context, entry),
+                          onEventTap: (event) =>
+                              showEventDetailSheet(context, event),
                         ),
                       ),
               ),
@@ -331,9 +356,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
       // Snapshotting from the server deliberately happens only after the
       // latest local edits have gone through the existing authenticated sync.
       await ref.read(syncRepositoryProvider).sync();
-      final code = await ref
-          .read(shareRepositoryProvider)
-          .create(semester.uuid);
+      final code =
+          await ref.read(shareRepositoryProvider).create(semester.uuid);
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -347,7 +371,9 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               const SizedBox(height: 16),
               SelectableText(
                 code.code,
-                style: Theme.of(dialogContext).textTheme.headlineMedium
+                style: Theme.of(dialogContext)
+                    .textTheme
+                    .headlineMedium
                     ?.copyWith(letterSpacing: 4, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
@@ -461,8 +487,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
 
   Duration _motionDuration(BuildContext context, Duration duration) =>
       (MediaQuery.maybeOf(context)?.disableAnimations ?? false)
-      ? Duration.zero
-      : duration;
+          ? Duration.zero
+          : duration;
 
   Future<void> _confirmDelete(BuildContext context, CourseEntry entry) async {
     final confirmed = await showDialog<bool>(

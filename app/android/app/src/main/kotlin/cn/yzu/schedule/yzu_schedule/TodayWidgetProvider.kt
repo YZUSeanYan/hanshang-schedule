@@ -36,7 +36,7 @@ class TodayWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             widgetId: Int
         ) {
-            val title = WidgetData.getString(context, "today_title", "邗上课表")
+            val title = WidgetData.displayTitle(context, "today_title", "邗上课表")
             val items = WidgetData.getJsonArray(context, "today_courses_json")
 
             val views = RemoteViews(context.packageName, R.layout.today_widget)

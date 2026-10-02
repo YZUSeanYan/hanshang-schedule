@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +11,12 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/platform/platform_capabilities.dart';
+
+/// 非强制更新的轻提示状态：冷启动检查发现新版本时写入，HomeShell 渲染成
+/// 底部小条。用户「忽略」后清空并记住该版本不再打扰。
+///
+/// 定义在这里（而不是 widget 里）是为了避免 widget 与本文件互相 import。
+final updateNoticeProvider = StateProvider<Map<String, dynamic>?>((ref) => null);
 
 final _sha256Pattern = RegExp(r'^[0-9a-fA-F]{64}$');
 
@@ -42,16 +51,22 @@ Uri? trustedApkUri(Map<String, dynamic> data, {String? apiBaseUrl}) {
 }
 
 /// 版本更新检查服务（设计文档 P0-9）：
-/// 启动时请求 /api/version/latest，有新版本弹窗提示，可"忽略此版本"。
+/// 启动时请求 /api/version/latest。普通可选更新只静默缓存，用户可从系统推送
+/// 或“我的 → 检查更新”进入详情。
+///
+/// 产品铁律（review R30）：**任何构建都不执行服务端的强制更新标志**——老用户
+/// 的升级路径必须零弹窗，服务端 is_force_update 不能突破这一约束；更新引导
+/// 只走非模态提示条与版本定向推送。
 class UpdateService {
   UpdateService(this._ref);
 
   final Ref _ref;
 
   static const _kIgnoredVersionCode = 'ignored_version_code';
+  static const _kCachedUpdate = 'cached_update_v1';
   static bool _autoChecked = false; // 每次冷启动只自动检查一次
 
-  /// 启动自动检查：静默失败，有更新才打扰用户。
+  /// 启动自动检查：普通更新和失败都保持静默。
   Future<void> checkOnLaunch(BuildContext context) async {
     if (!PlatformCapabilities.usesApkUpdates(defaultTargetPlatform)) return;
     if (_autoChecked) return;
@@ -85,8 +100,35 @@ class UpdateService {
     }
   }
 
-  /// 返回是否有更新弹出了对话框。
+  /// 返回是否检测到需要展示的更新。
   Future<bool> _check(BuildContext context, {required bool manual}) async {
+    final data = await latestUpdate();
+    if (data == null) return false;
+    final latestCode = data['version_code'] as int? ?? 0;
+    final apkUri = trustedApkUri(data);
+    if (apkUri == null) {
+      throw const FormatException('服务器返回了不可信的更新地址或无效校验值');
+    }
+
+    // 用户已忽略过该版本 → 自动检查不再打扰；手动检查仍展示详情。
+    if (!manual) {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getInt(_kIgnoredVersionCode) == latestCode) return false;
+    }
+    if (!context.mounted) return false;
+    if (manual) {
+      await context.push('/update');
+    } else {
+      // 自动检查：既不能有全屏弹窗挡课表，也不能毫无提醒（用户明确要求）。
+      // 改投底部轻提示条——非模态、一行、可忽略。已被忽略的版本在上面
+      // 提前 return 了，不会走到这里。
+      _ref.read(updateNoticeProvider.notifier).state = data;
+    }
+    return true;
+  }
+
+  /// Fetch and cache a validated update record for the dedicated detail page.
+  Future<Map<String, dynamic>?> latestUpdate() async {
     final info = await PackageInfo.fromPlatform();
     final currentCode = int.tryParse(info.buildNumber) ?? 0;
 
@@ -97,30 +139,64 @@ class UpdateService {
           queryParameters: {'current_code': currentCode},
         );
     final data = resp.data?['data'] as Map<String, dynamic>? ?? {};
-    if (data['has_update'] != true) return false;
-
-    final latestCode = data['version_code'] as int? ?? 0;
-    final isForce = data['is_force_update'] == true;
-    final apkUri = _trustedApkUri(data);
-    if (apkUri == null) {
+    if (data['has_update'] != true) {
+      // 服务端权威判定"已是最新"：清掉可能过期的本地缓存（review R31），
+      // 详情页不能再拿旧缓存冒充可更新记录。
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kCachedUpdate);
+      return null;
+    }
+    if (trustedApkUri(data) == null) {
       throw const FormatException('服务器返回了不可信的更新地址或无效校验值');
     }
+    final safe = <String, dynamic>{
+      'has_update': true,
+      'version_name': data['version_name']?.toString() ?? '',
+      'version_code': data['version_code'],
+      'apk_url': data['apk_url']?.toString() ?? '',
+      'sha256': data['sha256']?.toString() ?? '',
+      'release_notes': data['release_notes']?.toString() ?? '',
+      'is_force_update': data['is_force_update'] == true,
+    };
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kCachedUpdate, jsonEncode(safe));
+    return safe;
+  }
 
-    // 非强制更新且用户已忽略过该版本 → 自动检查不再打扰；手动检查仍提示
-    if (!isForce && !manual) {
-      final prefs = await SharedPreferences.getInstance();
-      if (prefs.getInt(_kIgnoredVersionCode) == latestCode) return false;
+  /// 本地缓存的更新记录（review R31）：只允许展示**严格比当前新**的版本。
+  /// 升级后缓存里的旧版本记录一律视为失效并清除。
+  Future<Map<String, dynamic>?> cachedUpdate() async {
+    final raw = (await SharedPreferences.getInstance()).getString(_kCachedUpdate);
+    if (raw == null) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic> || trustedApkUri(decoded) == null) {
+        return null;
+      }
+      final info = await PackageInfo.fromPlatform();
+      final currentCode = int.tryParse(info.buildNumber) ?? 0;
+      final cachedCode = decoded['version_code'];
+      if (cachedCode is! int || cachedCode <= currentCode) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_kCachedUpdate);
+        return null;
+      }
+      return decoded;
+    } catch (_) {
+      // Ignore malformed local state and refresh from the signed API record.
     }
+    return null;
+  }
 
-    if (!context.mounted) return false;
-    await _showUpdateDialog(
-      context,
-      data,
-      isForce: isForce,
-      latestCode: latestCode,
-      apkUri: apkUri,
-    );
-    return true;
+  Future<void> ignoreVersion(int versionCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kIgnoredVersionCode, versionCode);
+  }
+
+  Future<bool> download(Map<String, dynamic> data) async {
+    final uri = trustedApkUri(data);
+    if (uri == null) return false;
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _openAppleDistribution(BuildContext context) async {
@@ -138,67 +214,6 @@ class UpdateService {
         const SnackBar(content: Text('iOS 版本通过 App Store 或 TestFlight 更新')),
       );
     }
-  }
-
-  Uri? _trustedApkUri(Map<String, dynamic> data) {
-    return trustedApkUri(data);
-  }
-
-  Future<void> _showUpdateDialog(
-    BuildContext context,
-    Map<String, dynamic> data, {
-    required bool isForce,
-    required int latestCode,
-    required Uri apkUri,
-  }) {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: !isForce, // 强制更新不允许点空白关闭
-      builder: (dialogContext) => PopScope(
-        canPop: !isForce,
-        child: AlertDialog(
-          title: Text('发现新版本 ${data['version_name']}'),
-          content: Text(
-            (data['release_notes'] as String?)?.isNotEmpty == true
-                ? data['release_notes'] as String
-                : '修复已知问题，建议更新。',
-          ),
-          actions: [
-            if (!isForce)
-              TextButton(
-                onPressed: () async {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setInt(_kIgnoredVersionCode, latestCode);
-                  if (dialogContext.mounted) Navigator.of(dialogContext).pop();
-                },
-                child: const Text('忽略此版本'),
-              ),
-            if (!isForce)
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('下次再说'),
-              ),
-            FilledButton(
-              onPressed: () async {
-                final opened = await launchUrl(
-                  apkUri,
-                  mode: LaunchMode.externalApplication,
-                );
-                if (!opened && dialogContext.mounted) {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    const SnackBar(content: Text('无法打开下载页面，请检查浏览器设置')),
-                  );
-                }
-                if (opened && !isForce && dialogContext.mounted) {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              child: const Text('立即更新'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

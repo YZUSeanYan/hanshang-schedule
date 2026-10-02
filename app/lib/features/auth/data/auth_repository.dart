@@ -3,20 +3,28 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/database/app_database.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../../core/notifications/push_service.dart';
+import '../../schedule/data/schedule_repository.dart';
 
 /// 当前登录用户
 class AuthUser {
-  const AuthUser(
-      {required this.id, required this.username, required this.email});
+  const AuthUser({
+    required this.id,
+    required this.username,
+    required this.email,
+    this.avatarMedia = '',
+  });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         id: json['id'] as int,
         username: json['username'] as String,
         email: json['email'] as String,
+        avatarMedia: json['avatar_media'] as String? ?? '',
       );
 
   factory AuthUser.offlineFallback() => const AuthUser(
@@ -29,10 +37,21 @@ class AuthUser {
   final String username;
   final String email;
 
+  /// 头像文件名（服务端 uploads/avatars/ 下），空=首字母默认头像
+  final String avatarMedia;
+
+  AuthUser copyWith({String? username, String? avatarMedia}) => AuthUser(
+        id: id,
+        username: username ?? this.username,
+        email: email,
+        avatarMedia: avatarMedia ?? this.avatarMedia,
+      );
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'username': username,
         'email': email,
+        'avatar_media': avatarMedia,
       };
 }
 
@@ -79,6 +98,7 @@ class AuthRepository {
     final data = resp.data!['data'] as Map<String, dynamic>;
     await _saveTokens(data);
     final user = AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+    await _ensureLocalDataIsolated(user.id);
     await _cacheUser(user);
     return user;
   }
@@ -92,8 +112,54 @@ class AuthRepository {
     final data = resp.data!['data'] as Map<String, dynamic>;
     await _saveTokens(data);
     final user = AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+    await _ensureLocalDataIsolated(user.id);
     await _cacheUser(user);
     return user;
+  }
+
+  /// 账号数据隔离（同设备切换账号的防串号）。
+  ///
+  /// 本地数据库是全局单库（按设备不按账号）：若当前登录账号与上次记录的
+  /// 账号不同，必须先清空本地全部业务表 + 重置同步游标，再让新账号从
+  /// 云端全量 pull。否则旧账号的本地数据会显示给新账号，且新账号的删除
+  /// 操作会以墓碑推送到旧账号云端（数据安全 P0）。
+  Future<void> _ensureLocalDataIsolated(int newUserId) async {
+    final prefs = await SharedPreferences.getInstance();
+    const key = 'last_logged_in_user_id';
+    final previous = prefs.getInt(key);
+    if (previous == newUserId) return;
+    await _wipeLocalDataForAccountSwitch();
+    await prefs.setInt(key, newUserId);
+  }
+
+  /// 清空本地全部业务数据（账号切换时调用，调用方负责先确认账号已变更）。
+  ///
+  /// 连带删除 pendingDeletions 墓碑队列：旧账号的墓碑绝不能随新账号的
+  /// 首次同步推送到云端（那会误删旧账号云端数据）。同步游标清零，让新
+  /// 账号从 0 全量拉取自己的数据。
+  ///
+  /// 同时写入新的 session_epoch（review R01）：所有在途同步在各自提交点
+  /// 核对代次，对不上立即放弃——登录清库无法阻止已经挂起的网络响应，
+  /// 代次校验才能保证旧账号的迟到数据绝不落进新账号的库。
+  Future<void> _wipeLocalDataForAccountSwitch() async {
+    final db = _ref.read(databaseProvider);
+    await db.transaction(() async {
+      await db.delete(db.localEvents).go();
+      await db.delete(db.schedules).go();
+      await db.delete(db.courses).go();
+      await db.delete(db.semesters).go();
+      await db.delete(db.pendingDeletions).go();
+      await db.delete(db.settingsEntries).go();
+      await db.delete(db.syncStates).go();
+      await db.delete(db.scheduleOverrides).go(); // v6 新表，切号必须一并清（review R02）
+      // 会话代次：旧同步的 _capturedEpoch 与之不同即失效
+      await db.into(db.settingsEntries).insert(
+            SettingsEntriesCompanion.insert(
+              key: 'session_epoch',
+              value: DateTime.now().millisecondsSinceEpoch.toString(),
+            ),
+          );
+    });
   }
 
   /// 发送重置密码验证码
@@ -113,6 +179,33 @@ class AuthRepository {
 
   Future<void> logout() async {
     await _storage.clear();
+  }
+
+  /// 修改用户名（昵称），返回更新后的用户
+  Future<AuthUser> updateUsername(String username) async {
+    final resp = await _dio.patch<Map<String, dynamic>>(
+      '/api/user/profile',
+      data: {'username': username},
+    );
+    final user = AuthUser.fromJson(resp.data!['data'] as Map<String, dynamic>);
+    await _cacheUser(user);
+    return user;
+  }
+
+  /// 上传头像（图片字节），返回更新后的头像文件名
+  Future<String> uploadAvatar(List<int> bytes, String filename) async {
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    final resp = await _dio.post<Map<String, dynamic>>(
+      '/api/user/avatar',
+      data: form,
+    );
+    final name =
+        (resp.data!['data'] as Map<String, dynamic>)['avatar_media'] as String;
+    final refreshed = await _fetchProfile();
+    await _cacheUser(refreshed);
+    return name;
   }
 
   Future<AuthUser> _fetchProfile() async {
@@ -204,6 +297,37 @@ class AuthState extends AsyncNotifier<AuthUser?> {
     } finally {
       await ref.read(authRepositoryProvider).logout();
       state = const AsyncData(null);
+    }
+  }
+
+  /// 修改用户名（昵称）。返回 null 表示成功，否则为错误提示。
+  Future<String?> updateUsername(String username) async {
+    try {
+      final user =
+          await ref.read(authRepositoryProvider).updateUsername(username);
+      state = AsyncData(user);
+      return null;
+    } on DioException catch (e) {
+      return apiErrorMessage(e, fallback: '修改失败');
+    } catch (_) {
+      return '修改失败，请稍后重试';
+    }
+  }
+
+  /// 上传头像。返回 null 表示成功。
+  Future<String?> updateAvatar(List<int> bytes, String filename) async {
+    final current = state.valueOrNull;
+    try {
+      final name =
+          await ref.read(authRepositoryProvider).uploadAvatar(bytes, filename);
+      if (current != null) {
+        state = AsyncData(current.copyWith(avatarMedia: name));
+      }
+      return null;
+    } on DioException catch (e) {
+      return apiErrorMessage(e, fallback: '头像上传失败');
+    } catch (_) {
+      return '头像上传失败，请稍后重试';
     }
   }
 }

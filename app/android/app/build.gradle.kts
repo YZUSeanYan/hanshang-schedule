@@ -24,6 +24,7 @@ if (releaseBuildRequested && !releaseSigningConfigured) {
 }
 
 android {
+    testBuildType = "release"
     namespace = "cn.yzu.schedule.yzu_schedule"
     // Android 16（API 36）实时通知（灵动岛）API 需要编译 SDK 36
     compileSdk = 36
@@ -45,6 +46,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -100,7 +102,7 @@ flutter {
 }
 
 dependencies {
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-    // 穿山甲（Pangle）广告 SDK：激励视频「看广告支持作者」。版本以官方接入中心披露为准。
-    implementation("com.pangle.cn:ads-sdk-pro:7.7.1.4")
 }

@@ -36,7 +36,7 @@ class TwoDayWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             widgetId: Int
         ) {
-            val title = WidgetData.getString(context, "twoday_title", "近日课程")
+            val title = WidgetData.displayTitle(context, "twoday_title", "近日课程")
             val data = WidgetData.getJsonObject(context, "twoday_json")
 
             val views = RemoteViews(context.packageName, R.layout.twoday_widget)

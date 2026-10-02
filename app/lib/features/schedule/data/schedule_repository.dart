@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -52,6 +53,7 @@ class SlotDraft {
 class CourseDraft {
   const CourseDraft({
     required this.name,
+    this.shortName = '',
     this.teacher = '',
     this.color,
     this.note = '',
@@ -59,6 +61,7 @@ class CourseDraft {
   });
 
   final String name;
+  final String shortName;
   final String teacher;
   final int? color;
   final String note;
@@ -188,6 +191,26 @@ class ScheduleRepository {
         _db.courses,
       )..where((c) => c.semesterId.equals(id))).go();
       await (_db.delete(_db.semesters)..where((s) => s.id.equals(id))).go();
+
+      // 删掉的若是当前学期，必须立刻补选一个：is_current 一旦全是 false，
+      // 课表页/课前提醒/小组件都会取不到学期而整页空白。取最近更新的一个，
+      // 与网页版 currentSemester 的回退规则一致。
+      if (semester.isCurrent) {
+        final rest = await (_db.select(_db.semesters)
+              ..orderBy([
+                (s) => OrderingTerm.desc(s.updatedAt),
+                (s) => OrderingTerm.desc(s.id),
+              ])
+              ..limit(1))
+            .getSingleOrNull();
+        if (rest != null) {
+          await (_db.update(_db.semesters)..where((s) => s.id.equals(rest.id)))
+              .write(SemestersCompanion(
+            isCurrent: const Value(true),
+            updatedAt: Value(DateTime.now()),
+          ));
+        }
+      }
     });
   }
 
@@ -222,26 +245,41 @@ class ScheduleRepository {
 
   // ---------- 课程 ----------
 
-  /// 监听某学期的全部课程（含时间段）
+  /// 监听某学期的全部课程（含时间段）。
+  ///
+  /// 必须同时 watch courses 和 schedules（review R08）：只 watch courses 时，
+  /// "仅修改课程时段"（updateSlot/deleteSlot、远端同步时段）不会触发课程流
+  /// 重算，UI/提醒/自动同步会一直沿用旧时段。
   Stream<List<CourseEntry>> watchCourseEntries(int semesterId) {
-    final query = _db.select(_db.courses)
-      ..where((c) => c.semesterId.equals(semesterId));
-    return query.watch().asyncMap((courseList) async {
-      final entries = <CourseEntry>[];
-      for (final course in courseList) {
-        final slots = await (_db.select(
-          _db.schedules,
-        )..where((s) => s.courseId.equals(course.id))).get();
-        entries.add(CourseEntry(course: course, slots: slots));
-      }
-      return entries;
-    });
+    final courseStream = (_db.select(_db.courses)
+          ..where((c) => c.semesterId.equals(semesterId)))
+        .watch();
+    final slotStream = (_db.select(_db.schedules).join([
+      innerJoin(_db.courses, _db.courses.id.equalsExp(_db.schedules.courseId)),
+    ])..where(_db.courses.semesterId.equals(semesterId)))
+        .watch()
+        .map((rows) => [for (final row in rows) row.readTable(_db.schedules)]);
+    return _combineLatest2<List<Course>, List<Schedule>, List<CourseEntry>>(
+      courseStream,
+      slotStream,
+      (courses, slots) {
+        final byCourse = <int, List<Schedule>>{};
+        for (final slot in slots) {
+          byCourse.putIfAbsent(slot.courseId, () => []).add(slot);
+        }
+        return [
+          for (final course in courses)
+            CourseEntry(course: course, slots: byCourse[course.id] ?? const []),
+        ];
+      },
+    );
   }
 
   /// 新增课程（含时间段）。颜色缺省按课名哈希分配马卡龙色。
   Future<int> createCourse({
     required int semesterId,
     required String name,
+    String shortName = '',
     String teacher = '',
     int? color,
     String note = '',
@@ -252,6 +290,7 @@ class ScheduleRepository {
       () => _createCourseRow(
         semesterId: semesterId,
         name: name,
+        shortName: shortName,
         teacher: teacher,
         color: color,
         note: note,
@@ -271,6 +310,7 @@ class ScheduleRepository {
         await _createCourseRow(
           semesterId: semesterId,
           name: course.name,
+          shortName: course.shortName,
           teacher: course.teacher,
           color: course.color,
           note: course.note,
@@ -285,6 +325,7 @@ class ScheduleRepository {
   Future<int> _createCourseRow({
     required int semesterId,
     required String name,
+    String shortName = '',
     required String teacher,
     required int? color,
     required String note,
@@ -298,6 +339,7 @@ class ScheduleRepository {
             uuid: Value(_uuidGen.v4()),
             semesterId: semesterId,
             name: name,
+            shortName: Value(shortName),
             teacher: Value(teacher),
             color: color ?? CourseColors.forCourseName(name).toARGB32(),
             note: Value(note),
@@ -312,6 +354,7 @@ class ScheduleRepository {
   Future<void> updateCourse({
     required int courseId,
     required String name,
+    String? shortName,
     String teacher = '',
     int? color,
     String note = '',
@@ -324,6 +367,8 @@ class ScheduleRepository {
       )..where((c) => c.id.equals(courseId))).write(
         CoursesCompanion(
           name: Value(name),
+          shortName:
+              shortName != null ? Value(shortName) : const Value.absent(),
           teacher: Value(teacher),
           note: Value(note),
           updatedAt: Value(now),
@@ -357,6 +402,35 @@ class ScheduleRepository {
         _db.schedules,
       )..where((s) => s.courseId.equals(courseId))).go();
       await (_db.delete(_db.courses)..where((c) => c.id.equals(courseId))).go();
+    });
+  }
+
+  /// 原地更新一条时间段（AI 调课用）：刷新 updatedAt 让 LWW 同步到其他设备。
+  Future<void> updateSlot(Schedule slot) async {
+    await _db
+        .update(_db.schedules)
+        .replace(slot.copyWith(updatedAt: DateTime.now()));
+  }
+
+  /// 新增一条时间段（AI 单次调课的"目标时段"用，review R24）：
+  /// 生成 uuid 并入同步，不触碰该课程的其他时段。
+  Future<void> createSlot({
+    required int courseId,
+    required SlotDraft draft,
+  }) async {
+    await _insertSlots(courseId, [draft], DateTime.now());
+  }
+
+  /// 删除一条时间段并记墓碑（AI 取消某节课用）。
+  Future<void> deleteSlot(Schedule slot) async {
+    await _db.transaction(() async {
+      final course = await (_db.select(
+        _db.courses,
+      )..where((c) => c.id.equals(slot.courseId))).getSingleOrNull();
+      await _recordDeletion('schedule', slot.uuid, course?.uuid ?? '');
+      await (_db.delete(
+        _db.schedules,
+      )..where((s) => s.id.equals(slot.id))).go();
     });
   }
 
@@ -433,6 +507,66 @@ final courseEntriesProvider = StreamProvider<List<CourseEntry>>((ref) {
   if (semester == null) return Stream.value(const <CourseEntry>[]);
   return ref.read(scheduleRepositoryProvider).watchCourseEntries(semester.id);
 });
+
+/// 轻量 combineLatest：任一输入流发出新值且两路都已有值时就发出组合结果。
+/// drift 的 watch() 是广播流，两路订阅互不干扰。
+Stream<R> _combineLatest2<A, B, R>(
+  Stream<A> streamA,
+  Stream<B> streamB,
+  R Function(A, B) combine,
+) {
+  late StreamController<R> controller;
+  StreamSubscription<A>? subA;
+  StreamSubscription<B>? subB;
+  A? latestA;
+  B? latestB;
+  var hasA = false;
+  var hasB = false;
+  var emitting = false;
+
+  void emit() {
+    if (!hasA || !hasB || emitting) return;
+    emitting = true;
+    controller.add(combine(latestA as A, latestB as B));
+    emitting = false;
+  }
+
+  controller = StreamController<R>(
+    onListen: () {
+      subA = streamA.listen(
+        (value) {
+          latestA = value;
+          hasA = true;
+          emit();
+        },
+        onError: controller.addError,
+        onDone: () => subB == null ? controller.close() : null,
+      );
+      subB = streamB.listen(
+        (value) {
+          latestB = value;
+          hasB = true;
+          emit();
+        },
+        onError: controller.addError,
+        onDone: () => subA == null ? controller.close() : null,
+      );
+    },
+    onPause: () {
+      subA?.pause();
+      subB?.pause();
+    },
+    onResume: () {
+      subA?.resume();
+      subB?.resume();
+    },
+    onCancel: () async {
+      await subA?.cancel();
+      await subB?.cancel();
+    },
+  );
+  return controller.stream;
+}
 
 /// 时间段在周次 [week] 是否上课（解析 customWeeks JSON 后走统一判断）
 bool slotOccursInWeek(Schedule slot, int week) {

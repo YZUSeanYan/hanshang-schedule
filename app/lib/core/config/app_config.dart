@@ -34,6 +34,13 @@ class AppConfig {
     defaultValue: '',
   );
 
+  /// Dedicated Ed25519 public key for the next-generation signed feature
+  /// manifest. Empty by default so unfinished builds fail closed.
+  static const String remoteFeaturePublicKey = String.fromEnvironment(
+    'REMOTE_FEATURE_PUBLIC_KEY_B64',
+    defaultValue: '',
+  );
+
   static Uri? trustedIosAppStoreUri([String value = iosAppStoreUrl]) {
     final uri = Uri.tryParse(value);
     if (uri == null ||

@@ -1,45 +1,52 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# ---- Flutter / Dart ----
 .dart_tool/
-.flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
-/build/
-/coverage/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.dill
+*.lock.bak
 
-# Symbolication related
-app.*.symbols
+# ---- Android ----
+android/.gradle/
+android/.kotlin/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/local.properties
+android/key.properties
+android/app/upload-keystore.jks
+*.jks
+*.keystore
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+plugins/*/android/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 
-# Obfuscation related
-app.*.map.json
+# ---- 本地原生动态库（构建期从 pub 缓存提取，不入库）----
+sqlite3.dll
+sqlite3.so
+sqlite3.dylib
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# ---- IDE / OS ----
+.idea/
+*.iml
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- 构建与临时产物 ----
+*.apk
+*.aab
+*.ipa
+*.hprof
+.kotlin/
+local.properties
+
+# ---- 第三方插件自带示例（非本项目代码）----
+plugins/*/example/
+
+# ---- 其他工程目录（非本仓库内容）----
+/cro-test/
+/iosport-1032/

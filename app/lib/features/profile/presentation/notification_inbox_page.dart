@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/notifications/push_service.dart';
 
@@ -11,20 +12,33 @@ class NotificationInboxPage extends ConsumerStatefulWidget {
       _NotificationInboxPageState();
 }
 
-class _NotificationInboxPageState extends ConsumerState<NotificationInboxPage> {
+class _NotificationInboxPageState extends ConsumerState<NotificationInboxPage>
+    with WidgetsBindingObserver {
   late Future<Map<String, dynamic>> _future;
   bool _markingAll = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _future = ref.read(pushServiceProvider).inbox();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _reload();
   }
 
   Future<void> _reload() async {
     final next = ref.read(pushServiceProvider).inbox();
     if (!mounted) return;
-    setState(() => _future = next);
+    setState(() { _future = next; });
     try {
       await next;
     } catch (_) {
@@ -92,92 +106,108 @@ class _NotificationInboxPageState extends ConsumerState<NotificationInboxPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('通知中心'),
-      actions: [
-        TextButton(
-          onPressed: _markingAll ? null : _markAllRead,
-          child: Text(_markingAll ? '处理中…' : '全部已读'),
-        ),
-        IconButton(
-          tooltip: '清空全部通知',
-          icon: const Icon(Icons.delete_sweep_outlined),
-          onPressed: _clearAll,
-        ),
-      ],
-    ),
-    body: FutureBuilder<Map<String, dynamic>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(
-            child: FilledButton.tonal(
-              onPressed: _reload,
-              child: const Text('重新加载'),
-            ),
-          );
-        }
-        final items = (snapshot.data?['items'] as List? ?? const [])
-            .cast<Map<String, dynamic>>();
-        if (items.isEmpty) return const Center(child: Text('暂无通知'));
-        return RefreshIndicator(
-          onRefresh: _reload,
-          child: ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              final unread = item['read_at'] == null;
-              return Card(
-                child: ListTile(
-                  leading: Icon(
-                    unread
-                        ? Icons.notifications_active
-                        : Icons.notifications_none,
-                  ),
-                  title: Text(item['title'] as String? ?? ''),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(item['body'] as String? ?? ''),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (unread) const Badge(),
-                      IconButton(
-                        tooltip: '删除这条通知',
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => _deleteItem(item),
-                      ),
-                    ],
-                  ),
-                  onTap: () async {
-                    if (unread) {
-                      try {
-                        await ref
-                            .read(pushServiceProvider)
-                            .markRead(item['id'] as int);
-                        await _reload();
-                      } catch (error) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('操作失败：$error')),
-                          );
+  Widget build(BuildContext context) {
+    ref.listen(notificationInboxRevisionProvider, (_, __) => _reload());
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('通知中心'),
+        actions: [
+          TextButton(
+            onPressed: _markingAll ? null : _markAllRead,
+            child: Text(_markingAll ? '处理中…' : '全部已读'),
+          ),
+          IconButton(
+            tooltip: '清空全部通知',
+            icon: const Icon(Icons.delete_sweep_outlined),
+            onPressed: _clearAll,
+          ),
+        ],
+      ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: FilledButton.tonal(
+                onPressed: _reload,
+                child: const Text('重新加载'),
+              ),
+            );
+          }
+          final items = (snapshot.data?['items'] as List? ?? const [])
+              .cast<Map<String, dynamic>>();
+          if (items.isEmpty) return const Center(child: Text('暂无通知'));
+          return RefreshIndicator(
+            onRefresh: _reload,
+            child: ListView.separated(
+              padding: const EdgeInsets.all(12),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                final unread = item['read_at'] == null;
+                return Card(
+                  child: ListTile(
+                    leading: Icon(
+                      unread
+                          ? Icons.notifications_active
+                          : Icons.notifications_none,
+                    ),
+                    title: Text(item['title'] as String? ?? ''),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(item['body'] as String? ?? ''),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (unread) const Badge(),
+                        IconButton(
+                          tooltip: '删除这条通知',
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => _deleteItem(item),
+                        ),
+                      ],
+                    ),
+                    onTap: () async {
+                      if (unread) {
+                        try {
+                          await ref
+                              .read(pushServiceProvider)
+                              .markRead(item['id'] as int);
+                          await _reload();
+                        } catch (error) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('操作失败：$error')),
+                            );
+                          }
                         }
                       }
-                    }
-                  },
-                ),
-              );
-            },
-          ),
-        );
-      },
-    ),
-  );
+                      if (!context.mounted) return;
+                      final data = item['data'];
+                      final type =
+                          data is Map ? data['type']?.toString() : null;
+                      final route =
+                          data is Map ? data['route']?.toString() : null;
+                      if (type == 'targeted_app_update' ||
+                          type == 'app_update') {
+                        await context.push('/update');
+                      } else if (type == 'shared_availability_invite' &&
+                          route == '/features/couple_schedule') {
+                        await context.push('/features/couple_schedule');
+                      }
+                    },
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

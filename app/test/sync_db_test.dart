@@ -156,6 +156,42 @@ void main() {
       expect(await db.select(db.semesters).get(), isEmpty);
       expect(await db.select(db.courses).get(), isEmpty);
     });
+
+    test('删除当前学期会自动补选一个，不会留下零个当前学期', () async {
+      final repo = ScheduleRepository(db);
+      final oldId = await repo.createSemester(
+        name: '2026春',
+        startMonday: DateTime(2026, 3, 2),
+      );
+      final currentId = await repo.createSemester(
+        name: '2026秋',
+        startMonday: DateTime(2026, 9, 7),
+      );
+      // createSemester 会把新建的设为当前，另一个自动让位
+      expect((await db.select(db.semesters).get()).where((s) => s.isCurrent).length, 1);
+
+      await repo.deleteSemester(currentId);
+
+      final rest = await db.select(db.semesters).get();
+      expect(rest.length, 1);
+      expect(rest.single.id, oldId);
+      expect(
+        rest.single.isCurrent,
+        isTrue,
+        reason: '删掉当前学期后必须补选剩下那个——否则课表页/课前提醒/小组件'
+            '全部取不到学期，整页空白（线上曾有 7 个账号处于该状态）',
+      );
+    });
+
+    test('删除唯一学期后没有学期可补，保持空表', () async {
+      final repo = ScheduleRepository(db);
+      final onlyId = await repo.createSemester(
+        name: '2026秋',
+        startMonday: DateTime(2026, 9, 7),
+      );
+      await repo.deleteSemester(onlyId);
+      expect(await db.select(db.semesters).get(), isEmpty);
+    });
   });
 
   group('当前学期不变量', () {

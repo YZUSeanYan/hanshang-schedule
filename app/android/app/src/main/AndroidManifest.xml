@@ -5,6 +5,15 @@
     <!-- 上课提醒：Android 13+ 通知权限 / 重启后重挂闹钟 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- AI 日程语音输入（2.0 新增；按住说话时申请，privacy-v4 已披露） -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- 上课提醒按点送达：Android 12+ 声明,Android 14+ 需在系统设置中授权
+         「闹钟和提醒」;未授权时自动降级为不精确闹钟(可能延迟几分钟)。 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- 文件导入使用 ACTION_OPEN_DOCUMENT 的一次性 URI 授权。部分第三方 SDK
+         仍声明旧存储权限，必须在最终合并清单中显式移除。 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
     <!-- 2026-09-02 合规：手表 BLE 功能未发布，移除蓝牙/定位权限声明，
          与隐私政策「不索取定位权限」保持一致；功能上线时再补回。 -->
     <application
@@ -41,7 +50,7 @@
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
-        <!-- 上课提醒：重启后重挂闹钟 / 闹钟到点发通知（App 未启动时） -->
+        <!-- 上课提醒：重启后清理旧版（自研链路）遗留闹钟，新提醒由插件链路负责 -->
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
@@ -52,6 +61,25 @@
         </receiver>
         <receiver
             android:name=".NotificationReceiver"
+            android:exported="false" />
+        <!-- flutter_local_notifications 的定时/动作/开机恢复接收器（review R19）：
+             插件 18.x 的 manifest 不代为声明，缺了它们 zonedSchedule 到点后
+             无广播目标，定时提醒永远不响。开机恢复也统一交给插件
+             （ScheduledNotificationBootReceiver），与 cancel/cancelAll 使用
+             同一套 PendingIntent，能被正确取消。 -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
             android:exported="false" />
         <receiver
             android:name="com.aliyun.ams.push.AliyunPushMessageReceiver"
@@ -129,6 +157,16 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- 拍照识别：相机 Intent 经 FileProvider 取全尺寸照片（不声明相机权限） -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

@@ -2,12 +2,13 @@ name: yzu_schedule
 description: 邗上课表 —— 扬州大学专属课表 App（简洁清爽、无广告）
 publish_to: "none"
 # 版本规则：versionName+versionCode，后端版本接口按 versionCode 比较
-version: 1.0.33+33
+version: 2.0.4+68
 
 environment:
   sdk: ^3.4.0
 
 dependencies:
+  path_provider: ^2.1.4
   flutter:
     sdk: flutter
   flutter_riverpod: ^2.5.1         # 状态管理（设计文档 2.1）
@@ -28,11 +29,13 @@ dependencies:
   cryptography: ^2.7.0             # 教务凭据客户端 AES-GCM 加密与 PBKDF2 密钥派生
   flutter_local_notifications: ^18.0.1  # 上课提醒本地通知
   timezone: ^0.9.4                 # 本地通知的定时时区支持
+  record: ^6.1.1                   # AI 日程语音录入（PCM WAV，按住说话）
   home_widget: ^0.7.0+1              # 桌面小组件（今日课程）
   aliyun_push:
     path: plugins/aliyun_push
 
 dev_dependencies:
+  sqlite3: ^2.9.4                 # 本地持久化回归测试
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0

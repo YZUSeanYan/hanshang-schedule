@@ -10,6 +10,8 @@ import '../config/app_config.dart';
 import '../network/api_client.dart';
 import 'reminder_service.dart';
 
+final notificationInboxRevisionProvider = StateProvider<int>((ref) => 0);
+
 abstract interface class PushServiceApi {
   Future<bool> shouldPrompt();
   Future<bool> consented();
@@ -116,9 +118,8 @@ class PushService implements PushServiceApi {
           ? data['account']?.toString().trim() ?? ''
           : '';
       if (account.isEmpty) throw const FormatException('服务器未返回有效的推送绑定标识');
-      final result = await _push
-          .bindAccount(account)
-          .timeout(const Duration(seconds: 12));
+      final result =
+          await _push.bindAccount(account).timeout(const Duration(seconds: 12));
       if (result['code'] != kAliyunPushSuccessCode) {
         throw StateError(result['errorMsg']?.toString() ?? '推送账号绑定失败');
       }
@@ -127,8 +128,8 @@ class PushService implements PushServiceApi {
       _boundUserId = userId;
     }
     final deviceId = await _push.getDeviceId().timeout(
-      const Duration(seconds: 8),
-    );
+          const Duration(seconds: 8),
+        );
     if (deviceId.trim().isEmpty) throw StateError('推送服务未返回设备标识');
     final android = await DeviceInfoPlugin().androidInfo;
     final package = await PackageInfo.fromPlatform();
@@ -138,18 +139,15 @@ class PushService implements PushServiceApi {
         .where((part) => part.isNotEmpty)
         .join(' ')
         .replaceAll(RegExp(r'\s+'), ' ');
-    await _ref
-        .read(dioProvider)
-        .post<void>(
-          '/api/notifications/devices',
-          data: {
-            'device_id': deviceId,
-            'label': label.isEmpty ? 'Android 设备' : label,
-            'platform': 'android',
-            'app_version': '${package.version}+${package.buildNumber}',
-          },
-        )
-        .timeout(const Duration(seconds: 12));
+    await _ref.read(dioProvider).post<void>(
+      '/api/notifications/devices',
+      data: {
+        'device_id': deviceId,
+        'label': label.isEmpty ? 'Android 设备' : label,
+        'platform': 'android',
+        'app_version': '${package.version}+${package.buildNumber}',
+      },
+    ).timeout(const Duration(seconds: 12));
   }
 
   void _registerSafeReceiver() {
@@ -158,11 +156,17 @@ class PushService implements PushServiceApi {
     // 安全注册；否则旧插件会对空回调使用 `!`，通知到达就可能抛异常。
     Future<void> ignore(Map<dynamic, dynamic> _) async {}
     _push.addMessageReceiver(
-      onNotification: ignore,
-      onMessage: ignore,
+      onNotification: (_) async {
+        _ref.read(notificationInboxRevisionProvider.notifier).state++;
+      },
+      onMessage: (_) async {
+        _ref.read(notificationInboxRevisionProvider.notifier).state++;
+      },
       onNotificationOpened: ignore,
       onNotificationRemoved: ignore,
-      onAndroidNotificationReceivedInApp: ignore,
+      onAndroidNotificationReceivedInApp: (_) async {
+        _ref.read(notificationInboxRevisionProvider.notifier).state++;
+      },
       onAndroidNotificationClickedWithNoAction: ignore,
     );
     _receiverRegistered = true;

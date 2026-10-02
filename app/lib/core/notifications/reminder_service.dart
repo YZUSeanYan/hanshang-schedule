@@ -9,8 +9,9 @@ import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 
+import '../../features/schedule/data/override_repository.dart';
 import '../../features/schedule/data/schedule_repository.dart';
-import '../constants/section_times.dart';
+import '../settings/section_time_settings.dart';
 import '../database/app_database.dart';
 import '../utils/location_formatter.dart';
 import '../utils/week_calculator.dart';
@@ -60,6 +61,13 @@ abstract interface class ReminderServiceApi {
   Future<void> reschedule();
 
   Future<void> sendTestNotification();
+
+  /// 设备是否已授权精确闹钟（SCHEDULE_EXACT_ALARM）。
+  /// 无权限时提醒走 inexact 闹钟，省电窗口下可能被系统延迟。
+  Future<bool> canExactSchedule();
+
+  /// 跳系统「闹钟和提醒」设置页引导授权精确闹钟（用户可拒绝，降级 inexact）。
+  Future<void> requestExactAlarmPermission();
 }
 
 class ReminderService implements ReminderServiceApi {
@@ -71,6 +79,9 @@ class ReminderService implements ReminderServiceApi {
 
   static const _channelId = 'class_reminders';
   static const _channelName = '上课提醒';
+  // AI 日程 2.0：日程提醒独立渠道，系统设置里可单独静音
+  static const _eventChannelId = 'event_reminders';
+  static const _eventChannelName = '日程提醒';
   static const _enabledKey = 'reminder_enabled';
   static const _leadMinutesKey = 'reminder_lead_minutes';
 
@@ -91,8 +102,31 @@ class ReminderService implements ReminderServiceApi {
     } else {
       await _ensurePermission();
       await _setSetting(_enabledKey, 'true');
+      // Android 14+ 精确闹钟默认未授权；不精确闹钟在 Doze/省电策略下会被
+      // 系统按维护窗口延迟（用户感知=提醒收不到）。开启提醒时引导授权，
+      // 用户拒绝则降级为不精确闹钟，功能仍可用但可能延迟。
+      if (!await canExactSchedule()) {
+        await requestExactAlarmPermission();
+      }
       await reschedule();
     }
+  }
+
+  @override
+  Future<bool> canExactSchedule() async {
+    await init();
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return false;
+    return await android.canScheduleExactNotifications() ?? false;
+  }
+
+  @override
+  Future<void> requestExactAlarmPermission() async {
+    await init();
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await android?.requestExactAlarmsPermission();
   }
 
   @override
@@ -189,33 +223,47 @@ class ReminderService implements ReminderServiceApi {
           ])
           ..limit(1))
         .getSingleOrNull();
-    if (semester == null) {
-      await _writePendingCache(const []);
-      return;
-    }
-    final courses = await (_db.select(_db.courses)
-          ..where((c) => c.semesterId.equals(semester.id)))
-        .get();
+    final courses = semester == null
+        ? const <Course>[]
+        : await (_db.select(_db.courses)
+              ..where((c) => c.semesterId.equals(semester.id)))
+            .get();
     final slots = await _db.select(_db.schedules).get();
     final slotsByCourse = <int, List<Schedule>>{};
     for (final s in slots) {
       slotsByCourse.putIfAbsent(s.courseId, () => []).add(s);
     }
+    // AI 日程 2.0：个人日程也排本地提醒
+    final events = await _db.select(_db.localEvents).get();
+    // 调休覆盖：放假（off）当天不发课程提醒，补课（makeup）按指定星期的课表排
+    final overrides = await _db.select(_db.scheduleOverrides).get();
 
+    final config = await SectionTimeSettings(_db).load();
     final lead = await leadMinutes();
     final now = tz.TZDateTime.now(tz.local);
     final pending = <Map<String, dynamic>>[];
     var notifyId = 1;
+    // 有精确闹钟权限则按点触发；无权限降级为不精确（系统省电窗口内可能延迟）。
+    final scheduleMode = await canExactSchedule()
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle;
 
     // 排未来 28 天；即使用户几周不打开 App，提醒也不会在第 8 天断档。
     for (var offset = 0; offset < 28; offset++) {
+
       final day = now.add(Duration(days: offset));
+      // 无学期时课程提醒整体跳过（日程提醒不依赖学期，在下方单独排）
+      if (semester == null) break;
       final week = weekNumberOf(semester.startDate, day);
       if (week < 1 || week > semester.totalWeeks) continue;
+      // 调休判定与课表页同源（effectiveWeekday）：
+      // 放假（off）→ null，跳过当天全部课程提醒；补课（makeup）→ 按指定星期取课。
+      final effective = effectiveWeekday(overrides, day);
+      if (effective == null) continue;
 
       for (final course in courses) {
         for (final slot in slotsByCourse[course.id] ?? const <Schedule>[]) {
-          if (slot.dayOfWeek != day.weekday) continue;
+          if (slot.dayOfWeek != effective) continue;
           List<int> customWeeks;
           try {
             customWeeks = (jsonDecode(slot.customWeeks) as List).cast<int>();
@@ -224,7 +272,7 @@ class ReminderService implements ReminderServiceApi {
           }
           if (!occursInWeek(slot.weeksType, customWeeks, week)) continue;
 
-          final start = SectionTimes.startOf(slot.startSection);
+          final start = config.startOf(slot.startSection, day);
           final parts = start.split(':');
           final classTime = tz.TZDateTime(tz.local, day.year, day.month,
               day.day, int.parse(parts[0]), int.parse(parts[1]));
@@ -264,7 +312,7 @@ class ReminderService implements ReminderServiceApi {
                 ],
               ),
             ),
-            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            androidScheduleMode: scheduleMode,
             // iOS 遗留必填参数（本 App 只发 Android，但签名要求）
             uiLocalNotificationDateInterpretation:
                 UILocalNotificationDateInterpretation.absoluteTime,
@@ -276,6 +324,82 @@ class ReminderService implements ReminderServiceApi {
             'time': remindAt.millisecondsSinceEpoch,
           });
         }
+      }
+    }
+
+    // ---- 日程提醒（AI 日程 2.0，不依赖学期）----
+    for (var offset = 0; offset < 28; offset++) {
+      final day = now.add(Duration(days: offset));
+      final dayDate = DateTime(day.year, day.month, day.day);
+      for (final event in events) {
+        if (event.remindMinutes == 0) continue; // 用户关了这个日程的提醒
+        if (event.eventType == 'recurring') {
+          if (event.weekday < 1 || event.weekday != day.weekday) continue;
+        } else {
+          final target = DateTime.tryParse(event.date);
+          if (target == null ||
+              target.year != dayDate.year ||
+              target.month != dayDate.month ||
+              target.day != dayDate.day) {
+            continue;
+          }
+        }
+
+        final eventLead =
+            event.remindMinutes > 0 ? event.remindMinutes : lead;
+        tz.TZDateTime remindAt;
+        String title;
+        String body;
+        final startMinutes = event.startTime.isNotEmpty
+            ? SectionTimeConfig.minutes(event.startTime)
+            : event.startSection >= 1
+                ? SectionTimeConfig.minutes(
+                    config.startOf(event.startSection, day))
+                : null;
+        if (startMinutes != null) {
+          final startAt = tz.TZDateTime(
+              tz.local, day.year, day.month, day.day, 0, 0)
+              .add(Duration(minutes: startMinutes));
+          remindAt = startAt.subtract(Duration(minutes: eventLead));
+          title = '日程提醒：${event.title}';
+          body = '${event.startTime.isNotEmpty ? event.startTime : config.startOf(event.startSection, day)} 开始'
+              '${event.location.isEmpty ? '' : ' · ${event.location}'}';
+        } else {
+          // DDL 等无时刻事项：当天 08:00 提醒
+          remindAt = tz.TZDateTime(tz.local, day.year, day.month, day.day, 8, 0);
+          title = event.eventType == 'ddl'
+              ? '今天截止：${event.title}'
+              : '今天的日程：${event.title}';
+          body = event.location;
+        }
+        if (remindAt.isBefore(now)) continue;
+
+        final id = notifyId++;
+        await _plugin.zonedSchedule(
+          id,
+          title,
+          body,
+          remindAt,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              _eventChannelId,
+              _eventChannelName,
+              importance: Importance.high,
+              priority: Priority.high,
+              icon: '@drawable/ic_notification',
+              channelDescription: '个人日程的开始与截止提醒',
+            ),
+          ),
+          androidScheduleMode: scheduleMode,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+        );
+        pending.add({
+          'id': id,
+          'title': title,
+          'body': body,
+          'time': remindAt.millisecondsSinceEpoch,
+        });
       }
     }
     await _writePendingCache(pending);

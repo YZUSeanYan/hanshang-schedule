@@ -42,7 +42,7 @@ class WeekWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             widgetId: Int
         ) {
-            val title = WidgetData.getString(context, "week_title", "一周课程")
+            val title = WidgetData.displayTitle(context, "week_title", "一周课程")
             val columns = WidgetData.getJsonArray(context, "week_grid_json")
 
             val views = RemoteViews(context.packageName, R.layout.week_widget)

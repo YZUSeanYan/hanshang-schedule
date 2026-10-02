@@ -4,21 +4,30 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/presentation/login_page.dart';
+import '../../features/ai_schedule/presentation/event_preview_page.dart';
+import '../../features/ai_schedule/presentation/voice_record_sheet.dart';
 import '../../features/course_import/presentation/import_failed_page.dart';
 import '../../features/course_import/presentation/import_page.dart';
 import '../../features/course_import/presentation/import_preview_page.dart';
 import '../../features/course_import/presentation/import_webview_page.dart';
+import '../../features/course_import/presentation/school_select_page.dart';
+import '../../features/schedule/presentation/holiday_override_page.dart';
 import '../../import/yzu_parser.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/profile/presentation/about_page.dart';
+import '../../features/profile/presentation/support_author_page.dart';
 import '../../features/profile/presentation/notification_inbox_page.dart';
 import '../../features/profile/presentation/notification_settings_page.dart';
 import '../../features/profile/presentation/background_delivery_guide_page.dart';
+import '../../features/update/update_detail_page.dart';
+import '../../features/shared_availability/presentation/shared_availability_page.dart';
 import '../notifications/push_service.dart';
 import '../widgets/liquid_glass.dart';
+import '../remote_features/remote_feature_page.dart';
 import '../../features/schedule/data/schedule_repository.dart';
 import '../../features/schedule/presentation/course_edit_page.dart';
 import '../../features/schedule/presentation/semester_settings_page.dart';
+import '../../features/update/update_notice_bar.dart';
 import '../../features/schedule/presentation/schedule_page.dart';
 
 /// 全局路由配置。
@@ -63,12 +72,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings/semester',
         builder: (context, state) => const SemesterSettingsPage(),
       ),
+      // 全屏页面：AI 日程预览确认
+      GoRoute(
+        path: '/ai/preview',
+        builder: (context, state) {
+          final args = state.extra as EventPreviewArgs;
+          return EventPreviewPage(result: args.result, source: args.source);
+        },
+      ),
       // 全屏页面：教务导入 WebView（WebVPN 引导抓取）
       GoRoute(
         path: '/import/webview',
         builder: (context, state) => const ImportWebViewPage(),
       ),
-      // 全屏页面：AI 通用教务导入（extra 传用户输入的教务系统网址）
+      // 全屏页面：其他学校教务 · 学校选择（搜索 + A-Z 索引）
+      GoRoute(
+        path: '/import/school-select',
+        builder: (context, state) => const SchoolSelectPage(),
+      ),
+      // 全屏页面：调休课表（放假与补课设置）
+      GoRoute(
+        path: '/holiday-overrides',
+        builder: (context, state) => const HolidayOverridePage(),
+      ),
+      // 全屏页面：AI 通用教务导入（extra 传用户输入/选择的教务系统网址）
       GoRoute(
         path: '/import/webview-generic',
         builder: (context, state) =>
@@ -91,6 +118,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AboutPage(),
       ),
       GoRoute(
+        path: '/support-author',
+        builder: (context, state) => const SupportAuthorPage(),
+      ),
+      GoRoute(
+        path: '/update',
+        builder: (context, state) => const UpdateDetailPage(),
+      ),
+      GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationInboxPage(),
       ),
@@ -101,6 +136,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications/background-guide',
         builder: (context, state) => const BackgroundDeliveryGuidePage(),
+      ),
+      GoRoute(
+        path: '/features/:moduleId',
+        builder: (context, state) {
+          final moduleId = state.pathParameters['moduleId']!;
+          if (moduleId == 'couple_schedule') {
+            return const SharedAvailabilityPage();
+          }
+          return RemoteFeaturePage(moduleId: moduleId);
+        },
       ),
       // 带底部导航的主框架
       StatefulShellRoute.indexedStack(
@@ -114,7 +159,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               builder: (context, state) => const SchedulePage(),
             ),
           ]),
-          // Tab 2：导入（教务系统导入入口）
+          // Tab 2：AI 日程（课表导入 + 语音/文字随手记）
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/import',
@@ -177,10 +222,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         builder: (context) => AlertDialog(
           icon: const Icon(Icons.notifications_active_outlined),
           title: const Text('及时接收课程与账户通知'),
-          content: const Text('开启后可接收上课提醒、同步异常和管理员发送的重要账户通知。通知权限可随时在“我的”或系统设置中关闭。'),
+          content:
+              const Text('开启后可接收上课提醒、同步异常和管理员发送的重要账户通知。通知权限可随时在“我的”或系统设置中关闭。'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('暂不开启')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('允许通知')),
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('暂不开启')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('允许通知')),
           ],
         ),
       );
@@ -192,7 +242,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         await push.enableForUser(user.id);
       } catch (error) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('$error')));
         }
       }
     } finally {
@@ -205,7 +256,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     return Scaffold(
       // 内容延伸到悬浮胶囊底栏后方，实现滚动穿透毛玻璃
       extendBody: true,
-      body: _AnimatedShell(shell: widget.navigationShell),
+      // Stack + Positioned 让轻提示条「浮在预留区、不参与布局」：进 body 而
+      // 不是 bottomSheet，是因为后者会被键盘顶起、也会挤动正文。
+      body: Stack(
+        children: [
+          _AnimatedShell(shell: widget.navigationShell),
+          const UpdateNoticeOverlay(),
+        ],
+      ),
       bottomNavigationBar: LiquidGlassNavBar(
         currentIndex: widget.navigationShell.currentIndex,
         destinations: const [
@@ -215,9 +273,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             label: '课表',
           ),
           GlassDestination(
-            icon: Icons.download_outlined,
-            selectedIcon: Icons.download,
-            label: '导入',
+            icon: Icons.add_circle_outline,
+            selectedIcon: Icons.add_circle,
+            label: '添加',
+            // AI 主行动作：小星星角标呼吸 + 按压回弹（外形与普通项一致）
+            aiAccent: true,
           ),
           GlassDestination(
             icon: Icons.person_outline,
@@ -230,6 +290,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           // 重复点当前 Tab 时回到该分支初始页
           initialLocation: index == widget.navigationShell.currentIndex,
         ),
+        // 长按中间的「添加」直接弹出语音添加层（震动反馈在弹层内触发），
+        // 录音免手持持续进行，「完成录音/取消」显式按钮收尾——不再走手势
+        // 驱动（松手发送/上滑取消在悬浮导航上事件归属丢失，已踩过的坑）。
+        // 添加页上点「添加」变身语音按钮；变身后再点 → 语音录入层
+        onVoiceActivate: () => VoiceRecordSheet.show(context),
+        onDestinationLongPressStart: (index) {
+          if (index != 1) return;
+          VoiceRecordSheet.show(context);
+        },
       ),
     );
   }

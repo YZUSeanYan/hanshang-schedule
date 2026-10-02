@@ -73,15 +73,18 @@ class YzuParser {
   // ==================== 主入口 ====================
 
   /// 解析 WebView 抓取包：{url, title, captured: [{type,url,body}], html}
-  static ParseResult parseCapture(Map<String, dynamic> capture) {
-    // 1. 优先：JSON 接口嗅探
-    final captured = (capture['captured'] as List?) ?? const [];
+  static ParseResult parseCapture(Map<String, dynamic> capture,
+      {Map<String, String> fieldAliases = const {}}) {
+    // 1. 优先：JSON 接口嗅探。SPA 切换学期时新旧响应会同时留在缓冲里
+    //（review R15），从头找会命中最旧的学期——必须从最新（最后到达）的
+    // 响应往回找，与"用户刚看到的页面"一致。
+    final captured = ((capture['captured'] as List?) ?? const []).reversed;
     final failures = <String>[];
     for (final resp in captured) {
       if (resp is! Map) continue;
       final body = resp['body'];
       if (body is! String || body.isEmpty) continue;
-      final result = tryParseJson(body);
+      final result = tryParseJson(body, fieldAliases: fieldAliases);
       if (result != null) {
         return ParseResult(
           courses: result,
@@ -349,10 +352,14 @@ class YzuParser {
   ];
 
   /// 尝试把一段 JSON 文本解析为课程列表；识别不了返回 null。
-  static List<ParsedCourse>? tryParseJson(String body) {
+  static List<ParsedCourse>? tryParseJson(String body,
+      {Map<String, String> fieldAliases = const {}}) {
     Object? decoded;
     try {
       decoded = jsonDecode(body);
+      if (fieldAliases.isNotEmpty) {
+        decoded = _mapFields(decoded, fieldAliases, 0);
+      }
     } catch (_) {
       return null;
     }
@@ -393,6 +400,28 @@ class YzuParser {
     return courses.isEmpty ? null : courses.values.toList();
   }
 
+  // Data-only aliases; canonical fields win, and recursion is bounded.
+  static Object? _mapFields(
+      Object? node, Map<String, String> aliases, int depth) {
+    if (depth > 20) throw const FormatException('JSON nesting too deep');
+    if (node is List) {
+      return node
+          .map((value) => _mapFields(value, aliases, depth + 1))
+          .toList();
+    }
+    if (node is Map<String, dynamic>) {
+      final mapped = node.map(
+          (key, value) => MapEntry(key, _mapFields(value, aliases, depth + 1)));
+      for (final entry in aliases.entries) {
+        if (mapped.containsKey(entry.key) && !mapped.containsKey(entry.value)) {
+          mapped[entry.value] = mapped[entry.key];
+        }
+      }
+      return mapped;
+    }
+    return node;
+  }
+
   static bool _appendJsonSlot({
     required Map<String, ParsedCourse> courses,
     required String name,
@@ -426,8 +455,7 @@ class YzuParser {
   /// 在 JSON 树里递归寻找"课程列表"：元素为 Map 且包含课程名键的 List。
   static List<Map<String, dynamic>>? _findCourseList(Object? node) {
     if (node is List) {
-      if (node.isNotEmpty &&
-          node.every((e) => e is Map<String, dynamic>)) {
+      if (node.isNotEmpty && node.every((e) => e is Map<String, dynamic>)) {
         final maps = node.cast<Map<String, dynamic>>();
         if (maps.any((m) =>
             _nameKeys.any(m.containsKey) &&
@@ -529,8 +557,8 @@ class YzuParser {
         _pickNum(item, _endSectionKeys) ?? _pickNum(idFields, _endSectionKeys);
     if (start != null && end != null && end >= start) return (start, end);
     // 扬大 URP：id.skjc 是起始节次，cxjc 是连续节数（可能在 item 或 id 上）。
-    final count = _pickNum(
-            item, const ['cxjc', 'continuingSession', 'sectionCount', 'duration']) ??
+    final count = _pickNum(item,
+            const ['cxjc', 'continuingSession', 'sectionCount', 'duration']) ??
         _pickNum(idFields,
             const ['cxjc', 'continuingSession', 'sectionCount', 'duration']);
     if (start != null && count != null && count > 0) {

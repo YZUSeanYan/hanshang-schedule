@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/course_colors.dart';
 import '../../../core/constants/section_times.dart';
 import '../../../core/utils/week_calculator.dart';
+import '../../course_import/data/import_telemetry.dart';
 import '../data/schedule_repository.dart';
 
 /// 课程编辑页：新增 / 编辑课程（同课程多时间段、单双周/自定义周次）。
@@ -37,6 +40,7 @@ class _SlotForm {
 class _CourseEditPageState extends ConsumerState<CourseEditPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _shortNameController = TextEditingController();
   final _teacherController = TextEditingController();
   final _noteController = TextEditingController();
   final List<_SlotForm> _slots = [_SlotForm()];
@@ -54,9 +58,13 @@ class _CourseEditPageState extends ConsumerState<CourseEditPage> {
   @override
   void initState() {
     super.initState();
+    unawaited(
+      ref.read(importTelemetryProvider).record('manual', 'edit', 'success'),
+    );
     final existing = widget.existing;
     if (existing != null) {
       _nameController.text = existing.course.name;
+      _shortNameController.text = existing.course.shortName;
       _teacherController.text = existing.course.teacher;
       _noteController.text = existing.course.note;
       _color = existing.course.color;
@@ -82,6 +90,7 @@ class _CourseEditPageState extends ConsumerState<CourseEditPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _shortNameController.dispose();
     _teacherController.dispose();
     _noteController.dispose();
     for (final slot in _slots) {
@@ -145,6 +154,7 @@ class _CourseEditPageState extends ConsumerState<CourseEditPage> {
         await repo.createCourse(
           semesterId: semester.id,
           name: _nameController.text.trim(),
+          shortName: _shortNameController.text.trim(),
           teacher: _teacherController.text.trim(),
           color: _color,
           note: _noteController.text.trim(),
@@ -154,12 +164,16 @@ class _CourseEditPageState extends ConsumerState<CourseEditPage> {
         await repo.updateCourse(
           courseId: existing.course.id,
           name: _nameController.text.trim(),
+          shortName: _shortNameController.text.trim(),
           teacher: _teacherController.text.trim(),
           color: _color,
           note: _noteController.text.trim(),
           slots: drafts,
         );
       }
+      unawaited(
+        ref.read(importTelemetryProvider).record('manual', 'save', 'success'),
+      );
       if (mounted) context.pop();
     } catch (error) {
       if (!mounted) return;
@@ -196,6 +210,17 @@ class _CourseEditPageState extends ConsumerState<CourseEditPage> {
               ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? '请输入课程名称' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _shortNameController,
+              maxLength: 8,
+              decoration: const InputDecoration(
+                labelText: '课程简称（选填）',
+                hintText: '课表卡片上显示，如「大物」；留空显示全称',
+                border: OutlineInputBorder(),
+                counterText: '',
+              ),
             ),
             const SizedBox(height: 12),
             TextFormField(

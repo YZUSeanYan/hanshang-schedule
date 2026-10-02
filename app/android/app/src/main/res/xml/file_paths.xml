@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 拍照识别临时文件：仅应用私有缓存目录，用完即删 -->
+<paths>
+    <cache-path name="captures" path="." />
+</paths>

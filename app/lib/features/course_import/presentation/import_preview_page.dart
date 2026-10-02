@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../data/import_telemetry.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -72,6 +75,11 @@ class _ImportPreviewPageState extends ConsumerState<ImportPreviewPage> {
             )
             .toList(),
       );
+      unawaited(ref.read(importTelemetryProvider).record(
+        importEntryOfSource(widget.result.source),
+        'save',
+        'success',
+      ));
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,

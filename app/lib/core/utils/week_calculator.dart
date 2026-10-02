@@ -41,7 +41,7 @@ bool occursInWeek(WeeksType type, List<int> customWeeks, int week) {
     case WeeksType.odd:
       return week.isOdd;
     case WeeksType.even:
-      return week >= 2; // 双周从第 2 周起（第 1 周不是双周）
+      return week >= 2 && week.isEven; // 双周=偶数周；第 1 周不算（review R21）
     case WeeksType.custom:
       return customWeeks.contains(week);
   }

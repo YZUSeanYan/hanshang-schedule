@@ -9,7 +9,7 @@ void main() {
   CourseEntry longCourse() {
     final now = DateTime(2026, 8, 12);
     return CourseEntry(
-      course: Course(
+      course: Course(shortName: '', 
         id: 1,
         uuid: 'fluid-thermodynamics',
         semesterId: 1,

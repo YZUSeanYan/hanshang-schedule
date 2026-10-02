@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:home_widget/home_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/schedule/data/override_repository.dart';
 import '../../features/schedule/data/schedule_repository.dart';
 import '../constants/course_colors.dart';
-import '../constants/section_times.dart';
+import '../settings/section_time_settings.dart';
 import '../database/app_database.dart';
 import '../utils/location_formatter.dart';
 import '../utils/week_calculator.dart';
@@ -27,6 +30,11 @@ class WidgetService {
   static const _weekdayLabels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
   static const _weekdayShort = ['一', '二', '三', '四', '五', '六', '日'];
 
+  /// 快照渲染日期标记（review R23）：原生 Provider 据此判断缓存是否过期，
+  /// 过期时显示"打开 App 更新"而不是把昨天的课程当今天。
+  static const _renderDateKey = 'render_date';
+  static const _lastRenderPrefKey = 'last_widget_render_date';
+
   static const providerName =
       'cn.yzu.schedule.yzu_schedule.TodayWidgetProvider';
 
@@ -39,6 +47,7 @@ class WidgetService {
     // iOS 侧 saveWidgetData 依赖 App Group；Android 上此调用为空操作。
     await HomeWidget.setAppGroupId(_iosAppGroupId);
     final today = DateTime.now();
+    final todayKey = _dateKey(today);
 
     final semester = await (_db.select(_db.semesters)
           ..where((s) => s.isCurrent.equals(true))
@@ -60,6 +69,8 @@ class WidgetService {
     await HomeWidget.saveWidgetData<String>('today_title', title);
     await HomeWidget.saveWidgetData<String>(
         'today_courses_json', jsonEncode(todayList));
+    await HomeWidget.saveWidgetData<String>(_renderDateKey, todayKey);
+    unawaited(_rememberRenderDate(todayKey));
 
     await HomeWidget.saveWidgetData<String>(
         'day_title', '${_titleFor(today, semester)} · 日视图');
@@ -122,19 +133,31 @@ class WidgetService {
   }
 
   /// 某天的课程列表（含颜色），按开始节次排序。
+  ///
+  /// 课程投影必须与 App 周视图一致（review R22）：先经调休覆盖改写
+  /// effectiveWeekday——放假返回空、补课按指定星期取课——而不是直接用
+  /// 自然星期查 schedules。
   Future<List<Map<String, String>>> _coursesForDate(
     DateTime date,
     Semester? semester,
   ) async {
     if (semester == null) return [];
+    final config = await SectionTimeSettings(_db).load();
     final week = weekNumberOf(semester.startDate, date);
     if (week < 1 || week > semester.totalWeeks) return [];
+
+    final dateKey = _dateKey(date);
+    final overrides = await (_db.select(_db.scheduleOverrides)
+          ..where((o) => o.date.equals(dateKey)))
+        .get();
+    final effectiveWeekdayValue = effectiveWeekday(overrides, date);
+    if (effectiveWeekdayValue == null) return []; // 当天放假
 
     final courseRows = await (_db.select(_db.courses)
           ..where((c) => c.semesterId.equals(semester.id)))
         .get();
     final slots = await (_db.select(_db.schedules)
-          ..where((s) => s.dayOfWeek.equals(date.weekday)))
+          ..where((s) => s.dayOfWeek.equals(effectiveWeekdayValue)))
         .get();
     final courseById = {for (final c in courseRows) c.id: c};
 
@@ -147,7 +170,7 @@ class WidgetService {
       items.add((
         slot.startSection,
         {
-          'time': '${SectionTimes.startOf(slot.startSection)}-${SectionTimes.endOf(slot.endSection)}',
+          'time': '${config.startOf(slot.startSection, date)}-${config.endOf(slot.endSection, date)}',
           'name': course.name,
           'loc': formatCourseLocation(slot.location),
           'sec': '${slot.startSection}-${slot.endSection}节',
@@ -204,6 +227,32 @@ class WidgetService {
       hash = (hash * 31 + unit) & 0x7fffffff;
     }
     return hash % CourseColors.macaron.length;
+  }
+
+  static String _dateKey(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+  Future<void> _rememberRenderDate(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_lastRenderPrefKey, key);
+    } catch (_) {/* 记录失败只影响跨午夜检测，不影响小组件数据 */}
+  }
+
+  /// 跨午夜检测（review R23）：小组件快照是"渲染时刻"的静态数据，
+  /// App 存活期间由 60 秒定时器调用；日期翻转后返回 true 并立即重刷，
+  /// 让"今天/明天"标题与课程在午夜后自动更新。
+  Future<bool> refreshIfDayChanged() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final last = prefs.getString(_lastRenderPrefKey);
+      final today = _dateKey(DateTime.now());
+      if (last == today) return false;
+      await refresh();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 }
 

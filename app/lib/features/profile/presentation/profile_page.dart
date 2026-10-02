@@ -1,4 +1,6 @@
 import 'dart:convert';
+import '../../schedule/presentation/section_time_settings_page.dart';
+import '../../schedule/presentation/schedule_display_sheet.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,7 +8,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/notifications/reminder_service.dart';
+import '../../course_import/data/schedule_file_picker.dart';
+import '../../../core/settings/course_card_display.dart';
+import '../../../core/settings/haptics_settings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../core/widgets/liquid_glass.dart';
@@ -19,6 +25,8 @@ import '../../schedule/data/schedule_repository.dart';
 import '../../share/data/share_repository.dart';
 import '../../watch/data/watch_ble_service.dart';
 import '../../update/update_checker.dart';
+import '../../../core/remote_features/remote_feature_manifest.dart';
+import '../../../core/remote_features/remote_feature_widgets.dart';
 
 /// 「我的」页面：账号信息、外观设置、检查更新、关于。
 class ProfilePage extends ConsumerWidget {
@@ -194,7 +202,23 @@ class ProfilePage extends ConsumerWidget {
       extendBodyBehindAppBar: true,
       appBar: buildGlassAppBar(
         context: context,
-        title: const Text('我的'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('我的',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              '账户、外观与提醒设置。',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
       body: ListView(
         // 穿透式顶栏：视口延伸到玻璃 AppBar 后方，列表滚动穿过时实时模糊
@@ -205,16 +229,11 @@ class ProfilePage extends ConsumerWidget {
         children: [
           // ---- 账号卡片 ----
           if (user != null)
-            ListTile(
-              leading: CircleAvatar(
-                child: Text(user.username.characters.first),
-              ),
-              title: Text(user.username),
-              subtitle: Text(user.email),
-            )
+            _AccountCard(user: user)
           else if (authState.isLoading)
             const ListTile(
-              leading: CircleAvatar(child: CircularProgressIndicator(strokeWidth: 2)),
+              leading: CircleAvatar(
+                  child: CircularProgressIndicator(strokeWidth: 2)),
               title: Text('正在恢复账号'),
               subtitle: Text('本地课表可继续使用，请稍候'),
             )
@@ -277,16 +296,15 @@ class ProfilePage extends ConsumerWidget {
                           final colorName = _seedLabels[index];
                           final reduceMotion =
                               MediaQuery.maybeOf(context)?.disableAnimations ??
-                              false;
+                                  false;
                           final duration = reduceMotion
                               ? Duration.zero
                               : const Duration(milliseconds: 180);
                           return Semantics(
                             button: true,
                             selected: selected,
-                            label: selected
-                                ? '$colorName，已选择'
-                                : '切换为$colorName',
+                            label:
+                                selected ? '$colorName，已选择' : '切换为$colorName',
                             child: InkWell(
                               customBorder: const CircleBorder(),
                               onTap: () => ref
@@ -354,9 +372,49 @@ class ProfilePage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.view_week_outlined),
+            title: const Text('课表显示'),
+            subtitle: const Text('晚间空白、周末显示'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showScheduleDisplaySheet(context),
+          ),
+          // 课程卡片信息密度：默认名称/教室/楼名三级，教师与校区收起进详情
+          Consumer(
+            builder: (context, ref, _) {
+              final show = ref.watch(courseCardDisplayProvider);
+              return SwitchListTile(
+                secondary: const Icon(Icons.badge_outlined),
+                title: const Text('卡片显示教师'),
+                subtitle: const Text('校区等完整信息在课程详情里查看'),
+                value: show,
+                onChanged: (value) => ref
+                    .read(courseCardDisplayProvider.notifier)
+                    .setShow(value),
+              );
+            },
+          ),
+          // 触感反馈：长按「添加」语音录入等交互震动（默认开启，重震感）
+          Consumer(
+            builder: (context, ref, _) {
+              final enabled = ref.watch(hapticsEnabledProvider);
+              return SwitchListTile(
+                secondary: const Icon(Icons.vibration_outlined),
+                title: const Text('触感反馈'),
+                subtitle: const Text('长按添加等操作时的震动提示'),
+                value: enabled,
+                onChanged: (value) => ref
+                    .read(hapticsEnabledProvider.notifier)
+                    .setEnabled(value),
+              );
+            },
+          ),
           const Divider(),
 
           // ---- 功能入口 ----
+          const RemoteFeatureSection(
+            placement: RemoteFeaturePlacement.profile,
+          ),
           // 云端同步：状态 + 手动触发
           Consumer(
             builder: (context, ref, _) {
@@ -364,8 +422,8 @@ class ProfilePage extends ConsumerWidget {
               final subtitle = status.error != null
                   ? '同步失败：${status.error}'
                   : status.lastSyncAt != null
-                  ? '上次同步 ${_fmtTime(status.lastSyncAt!)}'
-                  : '编辑课程后自动同步，也可手动触发';
+                      ? '上次同步 ${_fmtTime(status.lastSyncAt!)}'
+                      : '编辑课程后自动同步，也可手动触发';
               return ListTile(
                 leading: const Icon(Icons.cloud_sync_outlined),
                 title: const Text('云端同步'),
@@ -382,9 +440,8 @@ class ProfilePage extends ConsumerWidget {
                     : () async {
                         ref.read(syncStatusProvider.notifier).markSyncing();
                         try {
-                          final summary = await ref
-                              .read(syncRepositoryProvider)
-                              .sync();
+                          final summary =
+                              await ref.read(syncRepositoryProvider).sync();
                           ref.read(syncStatusProvider.notifier).markSuccess();
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -397,6 +454,21 @@ class ProfilePage extends ConsumerWidget {
                       },
               );
             },
+          ),
+          ListTile(
+            leading: const Icon(Icons.event_repeat_outlined),
+            title: const Text('调休课表'),
+            subtitle: const Text('放假与补课安排 · 可上传通知自动识别'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/holiday-overrides'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.schedule_outlined),
+            title: const Text('每节课时间'),
+            subtitle: const Text('扬大默认作息 · 自定义上下课时间'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => const SectionTimeSettingsPage())),
           ),
           // 上课提醒：开关 + 提前量
           Consumer(
@@ -473,6 +545,13 @@ class ProfilePage extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/about'),
           ),
+          ListTile(
+            leading: const Icon(Icons.favorite_outline_rounded),
+            title: const Text('支持作者'),
+            subtitle: const Text('扫码支持一下，免费无广告'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/support-author'),
+          ),
 
           // ---- 退出登录 ----
           if (user != null) ...[
@@ -502,15 +581,30 @@ class ReminderSettingsTile extends StatefulWidget {
   State<ReminderSettingsTile> createState() => _ReminderSettingsTileState();
 }
 
-class _ReminderSettingsTileState extends State<ReminderSettingsTile> {
+class _ReminderSettingsTileState extends State<ReminderSettingsTile>
+    with WidgetsBindingObserver {
   bool? _enabled;
   int? _leadMinutes;
+  bool? _exactAllowed;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 用户可能刚去系统设置页授权了「闹钟和提醒」,回前台时刷新状态
+    if (state == AppLifecycleState.resumed) _refreshExactAllowed();
   }
 
   Future<void> _load() async {
@@ -518,14 +612,27 @@ class _ReminderSettingsTileState extends State<ReminderSettingsTile> {
       final values = await Future.wait<Object>([
         widget.service.isEnabled(),
         widget.service.leadMinutes(),
+        widget.service.canExactSchedule(),
       ]);
       if (!mounted) return;
       setState(() {
         _enabled = values[0] as bool;
         _leadMinutes = values[1] as int;
+        _exactAllowed = values[2] as bool;
       });
     } catch (error) {
       if (mounted) _showError(error);
+    }
+  }
+
+  Future<void> _refreshExactAllowed() async {
+    try {
+      final allowed = await widget.service.canExactSchedule();
+      if (mounted && allowed != _exactAllowed) {
+        setState(() => _exactAllowed = allowed);
+      }
+    } catch (_) {
+      // 状态刷新失败不影响现有展示
     }
   }
 
@@ -537,6 +644,7 @@ class _ReminderSettingsTileState extends State<ReminderSettingsTile> {
     });
     try {
       await widget.service.setEnabled(value);
+      await _refreshExactAllowed();
     } catch (error) {
       if (!mounted) return;
       setState(() => _enabled = previous);
@@ -613,6 +721,28 @@ class _ReminderSettingsTileState extends State<ReminderSettingsTile> {
           value: enabled,
           onChanged: _saving ? null : _setEnabled,
         ),
+        if (enabled && _exactAllowed == false)
+          ListTile(
+            dense: true,
+            leading: Icon(
+              Icons.alarm_off_outlined,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            title: Text(
+              '提醒可能不准时',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            subtitle: const Text('系统未授权「闹钟和提醒」，点此去开启，开启后提醒将按点送达'),
+            onTap: _saving
+                ? null
+                : () async {
+                    await widget.service.requestExactAlarmPermission();
+                    await _refreshExactAllowed();
+                  },
+          ),
         if (enabled)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -624,9 +754,8 @@ class _ReminderSettingsTileState extends State<ReminderSettingsTile> {
                 ButtonSegment(value: 30, label: Text('30分钟')),
               ],
               selected: {leadMinutes},
-              onSelectionChanged: _saving
-                  ? null
-                  : (values) => _setLeadMinutes(values.first),
+              onSelectionChanged:
+                  _saving ? null : (values) => _setLeadMinutes(values.first),
             ),
           ),
         if (enabled)
@@ -752,7 +881,12 @@ class _CourseLiveTileState extends State<CourseLiveTile> {
   void initState() {
     super.initState();
     widget.service.isEnabled().then((v) {
-      if (mounted) setState(() { _enabled = v; _loaded = true; });
+      if (mounted) {
+        setState(() {
+          _enabled = v;
+          _loaded = true;
+        });
+      }
     });
   }
 
@@ -778,6 +912,135 @@ class _CourseLiveTileState extends State<CourseLiveTile> {
       isThreeLine: true,
       value: _enabled,
       onChanged: _loaded ? _toggle : null,
+    );
+  }
+}
+
+/// 账号卡片：头像（点按更换）+ 用户名（可改昵称）+ 邮箱。
+class _AccountCard extends ConsumerStatefulWidget {
+  const _AccountCard({required this.user});
+
+  final AuthUser user;
+
+  @override
+  ConsumerState<_AccountCard> createState() => _AccountCardState();
+}
+
+class _AccountCardState extends ConsumerState<_AccountCard> {
+  bool _busy = false;
+
+  Future<void> _changeAvatar() async {
+    if (_busy) return;
+    final file = await ScheduleFilePicker.pick(image: true);
+    if (file == null || !mounted) return;
+    if (file.bytes.length > 2 * 1024 * 1024) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('头像图片不能超过 2 MB')),
+      );
+      return;
+    }
+    setState(() => _busy = true);
+    final error =
+        await ref.read(authStateProvider.notifier).updateAvatar(file.bytes, file.name);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(error ?? '头像已更新')),
+    );
+  }
+
+  Future<void> _editUsername() async {
+    final controller = TextEditingController(text: widget.user.username);
+    final confirmed = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('修改用户名'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 32,
+          decoration: const InputDecoration(
+            hintText: '2-32 位，中英文、数字、_、-',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == null || confirmed.isEmpty || !mounted) return;
+    if (confirmed == widget.user.username) return;
+    setState(() => _busy = true);
+    final error =
+        await ref.read(authStateProvider.notifier).updateUsername(confirmed);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(error ?? '用户名已更新')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final avatarUrl = widget.user.avatarMedia.isEmpty
+        ? null
+        : '${AppConfig.apiBaseUrl}/api/user/avatar/${widget.user.avatarMedia}';
+    return ListTile(
+      leading: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: _busy ? null : _changeAvatar,
+        child: Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            CircleAvatar(
+              backgroundImage:
+                  avatarUrl == null ? null : NetworkImage(avatarUrl),
+              child: avatarUrl == null
+                  ? Text(widget.user.username.characters.first)
+                  : null,
+            ),
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.edit, size: 10, color: scheme.onPrimary),
+            ),
+          ],
+        ),
+      ),
+      title: Row(
+        children: [
+          Flexible(
+            child: Text(
+              widget.user.username,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 4),
+          InkWell(
+            customBorder: const CircleBorder(),
+            onTap: _busy ? null : _editUsername,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(Icons.edit_outlined,
+                  size: 16, color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+      subtitle: Text(widget.user.email),
     );
   }
 }

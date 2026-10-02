@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config/app_config.dart';
 import 'core/platform/platform_capabilities.dart';
 import 'core/router/app_router.dart';
+import 'core/remote_features/remote_feature_manifest.dart';
+import 'core/remote_features/remote_feature_providers.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'features/privacy/data/privacy_consent.dart';
@@ -25,14 +27,22 @@ class YzuScheduleApp extends ConsumerWidget {
       return const _InsecureApiBlockedApp();
     }
 
-    // 隐私政策门禁（金标联盟/应用商店合规）：未同意前不挂载业务路由，
-    // 也就不会触发会话恢复、云端同步与推送初始化。
-    final gate = ref.watch(privacyGateProvider);
+    // 先验证本机签名清单与隐私同意记录，联网更新在后台进行。
+    // 当前已知政策获同意前，不挂载认证、同步、推送等业务 Provider。
+    final manifestState = ref.watch(remoteFeatureManifestProvider);
+    if (manifestState.isLoading) return const _PrivacyGateSplash();
+    final manifest = manifestState.valueOrNull ?? RemoteFeatureManifest.bundled;
+    // A non-breaking policy refresh may update the displayed document without
+    // clearing the bundled consent. It can never waive first-run consent.
+    final policy = manifest.privacyPolicy.requiresReconsent
+        ? manifest.privacyPolicy
+        : bundledPrivacyPolicy;
+    final gate = ref.watch(privacyPolicyGateProvider(policy.id));
     return gate.when(
       loading: () => const _PrivacyGateSplash(),
-      error: (_, __) => _buildMainApp(ref),
+      error: (_, __) => PrivacyGateView(policy: policy),
       data: (consented) =>
-          consented ? _buildMainApp(ref) : const PrivacyGateView(),
+          consented ? _buildMainApp(ref) : PrivacyGateView(policy: policy),
     );
   }
 

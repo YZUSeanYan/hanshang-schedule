@@ -29,6 +29,24 @@ object WidgetData {
         R.drawable.widget_course_bg_9, R.drawable.widget_course_bg_10,
     )
 
+    /** 按系统当前日期生成 yyyy-MM-dd（与 Dart 侧 render_date 契约一致） */
+    fun todayKey(): String =
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+
+    /**
+     * 小组件标题读取（跨午夜诚实提示，review R23）：快照是"渲染时刻"的
+     * 静态数据；若渲染日期不是今天，标题追加提示而不是把昨天的课当今天。
+     * App 侧（60 秒定时器/数据变化）会尽快重刷消除该状态。
+     */
+    fun displayTitle(context: Context, key: String, fallback: String): String {
+        val title = getString(context, key, fallback)
+        val rendered = getString(context, "render_date", "")
+        return if (rendered.isNotEmpty() && rendered != todayKey()) {
+            "$title（打开 App 更新）"
+        } else title
+    }
+
     fun prefs(context: Context) = context.getSharedPreferences(
         "HomeWidgetPreferences", Context.MODE_PRIVATE
     )

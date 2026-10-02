@@ -30,12 +30,11 @@ class $SemestersTable extends Semesters
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _startDateMeta =
-      const VerificationMeta('startDate');
   @override
-  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
-      'start_date', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  late final GeneratedColumnWithTypeConverter<DateTime, int> startDate =
+      GeneratedColumn<int>('start_date', aliasedName, false,
+              type: DriftSqlType.int, requiredDuringInsert: true)
+          .withConverter<DateTime>($SemestersTable.$converterstartDate);
   static const VerificationMeta _totalWeeksMeta =
       const VerificationMeta('totalWeeks');
   @override
@@ -54,14 +53,13 @@ class $SemestersTable extends Semesters
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("is_current" IN (0, 1))'),
       defaultValue: const Constant(false));
-  static const VerificationMeta _updatedAtMeta =
-      const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-      'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime,
-      requiredDuringInsert: false,
-      defaultValue: currentDateAndTime);
+  late final GeneratedColumnWithTypeConverter<DateTime, int> updatedAt =
+      GeneratedColumn<int>('updated_at', aliasedName, false,
+              type: DriftSqlType.int,
+              requiredDuringInsert: false,
+              clientDefault: () => DateTime.now().millisecondsSinceEpoch)
+          .withConverter<DateTime>($SemestersTable.$converterupdatedAt);
   @override
   List<GeneratedColumn> get $columns =>
       [id, uuid, name, startDate, totalWeeks, isCurrent, updatedAt];
@@ -88,12 +86,6 @@ class $SemestersTable extends Semesters
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
-    if (data.containsKey('start_date')) {
-      context.handle(_startDateMeta,
-          startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta));
-    } else if (isInserting) {
-      context.missing(_startDateMeta);
-    }
     if (data.containsKey('total_weeks')) {
       context.handle(
           _totalWeeksMeta,
@@ -103,10 +95,6 @@ class $SemestersTable extends Semesters
     if (data.containsKey('is_current')) {
       context.handle(_isCurrentMeta,
           isCurrent.isAcceptableOrUnknown(data['is_current']!, _isCurrentMeta));
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(_updatedAtMeta,
-          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
     }
     return context;
   }
@@ -123,14 +111,16 @@ class $SemestersTable extends Semesters
           .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
-      startDate: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}start_date'])!,
+      startDate: $SemestersTable.$converterstartDate.fromSql(attachedDatabase
+          .typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}start_date'])!),
       totalWeeks: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}total_weeks'])!,
       isCurrent: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_current'])!,
-      updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      updatedAt: $SemestersTable.$converterupdatedAt.fromSql(attachedDatabase
+          .typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!),
     );
   }
 
@@ -138,6 +128,11 @@ class $SemestersTable extends Semesters
   $SemestersTable createAlias(String alias) {
     return $SemestersTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<DateTime, int> $converterstartDate =
+      const DateTimeMsConverter();
+  static TypeConverter<DateTime, int> $converterupdatedAt =
+      const DateTimeMsConverter();
 }
 
 class Semester extends DataClass implements Insertable<Semester> {
@@ -162,10 +157,16 @@ class Semester extends DataClass implements Insertable<Semester> {
     map['id'] = Variable<int>(id);
     map['uuid'] = Variable<String>(uuid);
     map['name'] = Variable<String>(name);
-    map['start_date'] = Variable<DateTime>(startDate);
+    {
+      map['start_date'] =
+          Variable<int>($SemestersTable.$converterstartDate.toSql(startDate));
+    }
     map['total_weeks'] = Variable<int>(totalWeeks);
     map['is_current'] = Variable<bool>(isCurrent);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    {
+      map['updated_at'] =
+          Variable<int>($SemestersTable.$converterupdatedAt.toSql(updatedAt));
+    }
     return map;
   }
 
@@ -299,10 +300,10 @@ class SemestersCompanion extends UpdateCompanion<Semester> {
     Expression<int>? id,
     Expression<String>? uuid,
     Expression<String>? name,
-    Expression<DateTime>? startDate,
+    Expression<int>? startDate,
     Expression<int>? totalWeeks,
     Expression<bool>? isCurrent,
-    Expression<DateTime>? updatedAt,
+    Expression<int>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -347,7 +348,8 @@ class SemestersCompanion extends UpdateCompanion<Semester> {
       map['name'] = Variable<String>(name.value);
     }
     if (startDate.present) {
-      map['start_date'] = Variable<DateTime>(startDate.value);
+      map['start_date'] = Variable<int>(
+          $SemestersTable.$converterstartDate.toSql(startDate.value));
     }
     if (totalWeeks.present) {
       map['total_weeks'] = Variable<int>(totalWeeks.value);
@@ -356,7 +358,8 @@ class SemestersCompanion extends UpdateCompanion<Semester> {
       map['is_current'] = Variable<bool>(isCurrent.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(
+          $SemestersTable.$converterupdatedAt.toSql(updatedAt.value));
     }
     return map;
   }
@@ -408,6 +411,14 @@ class $CoursesTable extends Courses with TableInfo<$CoursesTable, Course> {
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _shortNameMeta =
+      const VerificationMeta('shortName');
+  @override
+  late final GeneratedColumn<String> shortName = GeneratedColumn<String>(
+      'short_name', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
   static const VerificationMeta _teacherMeta =
       const VerificationMeta('teacher');
   @override
@@ -428,15 +439,14 @@ class $CoursesTable extends Courses with TableInfo<$CoursesTable, Course> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
-  static const VerificationMeta _updatedAtMeta =
-      const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-      'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  late final GeneratedColumnWithTypeConverter<DateTime, int> updatedAt =
+      GeneratedColumn<int>('updated_at', aliasedName, false,
+              type: DriftSqlType.int, requiredDuringInsert: true)
+          .withConverter<DateTime>($CoursesTable.$converterupdatedAt);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, uuid, semesterId, name, teacher, color, note, updatedAt];
+      [id, uuid, semesterId, name, shortName, teacher, color, note, updatedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -468,6 +478,10 @@ class $CoursesTable extends Courses with TableInfo<$CoursesTable, Course> {
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
+    if (data.containsKey('short_name')) {
+      context.handle(_shortNameMeta,
+          shortName.isAcceptableOrUnknown(data['short_name']!, _shortNameMeta));
+    }
     if (data.containsKey('teacher')) {
       context.handle(_teacherMeta,
           teacher.isAcceptableOrUnknown(data['teacher']!, _teacherMeta));
@@ -481,12 +495,6 @@ class $CoursesTable extends Courses with TableInfo<$CoursesTable, Course> {
     if (data.containsKey('note')) {
       context.handle(
           _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(_updatedAtMeta,
-          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
     }
     return context;
   }
@@ -505,14 +513,17 @@ class $CoursesTable extends Courses with TableInfo<$CoursesTable, Course> {
           .read(DriftSqlType.int, data['${effectivePrefix}semester_id'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      shortName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}short_name'])!,
       teacher: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}teacher'])!,
       color: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}color'])!,
       note: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}note'])!,
-      updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      updatedAt: $CoursesTable.$converterupdatedAt.fromSql(attachedDatabase
+          .typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!),
     );
   }
 
@@ -520,6 +531,9 @@ class $CoursesTable extends Courses with TableInfo<$CoursesTable, Course> {
   $CoursesTable createAlias(String alias) {
     return $CoursesTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<DateTime, int> $converterupdatedAt =
+      const DateTimeMsConverter();
 }
 
 class Course extends DataClass implements Insertable<Course> {
@@ -527,6 +541,7 @@ class Course extends DataClass implements Insertable<Course> {
   final String uuid;
   final int semesterId;
   final String name;
+  final String shortName;
   final String teacher;
   final int color;
   final String note;
@@ -536,6 +551,7 @@ class Course extends DataClass implements Insertable<Course> {
       required this.uuid,
       required this.semesterId,
       required this.name,
+      required this.shortName,
       required this.teacher,
       required this.color,
       required this.note,
@@ -547,10 +563,14 @@ class Course extends DataClass implements Insertable<Course> {
     map['uuid'] = Variable<String>(uuid);
     map['semester_id'] = Variable<int>(semesterId);
     map['name'] = Variable<String>(name);
+    map['short_name'] = Variable<String>(shortName);
     map['teacher'] = Variable<String>(teacher);
     map['color'] = Variable<int>(color);
     map['note'] = Variable<String>(note);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    {
+      map['updated_at'] =
+          Variable<int>($CoursesTable.$converterupdatedAt.toSql(updatedAt));
+    }
     return map;
   }
 
@@ -560,6 +580,7 @@ class Course extends DataClass implements Insertable<Course> {
       uuid: Value(uuid),
       semesterId: Value(semesterId),
       name: Value(name),
+      shortName: Value(shortName),
       teacher: Value(teacher),
       color: Value(color),
       note: Value(note),
@@ -575,6 +596,7 @@ class Course extends DataClass implements Insertable<Course> {
       uuid: serializer.fromJson<String>(json['uuid']),
       semesterId: serializer.fromJson<int>(json['semesterId']),
       name: serializer.fromJson<String>(json['name']),
+      shortName: serializer.fromJson<String>(json['shortName']),
       teacher: serializer.fromJson<String>(json['teacher']),
       color: serializer.fromJson<int>(json['color']),
       note: serializer.fromJson<String>(json['note']),
@@ -589,6 +611,7 @@ class Course extends DataClass implements Insertable<Course> {
       'uuid': serializer.toJson<String>(uuid),
       'semesterId': serializer.toJson<int>(semesterId),
       'name': serializer.toJson<String>(name),
+      'shortName': serializer.toJson<String>(shortName),
       'teacher': serializer.toJson<String>(teacher),
       'color': serializer.toJson<int>(color),
       'note': serializer.toJson<String>(note),
@@ -601,6 +624,7 @@ class Course extends DataClass implements Insertable<Course> {
           String? uuid,
           int? semesterId,
           String? name,
+          String? shortName,
           String? teacher,
           int? color,
           String? note,
@@ -610,6 +634,7 @@ class Course extends DataClass implements Insertable<Course> {
         uuid: uuid ?? this.uuid,
         semesterId: semesterId ?? this.semesterId,
         name: name ?? this.name,
+        shortName: shortName ?? this.shortName,
         teacher: teacher ?? this.teacher,
         color: color ?? this.color,
         note: note ?? this.note,
@@ -622,6 +647,7 @@ class Course extends DataClass implements Insertable<Course> {
       semesterId:
           data.semesterId.present ? data.semesterId.value : this.semesterId,
       name: data.name.present ? data.name.value : this.name,
+      shortName: data.shortName.present ? data.shortName.value : this.shortName,
       teacher: data.teacher.present ? data.teacher.value : this.teacher,
       color: data.color.present ? data.color.value : this.color,
       note: data.note.present ? data.note.value : this.note,
@@ -636,6 +662,7 @@ class Course extends DataClass implements Insertable<Course> {
           ..write('uuid: $uuid, ')
           ..write('semesterId: $semesterId, ')
           ..write('name: $name, ')
+          ..write('shortName: $shortName, ')
           ..write('teacher: $teacher, ')
           ..write('color: $color, ')
           ..write('note: $note, ')
@@ -645,8 +672,8 @@ class Course extends DataClass implements Insertable<Course> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, uuid, semesterId, name, teacher, color, note, updatedAt);
+  int get hashCode => Object.hash(
+      id, uuid, semesterId, name, shortName, teacher, color, note, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -655,6 +682,7 @@ class Course extends DataClass implements Insertable<Course> {
           other.uuid == this.uuid &&
           other.semesterId == this.semesterId &&
           other.name == this.name &&
+          other.shortName == this.shortName &&
           other.teacher == this.teacher &&
           other.color == this.color &&
           other.note == this.note &&
@@ -666,6 +694,7 @@ class CoursesCompanion extends UpdateCompanion<Course> {
   final Value<String> uuid;
   final Value<int> semesterId;
   final Value<String> name;
+  final Value<String> shortName;
   final Value<String> teacher;
   final Value<int> color;
   final Value<String> note;
@@ -675,6 +704,7 @@ class CoursesCompanion extends UpdateCompanion<Course> {
     this.uuid = const Value.absent(),
     this.semesterId = const Value.absent(),
     this.name = const Value.absent(),
+    this.shortName = const Value.absent(),
     this.teacher = const Value.absent(),
     this.color = const Value.absent(),
     this.note = const Value.absent(),
@@ -685,6 +715,7 @@ class CoursesCompanion extends UpdateCompanion<Course> {
     this.uuid = const Value.absent(),
     required int semesterId,
     required String name,
+    this.shortName = const Value.absent(),
     this.teacher = const Value.absent(),
     required int color,
     this.note = const Value.absent(),
@@ -698,16 +729,18 @@ class CoursesCompanion extends UpdateCompanion<Course> {
     Expression<String>? uuid,
     Expression<int>? semesterId,
     Expression<String>? name,
+    Expression<String>? shortName,
     Expression<String>? teacher,
     Expression<int>? color,
     Expression<String>? note,
-    Expression<DateTime>? updatedAt,
+    Expression<int>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (uuid != null) 'uuid': uuid,
       if (semesterId != null) 'semester_id': semesterId,
       if (name != null) 'name': name,
+      if (shortName != null) 'short_name': shortName,
       if (teacher != null) 'teacher': teacher,
       if (color != null) 'color': color,
       if (note != null) 'note': note,
@@ -720,6 +753,7 @@ class CoursesCompanion extends UpdateCompanion<Course> {
       Value<String>? uuid,
       Value<int>? semesterId,
       Value<String>? name,
+      Value<String>? shortName,
       Value<String>? teacher,
       Value<int>? color,
       Value<String>? note,
@@ -729,6 +763,7 @@ class CoursesCompanion extends UpdateCompanion<Course> {
       uuid: uuid ?? this.uuid,
       semesterId: semesterId ?? this.semesterId,
       name: name ?? this.name,
+      shortName: shortName ?? this.shortName,
       teacher: teacher ?? this.teacher,
       color: color ?? this.color,
       note: note ?? this.note,
@@ -751,6 +786,9 @@ class CoursesCompanion extends UpdateCompanion<Course> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (shortName.present) {
+      map['short_name'] = Variable<String>(shortName.value);
+    }
     if (teacher.present) {
       map['teacher'] = Variable<String>(teacher.value);
     }
@@ -761,7 +799,8 @@ class CoursesCompanion extends UpdateCompanion<Course> {
       map['note'] = Variable<String>(note.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(
+          $CoursesTable.$converterupdatedAt.toSql(updatedAt.value));
     }
     return map;
   }
@@ -773,6 +812,7 @@ class CoursesCompanion extends UpdateCompanion<Course> {
           ..write('uuid: $uuid, ')
           ..write('semesterId: $semesterId, ')
           ..write('name: $name, ')
+          ..write('shortName: $shortName, ')
           ..write('teacher: $teacher, ')
           ..write('color: $color, ')
           ..write('note: $note, ')
@@ -849,12 +889,11 @@ class $SchedulesTable extends Schedules
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
-  static const VerificationMeta _updatedAtMeta =
-      const VerificationMeta('updatedAt');
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-      'updated_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  late final GeneratedColumnWithTypeConverter<DateTime, int> updatedAt =
+      GeneratedColumn<int>('updated_at', aliasedName, false,
+              type: DriftSqlType.int, requiredDuringInsert: true)
+          .withConverter<DateTime>($SchedulesTable.$converterupdatedAt);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -925,12 +964,6 @@ class $SchedulesTable extends Schedules
       context.handle(_locationMeta,
           location.isAcceptableOrUnknown(data['location']!, _locationMeta));
     }
-    if (data.containsKey('updated_at')) {
-      context.handle(_updatedAtMeta,
-          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
     return context;
   }
 
@@ -959,8 +992,9 @@ class $SchedulesTable extends Schedules
           .read(DriftSqlType.string, data['${effectivePrefix}custom_weeks'])!,
       location: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}location'])!,
-      updatedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      updatedAt: $SchedulesTable.$converterupdatedAt.fromSql(attachedDatabase
+          .typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!),
     );
   }
 
@@ -971,6 +1005,8 @@ class $SchedulesTable extends Schedules
 
   static JsonTypeConverter2<WeeksType, int, int> $converterweeksType =
       const EnumIndexConverter<WeeksType>(WeeksType.values);
+  static TypeConverter<DateTime, int> $converterupdatedAt =
+      const DateTimeMsConverter();
 }
 
 class Schedule extends DataClass implements Insertable<Schedule> {
@@ -1010,7 +1046,10 @@ class Schedule extends DataClass implements Insertable<Schedule> {
     }
     map['custom_weeks'] = Variable<String>(customWeeks);
     map['location'] = Variable<String>(location);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    {
+      map['updated_at'] =
+          Variable<int>($SchedulesTable.$converterupdatedAt.toSql(updatedAt));
+    }
     return map;
   }
 
@@ -1192,7 +1231,7 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
     Expression<int>? weeksType,
     Expression<String>? customWeeks,
     Expression<String>? location,
-    Expression<DateTime>? updatedAt,
+    Expression<int>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1265,7 +1304,8 @@ class SchedulesCompanion extends UpdateCompanion<Schedule> {
       map['location'] = Variable<String>(location.value);
     }
     if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+      map['updated_at'] = Variable<int>(
+          $SchedulesTable.$converterupdatedAt.toSql(updatedAt.value));
     }
     return map;
   }
@@ -1489,12 +1529,11 @@ class $SyncStatesTable extends SyncStates
   late final GeneratedColumn<String> entity = GeneratedColumn<String>(
       'entity', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _lastSyncedAtMeta =
-      const VerificationMeta('lastSyncedAt');
   @override
-  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
-      'last_synced_at', aliasedName, true,
-      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  late final GeneratedColumnWithTypeConverter<DateTime?, int> lastSyncedAt =
+      GeneratedColumn<int>('last_synced_at', aliasedName, true,
+              type: DriftSqlType.int, requiredDuringInsert: false)
+          .withConverter<DateTime?>($SyncStatesTable.$converterlastSyncedAtn);
   static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
   @override
   late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
@@ -1522,12 +1561,6 @@ class $SyncStatesTable extends SyncStates
     } else if (isInserting) {
       context.missing(_entityMeta);
     }
-    if (data.containsKey('last_synced_at')) {
-      context.handle(
-          _lastSyncedAtMeta,
-          lastSyncedAt.isAcceptableOrUnknown(
-              data['last_synced_at']!, _lastSyncedAtMeta));
-    }
     if (data.containsKey('dirty')) {
       context.handle(
           _dirtyMeta, dirty.isAcceptableOrUnknown(data['dirty']!, _dirtyMeta));
@@ -1543,8 +1576,9 @@ class $SyncStatesTable extends SyncStates
     return SyncState(
       entity: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}entity'])!,
-      lastSyncedAt: attachedDatabase.typeMapping.read(
-          DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
+      lastSyncedAt: $SyncStatesTable.$converterlastSyncedAtn.fromSql(
+          attachedDatabase.typeMapping.read(
+              DriftSqlType.int, data['${effectivePrefix}last_synced_at'])),
       dirty: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}dirty'])!,
     );
@@ -1554,6 +1588,11 @@ class $SyncStatesTable extends SyncStates
   $SyncStatesTable createAlias(String alias) {
     return $SyncStatesTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<DateTime, int> $converterlastSyncedAt =
+      const DateTimeMsConverter();
+  static TypeConverter<DateTime?, int?> $converterlastSyncedAtn =
+      NullAwareTypeConverter.wrap($converterlastSyncedAt);
 }
 
 class SyncState extends DataClass implements Insertable<SyncState> {
@@ -1567,7 +1606,8 @@ class SyncState extends DataClass implements Insertable<SyncState> {
     final map = <String, Expression>{};
     map['entity'] = Variable<String>(entity);
     if (!nullToAbsent || lastSyncedAt != null) {
-      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
+      map['last_synced_at'] = Variable<int>(
+          $SyncStatesTable.$converterlastSyncedAtn.toSql(lastSyncedAt));
     }
     map['dirty'] = Variable<bool>(dirty);
     return map;
@@ -1662,7 +1702,7 @@ class SyncStatesCompanion extends UpdateCompanion<SyncState> {
   }) : entity = Value(entity);
   static Insertable<SyncState> custom({
     Expression<String>? entity,
-    Expression<DateTime>? lastSyncedAt,
+    Expression<int>? lastSyncedAt,
     Expression<bool>? dirty,
     Expression<int>? rowid,
   }) {
@@ -1694,7 +1734,8 @@ class SyncStatesCompanion extends UpdateCompanion<SyncState> {
       map['entity'] = Variable<String>(entity.value);
     }
     if (lastSyncedAt.present) {
-      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
+      map['last_synced_at'] = Variable<int>(
+          $SyncStatesTable.$converterlastSyncedAtn.toSql(lastSyncedAt.value));
     }
     if (dirty.present) {
       map['dirty'] = Variable<bool>(dirty.value);
@@ -1750,12 +1791,11 @@ class $PendingDeletionsTable extends PendingDeletions
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
-  static const VerificationMeta _deletedAtMeta =
-      const VerificationMeta('deletedAt');
   @override
-  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
-      'deleted_at', aliasedName, false,
-      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  late final GeneratedColumnWithTypeConverter<DateTime, int> deletedAt =
+      GeneratedColumn<int>('deleted_at', aliasedName, false,
+              type: DriftSqlType.int, requiredDuringInsert: true)
+          .withConverter<DateTime>($PendingDeletionsTable.$converterdeletedAt);
   @override
   List<GeneratedColumn> get $columns =>
       [id, entity, uuid, parentUuid, deletedAt];
@@ -1790,12 +1830,6 @@ class $PendingDeletionsTable extends PendingDeletions
           parentUuid.isAcceptableOrUnknown(
               data['parent_uuid']!, _parentUuidMeta));
     }
-    if (data.containsKey('deleted_at')) {
-      context.handle(_deletedAtMeta,
-          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
-    } else if (isInserting) {
-      context.missing(_deletedAtMeta);
-    }
     return context;
   }
 
@@ -1813,8 +1847,9 @@ class $PendingDeletionsTable extends PendingDeletions
           .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
       parentUuid: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}parent_uuid'])!,
-      deletedAt: attachedDatabase.typeMapping
-          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at'])!,
+      deletedAt: $PendingDeletionsTable.$converterdeletedAt.fromSql(
+          attachedDatabase.typeMapping
+              .read(DriftSqlType.int, data['${effectivePrefix}deleted_at'])!),
     );
   }
 
@@ -1822,6 +1857,9 @@ class $PendingDeletionsTable extends PendingDeletions
   $PendingDeletionsTable createAlias(String alias) {
     return $PendingDeletionsTable(attachedDatabase, alias);
   }
+
+  static TypeConverter<DateTime, int> $converterdeletedAt =
+      const DateTimeMsConverter();
 }
 
 class PendingDeletion extends DataClass implements Insertable<PendingDeletion> {
@@ -1843,7 +1881,10 @@ class PendingDeletion extends DataClass implements Insertable<PendingDeletion> {
     map['entity'] = Variable<String>(entity);
     map['uuid'] = Variable<String>(uuid);
     map['parent_uuid'] = Variable<String>(parentUuid);
-    map['deleted_at'] = Variable<DateTime>(deletedAt);
+    {
+      map['deleted_at'] = Variable<int>(
+          $PendingDeletionsTable.$converterdeletedAt.toSql(deletedAt));
+    }
     return map;
   }
 
@@ -1956,7 +1997,7 @@ class PendingDeletionsCompanion extends UpdateCompanion<PendingDeletion> {
     Expression<String>? entity,
     Expression<String>? uuid,
     Expression<String>? parentUuid,
-    Expression<DateTime>? deletedAt,
+    Expression<int>? deletedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1998,7 +2039,8 @@ class PendingDeletionsCompanion extends UpdateCompanion<PendingDeletion> {
       map['parent_uuid'] = Variable<String>(parentUuid.value);
     }
     if (deletedAt.present) {
-      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+      map['deleted_at'] = Variable<int>(
+          $PendingDeletionsTable.$converterdeletedAt.toSql(deletedAt.value));
     }
     return map;
   }
@@ -2016,6 +2058,1189 @@ class PendingDeletionsCompanion extends UpdateCompanion<PendingDeletion> {
   }
 }
 
+class $LocalEventsTable extends LocalEvents
+    with TableInfo<$LocalEventsTable, LocalEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _shortTitleMeta =
+      const VerificationMeta('shortTitle');
+  @override
+  late final GeneratedColumn<String> shortTitle = GeneratedColumn<String>(
+      'short_title', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _eventTypeMeta =
+      const VerificationMeta('eventType');
+  @override
+  late final GeneratedColumn<String> eventType = GeneratedColumn<String>(
+      'event_type', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('event'));
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+      'date', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _weekdayMeta =
+      const VerificationMeta('weekday');
+  @override
+  late final GeneratedColumn<int> weekday = GeneratedColumn<int>(
+      'weekday', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _startTimeMeta =
+      const VerificationMeta('startTime');
+  @override
+  late final GeneratedColumn<String> startTime = GeneratedColumn<String>(
+      'start_time', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _endTimeMeta =
+      const VerificationMeta('endTime');
+  @override
+  late final GeneratedColumn<String> endTime = GeneratedColumn<String>(
+      'end_time', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _startSectionMeta =
+      const VerificationMeta('startSection');
+  @override
+  late final GeneratedColumn<int> startSection = GeneratedColumn<int>(
+      'start_section', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _endSectionMeta =
+      const VerificationMeta('endSection');
+  @override
+  late final GeneratedColumn<int> endSection = GeneratedColumn<int>(
+      'end_section', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _busySectionsMeta =
+      const VerificationMeta('busySections');
+  @override
+  late final GeneratedColumn<String> busySections = GeneratedColumn<String>(
+      'busy_sections', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _locationMeta =
+      const VerificationMeta('location');
+  @override
+  late final GeneratedColumn<String> location = GeneratedColumn<String>(
+      'location', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+      'note', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<int> color = GeneratedColumn<int>(
+      'color', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _remindMinutesMeta =
+      const VerificationMeta('remindMinutes');
+  @override
+  late final GeneratedColumn<int> remindMinutes = GeneratedColumn<int>(
+      'remind_minutes', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(-1));
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+      'source', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('manual'));
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, int> updatedAt =
+      GeneratedColumn<int>('updated_at', aliasedName, false,
+              type: DriftSqlType.int, requiredDuringInsert: true)
+          .withConverter<DateTime>($LocalEventsTable.$converterupdatedAt);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        uuid,
+        title,
+        shortTitle,
+        eventType,
+        date,
+        weekday,
+        startTime,
+        endTime,
+        startSection,
+        endSection,
+        busySections,
+        location,
+        note,
+        color,
+        remindMinutes,
+        source,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_events';
+  @override
+  VerificationContext validateIntegrity(Insertable<LocalEvent> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('short_title')) {
+      context.handle(
+          _shortTitleMeta,
+          shortTitle.isAcceptableOrUnknown(
+              data['short_title']!, _shortTitleMeta));
+    }
+    if (data.containsKey('event_type')) {
+      context.handle(_eventTypeMeta,
+          eventType.isAcceptableOrUnknown(data['event_type']!, _eventTypeMeta));
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+          _dateMeta, date.isAcceptableOrUnknown(data['date']!, _dateMeta));
+    }
+    if (data.containsKey('weekday')) {
+      context.handle(_weekdayMeta,
+          weekday.isAcceptableOrUnknown(data['weekday']!, _weekdayMeta));
+    }
+    if (data.containsKey('start_time')) {
+      context.handle(_startTimeMeta,
+          startTime.isAcceptableOrUnknown(data['start_time']!, _startTimeMeta));
+    }
+    if (data.containsKey('end_time')) {
+      context.handle(_endTimeMeta,
+          endTime.isAcceptableOrUnknown(data['end_time']!, _endTimeMeta));
+    }
+    if (data.containsKey('start_section')) {
+      context.handle(
+          _startSectionMeta,
+          startSection.isAcceptableOrUnknown(
+              data['start_section']!, _startSectionMeta));
+    }
+    if (data.containsKey('end_section')) {
+      context.handle(
+          _endSectionMeta,
+          endSection.isAcceptableOrUnknown(
+              data['end_section']!, _endSectionMeta));
+    }
+    if (data.containsKey('busy_sections')) {
+      context.handle(
+          _busySectionsMeta,
+          busySections.isAcceptableOrUnknown(
+              data['busy_sections']!, _busySectionsMeta));
+    }
+    if (data.containsKey('location')) {
+      context.handle(_locationMeta,
+          location.isAcceptableOrUnknown(data['location']!, _locationMeta));
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+          _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+          _colorMeta, color.isAcceptableOrUnknown(data['color']!, _colorMeta));
+    }
+    if (data.containsKey('remind_minutes')) {
+      context.handle(
+          _remindMinutesMeta,
+          remindMinutes.isAcceptableOrUnknown(
+              data['remind_minutes']!, _remindMinutesMeta));
+    }
+    if (data.containsKey('source')) {
+      context.handle(_sourceMeta,
+          source.isAcceptableOrUnknown(data['source']!, _sourceMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalEvent(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      uuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      shortTitle: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}short_title'])!,
+      eventType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}event_type'])!,
+      date: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}date'])!,
+      weekday: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}weekday'])!,
+      startTime: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}start_time'])!,
+      endTime: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}end_time'])!,
+      startSection: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}start_section'])!,
+      endSection: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}end_section'])!,
+      busySections: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}busy_sections'])!,
+      location: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}location'])!,
+      note: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}note'])!,
+      color: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}color'])!,
+      remindMinutes: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}remind_minutes'])!,
+      source: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source'])!,
+      updatedAt: $LocalEventsTable.$converterupdatedAt.fromSql(attachedDatabase
+          .typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!),
+    );
+  }
+
+  @override
+  $LocalEventsTable createAlias(String alias) {
+    return $LocalEventsTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, int> $converterupdatedAt =
+      const DateTimeMsConverter();
+}
+
+class LocalEvent extends DataClass implements Insertable<LocalEvent> {
+  final int id;
+  final String uuid;
+  final String title;
+  final String shortTitle;
+  final String eventType;
+  final String date;
+  final int weekday;
+  final String startTime;
+  final String endTime;
+  final int startSection;
+  final int endSection;
+  final String busySections;
+  final String location;
+  final String note;
+  final int color;
+  final int remindMinutes;
+  final String source;
+  final DateTime updatedAt;
+  const LocalEvent(
+      {required this.id,
+      required this.uuid,
+      required this.title,
+      required this.shortTitle,
+      required this.eventType,
+      required this.date,
+      required this.weekday,
+      required this.startTime,
+      required this.endTime,
+      required this.startSection,
+      required this.endSection,
+      required this.busySections,
+      required this.location,
+      required this.note,
+      required this.color,
+      required this.remindMinutes,
+      required this.source,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    map['title'] = Variable<String>(title);
+    map['short_title'] = Variable<String>(shortTitle);
+    map['event_type'] = Variable<String>(eventType);
+    map['date'] = Variable<String>(date);
+    map['weekday'] = Variable<int>(weekday);
+    map['start_time'] = Variable<String>(startTime);
+    map['end_time'] = Variable<String>(endTime);
+    map['start_section'] = Variable<int>(startSection);
+    map['end_section'] = Variable<int>(endSection);
+    map['busy_sections'] = Variable<String>(busySections);
+    map['location'] = Variable<String>(location);
+    map['note'] = Variable<String>(note);
+    map['color'] = Variable<int>(color);
+    map['remind_minutes'] = Variable<int>(remindMinutes);
+    map['source'] = Variable<String>(source);
+    {
+      map['updated_at'] =
+          Variable<int>($LocalEventsTable.$converterupdatedAt.toSql(updatedAt));
+    }
+    return map;
+  }
+
+  LocalEventsCompanion toCompanion(bool nullToAbsent) {
+    return LocalEventsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      title: Value(title),
+      shortTitle: Value(shortTitle),
+      eventType: Value(eventType),
+      date: Value(date),
+      weekday: Value(weekday),
+      startTime: Value(startTime),
+      endTime: Value(endTime),
+      startSection: Value(startSection),
+      endSection: Value(endSection),
+      busySections: Value(busySections),
+      location: Value(location),
+      note: Value(note),
+      color: Value(color),
+      remindMinutes: Value(remindMinutes),
+      source: Value(source),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory LocalEvent.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalEvent(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      title: serializer.fromJson<String>(json['title']),
+      shortTitle: serializer.fromJson<String>(json['shortTitle']),
+      eventType: serializer.fromJson<String>(json['eventType']),
+      date: serializer.fromJson<String>(json['date']),
+      weekday: serializer.fromJson<int>(json['weekday']),
+      startTime: serializer.fromJson<String>(json['startTime']),
+      endTime: serializer.fromJson<String>(json['endTime']),
+      startSection: serializer.fromJson<int>(json['startSection']),
+      endSection: serializer.fromJson<int>(json['endSection']),
+      busySections: serializer.fromJson<String>(json['busySections']),
+      location: serializer.fromJson<String>(json['location']),
+      note: serializer.fromJson<String>(json['note']),
+      color: serializer.fromJson<int>(json['color']),
+      remindMinutes: serializer.fromJson<int>(json['remindMinutes']),
+      source: serializer.fromJson<String>(json['source']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'title': serializer.toJson<String>(title),
+      'shortTitle': serializer.toJson<String>(shortTitle),
+      'eventType': serializer.toJson<String>(eventType),
+      'date': serializer.toJson<String>(date),
+      'weekday': serializer.toJson<int>(weekday),
+      'startTime': serializer.toJson<String>(startTime),
+      'endTime': serializer.toJson<String>(endTime),
+      'startSection': serializer.toJson<int>(startSection),
+      'endSection': serializer.toJson<int>(endSection),
+      'busySections': serializer.toJson<String>(busySections),
+      'location': serializer.toJson<String>(location),
+      'note': serializer.toJson<String>(note),
+      'color': serializer.toJson<int>(color),
+      'remindMinutes': serializer.toJson<int>(remindMinutes),
+      'source': serializer.toJson<String>(source),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  LocalEvent copyWith(
+          {int? id,
+          String? uuid,
+          String? title,
+          String? shortTitle,
+          String? eventType,
+          String? date,
+          int? weekday,
+          String? startTime,
+          String? endTime,
+          int? startSection,
+          int? endSection,
+          String? busySections,
+          String? location,
+          String? note,
+          int? color,
+          int? remindMinutes,
+          String? source,
+          DateTime? updatedAt}) =>
+      LocalEvent(
+        id: id ?? this.id,
+        uuid: uuid ?? this.uuid,
+        title: title ?? this.title,
+        shortTitle: shortTitle ?? this.shortTitle,
+        eventType: eventType ?? this.eventType,
+        date: date ?? this.date,
+        weekday: weekday ?? this.weekday,
+        startTime: startTime ?? this.startTime,
+        endTime: endTime ?? this.endTime,
+        startSection: startSection ?? this.startSection,
+        endSection: endSection ?? this.endSection,
+        busySections: busySections ?? this.busySections,
+        location: location ?? this.location,
+        note: note ?? this.note,
+        color: color ?? this.color,
+        remindMinutes: remindMinutes ?? this.remindMinutes,
+        source: source ?? this.source,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  LocalEvent copyWithCompanion(LocalEventsCompanion data) {
+    return LocalEvent(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      title: data.title.present ? data.title.value : this.title,
+      shortTitle:
+          data.shortTitle.present ? data.shortTitle.value : this.shortTitle,
+      eventType: data.eventType.present ? data.eventType.value : this.eventType,
+      date: data.date.present ? data.date.value : this.date,
+      weekday: data.weekday.present ? data.weekday.value : this.weekday,
+      startTime: data.startTime.present ? data.startTime.value : this.startTime,
+      endTime: data.endTime.present ? data.endTime.value : this.endTime,
+      startSection: data.startSection.present
+          ? data.startSection.value
+          : this.startSection,
+      endSection:
+          data.endSection.present ? data.endSection.value : this.endSection,
+      busySections: data.busySections.present
+          ? data.busySections.value
+          : this.busySections,
+      location: data.location.present ? data.location.value : this.location,
+      note: data.note.present ? data.note.value : this.note,
+      color: data.color.present ? data.color.value : this.color,
+      remindMinutes: data.remindMinutes.present
+          ? data.remindMinutes.value
+          : this.remindMinutes,
+      source: data.source.present ? data.source.value : this.source,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalEvent(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('title: $title, ')
+          ..write('shortTitle: $shortTitle, ')
+          ..write('eventType: $eventType, ')
+          ..write('date: $date, ')
+          ..write('weekday: $weekday, ')
+          ..write('startTime: $startTime, ')
+          ..write('endTime: $endTime, ')
+          ..write('startSection: $startSection, ')
+          ..write('endSection: $endSection, ')
+          ..write('busySections: $busySections, ')
+          ..write('location: $location, ')
+          ..write('note: $note, ')
+          ..write('color: $color, ')
+          ..write('remindMinutes: $remindMinutes, ')
+          ..write('source: $source, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      uuid,
+      title,
+      shortTitle,
+      eventType,
+      date,
+      weekday,
+      startTime,
+      endTime,
+      startSection,
+      endSection,
+      busySections,
+      location,
+      note,
+      color,
+      remindMinutes,
+      source,
+      updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalEvent &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.title == this.title &&
+          other.shortTitle == this.shortTitle &&
+          other.eventType == this.eventType &&
+          other.date == this.date &&
+          other.weekday == this.weekday &&
+          other.startTime == this.startTime &&
+          other.endTime == this.endTime &&
+          other.startSection == this.startSection &&
+          other.endSection == this.endSection &&
+          other.busySections == this.busySections &&
+          other.location == this.location &&
+          other.note == this.note &&
+          other.color == this.color &&
+          other.remindMinutes == this.remindMinutes &&
+          other.source == this.source &&
+          other.updatedAt == this.updatedAt);
+}
+
+class LocalEventsCompanion extends UpdateCompanion<LocalEvent> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String> title;
+  final Value<String> shortTitle;
+  final Value<String> eventType;
+  final Value<String> date;
+  final Value<int> weekday;
+  final Value<String> startTime;
+  final Value<String> endTime;
+  final Value<int> startSection;
+  final Value<int> endSection;
+  final Value<String> busySections;
+  final Value<String> location;
+  final Value<String> note;
+  final Value<int> color;
+  final Value<int> remindMinutes;
+  final Value<String> source;
+  final Value<DateTime> updatedAt;
+  const LocalEventsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.title = const Value.absent(),
+    this.shortTitle = const Value.absent(),
+    this.eventType = const Value.absent(),
+    this.date = const Value.absent(),
+    this.weekday = const Value.absent(),
+    this.startTime = const Value.absent(),
+    this.endTime = const Value.absent(),
+    this.startSection = const Value.absent(),
+    this.endSection = const Value.absent(),
+    this.busySections = const Value.absent(),
+    this.location = const Value.absent(),
+    this.note = const Value.absent(),
+    this.color = const Value.absent(),
+    this.remindMinutes = const Value.absent(),
+    this.source = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  LocalEventsCompanion.insert({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    required String title,
+    this.shortTitle = const Value.absent(),
+    this.eventType = const Value.absent(),
+    this.date = const Value.absent(),
+    this.weekday = const Value.absent(),
+    this.startTime = const Value.absent(),
+    this.endTime = const Value.absent(),
+    this.startSection = const Value.absent(),
+    this.endSection = const Value.absent(),
+    this.busySections = const Value.absent(),
+    this.location = const Value.absent(),
+    this.note = const Value.absent(),
+    this.color = const Value.absent(),
+    this.remindMinutes = const Value.absent(),
+    this.source = const Value.absent(),
+    required DateTime updatedAt,
+  })  : title = Value(title),
+        updatedAt = Value(updatedAt);
+  static Insertable<LocalEvent> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? title,
+    Expression<String>? shortTitle,
+    Expression<String>? eventType,
+    Expression<String>? date,
+    Expression<int>? weekday,
+    Expression<String>? startTime,
+    Expression<String>? endTime,
+    Expression<int>? startSection,
+    Expression<int>? endSection,
+    Expression<String>? busySections,
+    Expression<String>? location,
+    Expression<String>? note,
+    Expression<int>? color,
+    Expression<int>? remindMinutes,
+    Expression<String>? source,
+    Expression<int>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (title != null) 'title': title,
+      if (shortTitle != null) 'short_title': shortTitle,
+      if (eventType != null) 'event_type': eventType,
+      if (date != null) 'date': date,
+      if (weekday != null) 'weekday': weekday,
+      if (startTime != null) 'start_time': startTime,
+      if (endTime != null) 'end_time': endTime,
+      if (startSection != null) 'start_section': startSection,
+      if (endSection != null) 'end_section': endSection,
+      if (busySections != null) 'busy_sections': busySections,
+      if (location != null) 'location': location,
+      if (note != null) 'note': note,
+      if (color != null) 'color': color,
+      if (remindMinutes != null) 'remind_minutes': remindMinutes,
+      if (source != null) 'source': source,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  LocalEventsCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? uuid,
+      Value<String>? title,
+      Value<String>? shortTitle,
+      Value<String>? eventType,
+      Value<String>? date,
+      Value<int>? weekday,
+      Value<String>? startTime,
+      Value<String>? endTime,
+      Value<int>? startSection,
+      Value<int>? endSection,
+      Value<String>? busySections,
+      Value<String>? location,
+      Value<String>? note,
+      Value<int>? color,
+      Value<int>? remindMinutes,
+      Value<String>? source,
+      Value<DateTime>? updatedAt}) {
+    return LocalEventsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      title: title ?? this.title,
+      shortTitle: shortTitle ?? this.shortTitle,
+      eventType: eventType ?? this.eventType,
+      date: date ?? this.date,
+      weekday: weekday ?? this.weekday,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      startSection: startSection ?? this.startSection,
+      endSection: endSection ?? this.endSection,
+      busySections: busySections ?? this.busySections,
+      location: location ?? this.location,
+      note: note ?? this.note,
+      color: color ?? this.color,
+      remindMinutes: remindMinutes ?? this.remindMinutes,
+      source: source ?? this.source,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (shortTitle.present) {
+      map['short_title'] = Variable<String>(shortTitle.value);
+    }
+    if (eventType.present) {
+      map['event_type'] = Variable<String>(eventType.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (weekday.present) {
+      map['weekday'] = Variable<int>(weekday.value);
+    }
+    if (startTime.present) {
+      map['start_time'] = Variable<String>(startTime.value);
+    }
+    if (endTime.present) {
+      map['end_time'] = Variable<String>(endTime.value);
+    }
+    if (startSection.present) {
+      map['start_section'] = Variable<int>(startSection.value);
+    }
+    if (endSection.present) {
+      map['end_section'] = Variable<int>(endSection.value);
+    }
+    if (busySections.present) {
+      map['busy_sections'] = Variable<String>(busySections.value);
+    }
+    if (location.present) {
+      map['location'] = Variable<String>(location.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<int>(color.value);
+    }
+    if (remindMinutes.present) {
+      map['remind_minutes'] = Variable<int>(remindMinutes.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(
+          $LocalEventsTable.$converterupdatedAt.toSql(updatedAt.value));
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('title: $title, ')
+          ..write('shortTitle: $shortTitle, ')
+          ..write('eventType: $eventType, ')
+          ..write('date: $date, ')
+          ..write('weekday: $weekday, ')
+          ..write('startTime: $startTime, ')
+          ..write('endTime: $endTime, ')
+          ..write('startSection: $startSection, ')
+          ..write('endSection: $endSection, ')
+          ..write('busySections: $busySections, ')
+          ..write('location: $location, ')
+          ..write('note: $note, ')
+          ..write('color: $color, ')
+          ..write('remindMinutes: $remindMinutes, ')
+          ..write('source: $source, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ScheduleOverridesTable extends ScheduleOverrides
+    with TableInfo<$ScheduleOverridesTable, ScheduleOverride> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScheduleOverridesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+      'uuid', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+      'date', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+      'kind', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _weekdayMeta =
+      const VerificationMeta('weekday');
+  @override
+  late final GeneratedColumn<int> weekday = GeneratedColumn<int>(
+      'weekday', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+      'note', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(''));
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, int> updatedAt =
+      GeneratedColumn<int>('updated_at', aliasedName, false,
+              type: DriftSqlType.int, requiredDuringInsert: true)
+          .withConverter<DateTime>($ScheduleOverridesTable.$converterupdatedAt);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, uuid, date, kind, weekday, note, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'schedule_overrides';
+  @override
+  VerificationContext validateIntegrity(Insertable<ScheduleOverride> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+          _uuidMeta, uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta));
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+          _dateMeta, date.isAcceptableOrUnknown(data['date']!, _dateMeta));
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+          _kindMeta, kind.isAcceptableOrUnknown(data['kind']!, _kindMeta));
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('weekday')) {
+      context.handle(_weekdayMeta,
+          weekday.isAcceptableOrUnknown(data['weekday']!, _weekdayMeta));
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+          _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ScheduleOverride map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScheduleOverride(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      uuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}uuid'])!,
+      date: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}date'])!,
+      kind: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}kind'])!,
+      weekday: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}weekday'])!,
+      note: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}note'])!,
+      updatedAt: $ScheduleOverridesTable.$converterupdatedAt.fromSql(
+          attachedDatabase.typeMapping
+              .read(DriftSqlType.int, data['${effectivePrefix}updated_at'])!),
+    );
+  }
+
+  @override
+  $ScheduleOverridesTable createAlias(String alias) {
+    return $ScheduleOverridesTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<DateTime, int> $converterupdatedAt =
+      const DateTimeMsConverter();
+}
+
+class ScheduleOverride extends DataClass
+    implements Insertable<ScheduleOverride> {
+  final int id;
+  final String uuid;
+  final String date;
+  final String kind;
+  final int weekday;
+  final String note;
+  final DateTime updatedAt;
+  const ScheduleOverride(
+      {required this.id,
+      required this.uuid,
+      required this.date,
+      required this.kind,
+      required this.weekday,
+      required this.note,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    map['date'] = Variable<String>(date);
+    map['kind'] = Variable<String>(kind);
+    map['weekday'] = Variable<int>(weekday);
+    map['note'] = Variable<String>(note);
+    {
+      map['updated_at'] = Variable<int>(
+          $ScheduleOverridesTable.$converterupdatedAt.toSql(updatedAt));
+    }
+    return map;
+  }
+
+  ScheduleOverridesCompanion toCompanion(bool nullToAbsent) {
+    return ScheduleOverridesCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      date: Value(date),
+      kind: Value(kind),
+      weekday: Value(weekday),
+      note: Value(note),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ScheduleOverride.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScheduleOverride(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      date: serializer.fromJson<String>(json['date']),
+      kind: serializer.fromJson<String>(json['kind']),
+      weekday: serializer.fromJson<int>(json['weekday']),
+      note: serializer.fromJson<String>(json['note']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'date': serializer.toJson<String>(date),
+      'kind': serializer.toJson<String>(kind),
+      'weekday': serializer.toJson<int>(weekday),
+      'note': serializer.toJson<String>(note),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ScheduleOverride copyWith(
+          {int? id,
+          String? uuid,
+          String? date,
+          String? kind,
+          int? weekday,
+          String? note,
+          DateTime? updatedAt}) =>
+      ScheduleOverride(
+        id: id ?? this.id,
+        uuid: uuid ?? this.uuid,
+        date: date ?? this.date,
+        kind: kind ?? this.kind,
+        weekday: weekday ?? this.weekday,
+        note: note ?? this.note,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  ScheduleOverride copyWithCompanion(ScheduleOverridesCompanion data) {
+    return ScheduleOverride(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      date: data.date.present ? data.date.value : this.date,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      weekday: data.weekday.present ? data.weekday.value : this.weekday,
+      note: data.note.present ? data.note.value : this.note,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduleOverride(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('date: $date, ')
+          ..write('kind: $kind, ')
+          ..write('weekday: $weekday, ')
+          ..write('note: $note, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, uuid, date, kind, weekday, note, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScheduleOverride &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.date == this.date &&
+          other.kind == this.kind &&
+          other.weekday == this.weekday &&
+          other.note == this.note &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ScheduleOverridesCompanion extends UpdateCompanion<ScheduleOverride> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String> date;
+  final Value<String> kind;
+  final Value<int> weekday;
+  final Value<String> note;
+  final Value<DateTime> updatedAt;
+  const ScheduleOverridesCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.date = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.weekday = const Value.absent(),
+    this.note = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  ScheduleOverridesCompanion.insert({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    required String date,
+    required String kind,
+    this.weekday = const Value.absent(),
+    this.note = const Value.absent(),
+    required DateTime updatedAt,
+  })  : date = Value(date),
+        kind = Value(kind),
+        updatedAt = Value(updatedAt);
+  static Insertable<ScheduleOverride> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? date,
+    Expression<String>? kind,
+    Expression<int>? weekday,
+    Expression<String>? note,
+    Expression<int>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (date != null) 'date': date,
+      if (kind != null) 'kind': kind,
+      if (weekday != null) 'weekday': weekday,
+      if (note != null) 'note': note,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  ScheduleOverridesCompanion copyWith(
+      {Value<int>? id,
+      Value<String>? uuid,
+      Value<String>? date,
+      Value<String>? kind,
+      Value<int>? weekday,
+      Value<String>? note,
+      Value<DateTime>? updatedAt}) {
+    return ScheduleOverridesCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      date: date ?? this.date,
+      kind: kind ?? this.kind,
+      weekday: weekday ?? this.weekday,
+      note: note ?? this.note,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (weekday.present) {
+      map['weekday'] = Variable<int>(weekday.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(
+          $ScheduleOverridesTable.$converterupdatedAt.toSql(updatedAt.value));
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduleOverridesCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('date: $date, ')
+          ..write('kind: $kind, ')
+          ..write('weekday: $weekday, ')
+          ..write('note: $note, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2027,6 +3252,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SyncStatesTable syncStates = $SyncStatesTable(this);
   late final $PendingDeletionsTable pendingDeletions =
       $PendingDeletionsTable(this);
+  late final $LocalEventsTable localEvents = $LocalEventsTable(this);
+  late final $ScheduleOverridesTable scheduleOverrides =
+      $ScheduleOverridesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2037,7 +3265,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         schedules,
         settingsEntries,
         syncStates,
-        pendingDeletions
+        pendingDeletions,
+        localEvents,
+        scheduleOverrides
       ];
 }
 
@@ -2078,8 +3308,10 @@ class $$SemestersTableFilterComposer
   ColumnFilters<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get startDate => $composableBuilder(
-      column: $table.startDate, builder: (column) => ColumnFilters(column));
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get startDate =>
+      $composableBuilder(
+          column: $table.startDate,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
 
   ColumnFilters<int> get totalWeeks => $composableBuilder(
       column: $table.totalWeeks, builder: (column) => ColumnFilters(column));
@@ -2087,8 +3319,10 @@ class $$SemestersTableFilterComposer
   ColumnFilters<bool> get isCurrent => $composableBuilder(
       column: $table.isCurrent, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get updatedAt =>
+      $composableBuilder(
+          column: $table.updatedAt,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
 }
 
 class $$SemestersTableOrderingComposer
@@ -2109,7 +3343,7 @@ class $$SemestersTableOrderingComposer
   ColumnOrderings<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get startDate => $composableBuilder(
+  ColumnOrderings<int> get startDate => $composableBuilder(
       column: $table.startDate, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get totalWeeks => $composableBuilder(
@@ -2118,7 +3352,7 @@ class $$SemestersTableOrderingComposer
   ColumnOrderings<bool> get isCurrent => $composableBuilder(
       column: $table.isCurrent, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 }
 
@@ -2140,7 +3374,7 @@ class $$SemestersTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get startDate =>
+  GeneratedColumnWithTypeConverter<DateTime, int> get startDate =>
       $composableBuilder(column: $table.startDate, builder: (column) => column);
 
   GeneratedColumn<int> get totalWeeks => $composableBuilder(
@@ -2149,7 +3383,7 @@ class $$SemestersTableAnnotationComposer
   GeneratedColumn<bool> get isCurrent =>
       $composableBuilder(column: $table.isCurrent, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumnWithTypeConverter<DateTime, int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
@@ -2235,6 +3469,7 @@ typedef $$CoursesTableCreateCompanionBuilder = CoursesCompanion Function({
   Value<String> uuid,
   required int semesterId,
   required String name,
+  Value<String> shortName,
   Value<String> teacher,
   required int color,
   Value<String> note,
@@ -2245,6 +3480,7 @@ typedef $$CoursesTableUpdateCompanionBuilder = CoursesCompanion Function({
   Value<String> uuid,
   Value<int> semesterId,
   Value<String> name,
+  Value<String> shortName,
   Value<String> teacher,
   Value<int> color,
   Value<String> note,
@@ -2272,6 +3508,9 @@ class $$CoursesTableFilterComposer
   ColumnFilters<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get shortName => $composableBuilder(
+      column: $table.shortName, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get teacher => $composableBuilder(
       column: $table.teacher, builder: (column) => ColumnFilters(column));
 
@@ -2281,8 +3520,10 @@ class $$CoursesTableFilterComposer
   ColumnFilters<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get updatedAt =>
+      $composableBuilder(
+          column: $table.updatedAt,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
 }
 
 class $$CoursesTableOrderingComposer
@@ -2306,6 +3547,9 @@ class $$CoursesTableOrderingComposer
   ColumnOrderings<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get shortName => $composableBuilder(
+      column: $table.shortName, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get teacher => $composableBuilder(
       column: $table.teacher, builder: (column) => ColumnOrderings(column));
 
@@ -2315,7 +3559,7 @@ class $$CoursesTableOrderingComposer
   ColumnOrderings<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 }
 
@@ -2340,6 +3584,9 @@ class $$CoursesTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
+  GeneratedColumn<String> get shortName =>
+      $composableBuilder(column: $table.shortName, builder: (column) => column);
+
   GeneratedColumn<String> get teacher =>
       $composableBuilder(column: $table.teacher, builder: (column) => column);
 
@@ -2349,7 +3596,7 @@ class $$CoursesTableAnnotationComposer
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumnWithTypeConverter<DateTime, int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
@@ -2380,6 +3627,7 @@ class $$CoursesTableTableManager extends RootTableManager<
             Value<String> uuid = const Value.absent(),
             Value<int> semesterId = const Value.absent(),
             Value<String> name = const Value.absent(),
+            Value<String> shortName = const Value.absent(),
             Value<String> teacher = const Value.absent(),
             Value<int> color = const Value.absent(),
             Value<String> note = const Value.absent(),
@@ -2390,6 +3638,7 @@ class $$CoursesTableTableManager extends RootTableManager<
             uuid: uuid,
             semesterId: semesterId,
             name: name,
+            shortName: shortName,
             teacher: teacher,
             color: color,
             note: note,
@@ -2400,6 +3649,7 @@ class $$CoursesTableTableManager extends RootTableManager<
             Value<String> uuid = const Value.absent(),
             required int semesterId,
             required String name,
+            Value<String> shortName = const Value.absent(),
             Value<String> teacher = const Value.absent(),
             required int color,
             Value<String> note = const Value.absent(),
@@ -2410,6 +3660,7 @@ class $$CoursesTableTableManager extends RootTableManager<
             uuid: uuid,
             semesterId: semesterId,
             name: name,
+            shortName: shortName,
             teacher: teacher,
             color: color,
             note: note,
@@ -2497,8 +3748,10 @@ class $$SchedulesTableFilterComposer
   ColumnFilters<String> get location => $composableBuilder(
       column: $table.location, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get updatedAt =>
+      $composableBuilder(
+          column: $table.updatedAt,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
 }
 
 class $$SchedulesTableOrderingComposer
@@ -2538,7 +3791,7 @@ class $$SchedulesTableOrderingComposer
   ColumnOrderings<String> get location => $composableBuilder(
       column: $table.location, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 }
 
@@ -2578,7 +3831,7 @@ class $$SchedulesTableAnnotationComposer
   GeneratedColumn<String> get location =>
       $composableBuilder(column: $table.location, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get updatedAt =>
+  GeneratedColumnWithTypeConverter<DateTime, int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
@@ -2825,8 +4078,10 @@ class $$SyncStatesTableFilterComposer
   ColumnFilters<String> get entity => $composableBuilder(
       column: $table.entity, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
-      column: $table.lastSyncedAt, builder: (column) => ColumnFilters(column));
+  ColumnWithTypeConverterFilters<DateTime?, DateTime, int> get lastSyncedAt =>
+      $composableBuilder(
+          column: $table.lastSyncedAt,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
 
   ColumnFilters<bool> get dirty => $composableBuilder(
       column: $table.dirty, builder: (column) => ColumnFilters(column));
@@ -2844,7 +4099,7 @@ class $$SyncStatesTableOrderingComposer
   ColumnOrderings<String> get entity => $composableBuilder(
       column: $table.entity, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+  ColumnOrderings<int> get lastSyncedAt => $composableBuilder(
       column: $table.lastSyncedAt,
       builder: (column) => ColumnOrderings(column));
 
@@ -2864,8 +4119,9 @@ class $$SyncStatesTableAnnotationComposer
   GeneratedColumn<String> get entity =>
       $composableBuilder(column: $table.entity, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
-      column: $table.lastSyncedAt, builder: (column) => column);
+  GeneratedColumnWithTypeConverter<DateTime?, int> get lastSyncedAt =>
+      $composableBuilder(
+          column: $table.lastSyncedAt, builder: (column) => column);
 
   GeneratedColumn<bool> get dirty =>
       $composableBuilder(column: $table.dirty, builder: (column) => column);
@@ -2974,8 +4230,10 @@ class $$PendingDeletionsTableFilterComposer
   ColumnFilters<String> get parentUuid => $composableBuilder(
       column: $table.parentUuid, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
-      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get deletedAt =>
+      $composableBuilder(
+          column: $table.deletedAt,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
 }
 
 class $$PendingDeletionsTableOrderingComposer
@@ -2999,7 +4257,7 @@ class $$PendingDeletionsTableOrderingComposer
   ColumnOrderings<String> get parentUuid => $composableBuilder(
       column: $table.parentUuid, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+  ColumnOrderings<int> get deletedAt => $composableBuilder(
       column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
 }
 
@@ -3024,7 +4282,7 @@ class $$PendingDeletionsTableAnnotationComposer
   GeneratedColumn<String> get parentUuid => $composableBuilder(
       column: $table.parentUuid, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get deletedAt =>
+  GeneratedColumnWithTypeConverter<DateTime, int> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
 }
 
@@ -3104,6 +4362,568 @@ typedef $$PendingDeletionsTableProcessedTableManager = ProcessedTableManager<
     ),
     PendingDeletion,
     PrefetchHooks Function()>;
+typedef $$LocalEventsTableCreateCompanionBuilder = LocalEventsCompanion
+    Function({
+  Value<int> id,
+  Value<String> uuid,
+  required String title,
+  Value<String> shortTitle,
+  Value<String> eventType,
+  Value<String> date,
+  Value<int> weekday,
+  Value<String> startTime,
+  Value<String> endTime,
+  Value<int> startSection,
+  Value<int> endSection,
+  Value<String> busySections,
+  Value<String> location,
+  Value<String> note,
+  Value<int> color,
+  Value<int> remindMinutes,
+  Value<String> source,
+  required DateTime updatedAt,
+});
+typedef $$LocalEventsTableUpdateCompanionBuilder = LocalEventsCompanion
+    Function({
+  Value<int> id,
+  Value<String> uuid,
+  Value<String> title,
+  Value<String> shortTitle,
+  Value<String> eventType,
+  Value<String> date,
+  Value<int> weekday,
+  Value<String> startTime,
+  Value<String> endTime,
+  Value<int> startSection,
+  Value<int> endSection,
+  Value<String> busySections,
+  Value<String> location,
+  Value<String> note,
+  Value<int> color,
+  Value<int> remindMinutes,
+  Value<String> source,
+  Value<DateTime> updatedAt,
+});
+
+class $$LocalEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalEventsTable> {
+  $$LocalEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get shortTitle => $composableBuilder(
+      column: $table.shortTitle, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get eventType => $composableBuilder(
+      column: $table.eventType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get weekday => $composableBuilder(
+      column: $table.weekday, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get startTime => $composableBuilder(
+      column: $table.startTime, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get endTime => $composableBuilder(
+      column: $table.endTime, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get startSection => $composableBuilder(
+      column: $table.startSection, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get endSection => $composableBuilder(
+      column: $table.endSection, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get busySections => $composableBuilder(
+      column: $table.busySections, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get location => $composableBuilder(
+      column: $table.location, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get color => $composableBuilder(
+      column: $table.color, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get remindMinutes => $composableBuilder(
+      column: $table.remindMinutes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get source => $composableBuilder(
+      column: $table.source, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get updatedAt =>
+      $composableBuilder(
+          column: $table.updatedAt,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
+}
+
+class $$LocalEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalEventsTable> {
+  $$LocalEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get shortTitle => $composableBuilder(
+      column: $table.shortTitle, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get eventType => $composableBuilder(
+      column: $table.eventType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get weekday => $composableBuilder(
+      column: $table.weekday, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get startTime => $composableBuilder(
+      column: $table.startTime, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get endTime => $composableBuilder(
+      column: $table.endTime, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get startSection => $composableBuilder(
+      column: $table.startSection,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get endSection => $composableBuilder(
+      column: $table.endSection, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get busySections => $composableBuilder(
+      column: $table.busySections,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get location => $composableBuilder(
+      column: $table.location, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get color => $composableBuilder(
+      column: $table.color, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get remindMinutes => $composableBuilder(
+      column: $table.remindMinutes,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get source => $composableBuilder(
+      column: $table.source, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$LocalEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalEventsTable> {
+  $$LocalEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get shortTitle => $composableBuilder(
+      column: $table.shortTitle, builder: (column) => column);
+
+  GeneratedColumn<String> get eventType =>
+      $composableBuilder(column: $table.eventType, builder: (column) => column);
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<int> get weekday =>
+      $composableBuilder(column: $table.weekday, builder: (column) => column);
+
+  GeneratedColumn<String> get startTime =>
+      $composableBuilder(column: $table.startTime, builder: (column) => column);
+
+  GeneratedColumn<String> get endTime =>
+      $composableBuilder(column: $table.endTime, builder: (column) => column);
+
+  GeneratedColumn<int> get startSection => $composableBuilder(
+      column: $table.startSection, builder: (column) => column);
+
+  GeneratedColumn<int> get endSection => $composableBuilder(
+      column: $table.endSection, builder: (column) => column);
+
+  GeneratedColumn<String> get busySections => $composableBuilder(
+      column: $table.busySections, builder: (column) => column);
+
+  GeneratedColumn<String> get location =>
+      $composableBuilder(column: $table.location, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<int> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<int> get remindMinutes => $composableBuilder(
+      column: $table.remindMinutes, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<DateTime, int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$LocalEventsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $LocalEventsTable,
+    LocalEvent,
+    $$LocalEventsTableFilterComposer,
+    $$LocalEventsTableOrderingComposer,
+    $$LocalEventsTableAnnotationComposer,
+    $$LocalEventsTableCreateCompanionBuilder,
+    $$LocalEventsTableUpdateCompanionBuilder,
+    (LocalEvent, BaseReferences<_$AppDatabase, $LocalEventsTable, LocalEvent>),
+    LocalEvent,
+    PrefetchHooks Function()> {
+  $$LocalEventsTableTableManager(_$AppDatabase db, $LocalEventsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalEventsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> shortTitle = const Value.absent(),
+            Value<String> eventType = const Value.absent(),
+            Value<String> date = const Value.absent(),
+            Value<int> weekday = const Value.absent(),
+            Value<String> startTime = const Value.absent(),
+            Value<String> endTime = const Value.absent(),
+            Value<int> startSection = const Value.absent(),
+            Value<int> endSection = const Value.absent(),
+            Value<String> busySections = const Value.absent(),
+            Value<String> location = const Value.absent(),
+            Value<String> note = const Value.absent(),
+            Value<int> color = const Value.absent(),
+            Value<int> remindMinutes = const Value.absent(),
+            Value<String> source = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              LocalEventsCompanion(
+            id: id,
+            uuid: uuid,
+            title: title,
+            shortTitle: shortTitle,
+            eventType: eventType,
+            date: date,
+            weekday: weekday,
+            startTime: startTime,
+            endTime: endTime,
+            startSection: startSection,
+            endSection: endSection,
+            busySections: busySections,
+            location: location,
+            note: note,
+            color: color,
+            remindMinutes: remindMinutes,
+            source: source,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            required String title,
+            Value<String> shortTitle = const Value.absent(),
+            Value<String> eventType = const Value.absent(),
+            Value<String> date = const Value.absent(),
+            Value<int> weekday = const Value.absent(),
+            Value<String> startTime = const Value.absent(),
+            Value<String> endTime = const Value.absent(),
+            Value<int> startSection = const Value.absent(),
+            Value<int> endSection = const Value.absent(),
+            Value<String> busySections = const Value.absent(),
+            Value<String> location = const Value.absent(),
+            Value<String> note = const Value.absent(),
+            Value<int> color = const Value.absent(),
+            Value<int> remindMinutes = const Value.absent(),
+            Value<String> source = const Value.absent(),
+            required DateTime updatedAt,
+          }) =>
+              LocalEventsCompanion.insert(
+            id: id,
+            uuid: uuid,
+            title: title,
+            shortTitle: shortTitle,
+            eventType: eventType,
+            date: date,
+            weekday: weekday,
+            startTime: startTime,
+            endTime: endTime,
+            startSection: startSection,
+            endSection: endSection,
+            busySections: busySections,
+            location: location,
+            note: note,
+            color: color,
+            remindMinutes: remindMinutes,
+            source: source,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$LocalEventsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $LocalEventsTable,
+    LocalEvent,
+    $$LocalEventsTableFilterComposer,
+    $$LocalEventsTableOrderingComposer,
+    $$LocalEventsTableAnnotationComposer,
+    $$LocalEventsTableCreateCompanionBuilder,
+    $$LocalEventsTableUpdateCompanionBuilder,
+    (LocalEvent, BaseReferences<_$AppDatabase, $LocalEventsTable, LocalEvent>),
+    LocalEvent,
+    PrefetchHooks Function()>;
+typedef $$ScheduleOverridesTableCreateCompanionBuilder
+    = ScheduleOverridesCompanion Function({
+  Value<int> id,
+  Value<String> uuid,
+  required String date,
+  required String kind,
+  Value<int> weekday,
+  Value<String> note,
+  required DateTime updatedAt,
+});
+typedef $$ScheduleOverridesTableUpdateCompanionBuilder
+    = ScheduleOverridesCompanion Function({
+  Value<int> id,
+  Value<String> uuid,
+  Value<String> date,
+  Value<String> kind,
+  Value<int> weekday,
+  Value<String> note,
+  Value<DateTime> updatedAt,
+});
+
+class $$ScheduleOverridesTableFilterComposer
+    extends Composer<_$AppDatabase, $ScheduleOverridesTable> {
+  $$ScheduleOverridesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get kind => $composableBuilder(
+      column: $table.kind, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get weekday => $composableBuilder(
+      column: $table.weekday, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<DateTime, DateTime, int> get updatedAt =>
+      $composableBuilder(
+          column: $table.updatedAt,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
+}
+
+class $$ScheduleOverridesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScheduleOverridesTable> {
+  $$ScheduleOverridesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+      column: $table.uuid, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+      column: $table.kind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get weekday => $composableBuilder(
+      column: $table.weekday, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$ScheduleOverridesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScheduleOverridesTable> {
+  $$ScheduleOverridesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get weekday =>
+      $composableBuilder(column: $table.weekday, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<DateTime, int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$ScheduleOverridesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ScheduleOverridesTable,
+    ScheduleOverride,
+    $$ScheduleOverridesTableFilterComposer,
+    $$ScheduleOverridesTableOrderingComposer,
+    $$ScheduleOverridesTableAnnotationComposer,
+    $$ScheduleOverridesTableCreateCompanionBuilder,
+    $$ScheduleOverridesTableUpdateCompanionBuilder,
+    (
+      ScheduleOverride,
+      BaseReferences<_$AppDatabase, $ScheduleOverridesTable, ScheduleOverride>
+    ),
+    ScheduleOverride,
+    PrefetchHooks Function()> {
+  $$ScheduleOverridesTableTableManager(
+      _$AppDatabase db, $ScheduleOverridesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScheduleOverridesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScheduleOverridesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ScheduleOverridesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            Value<String> date = const Value.absent(),
+            Value<String> kind = const Value.absent(),
+            Value<int> weekday = const Value.absent(),
+            Value<String> note = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+          }) =>
+              ScheduleOverridesCompanion(
+            id: id,
+            uuid: uuid,
+            date: date,
+            kind: kind,
+            weekday: weekday,
+            note: note,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> uuid = const Value.absent(),
+            required String date,
+            required String kind,
+            Value<int> weekday = const Value.absent(),
+            Value<String> note = const Value.absent(),
+            required DateTime updatedAt,
+          }) =>
+              ScheduleOverridesCompanion.insert(
+            id: id,
+            uuid: uuid,
+            date: date,
+            kind: kind,
+            weekday: weekday,
+            note: note,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$ScheduleOverridesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ScheduleOverridesTable,
+    ScheduleOverride,
+    $$ScheduleOverridesTableFilterComposer,
+    $$ScheduleOverridesTableOrderingComposer,
+    $$ScheduleOverridesTableAnnotationComposer,
+    $$ScheduleOverridesTableCreateCompanionBuilder,
+    $$ScheduleOverridesTableUpdateCompanionBuilder,
+    (
+      ScheduleOverride,
+      BaseReferences<_$AppDatabase, $ScheduleOverridesTable, ScheduleOverride>
+    ),
+    ScheduleOverride,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3120,4 +4940,8 @@ class $AppDatabaseManager {
       $$SyncStatesTableTableManager(_db, _db.syncStates);
   $$PendingDeletionsTableTableManager get pendingDeletions =>
       $$PendingDeletionsTableTableManager(_db, _db.pendingDeletions);
+  $$LocalEventsTableTableManager get localEvents =>
+      $$LocalEventsTableTableManager(_db, _db.localEvents);
+  $$ScheduleOverridesTableTableManager get scheduleOverrides =>
+      $$ScheduleOverridesTableTableManager(_db, _db.scheduleOverrides);
 }

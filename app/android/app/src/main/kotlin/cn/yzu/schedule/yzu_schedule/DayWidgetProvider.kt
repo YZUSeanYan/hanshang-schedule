@@ -37,7 +37,7 @@ class DayWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             widgetId: Int
         ) {
-            val title = WidgetData.getString(context, "day_title", "日视图")
+            val title = WidgetData.displayTitle(context, "day_title", "日视图")
             val items = WidgetData.getJsonArray(context, "day_courses_json")
 
             val views = RemoteViews(context.packageName, R.layout.day_widget)

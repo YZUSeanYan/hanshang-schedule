@@ -11,6 +11,8 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var transfer: WatchBleTransfer? = null
     private var eventSink: EventChannel.EventSink? = null
+    private lateinit var filePicker: ScheduleFilePickerPlugin
+    private val schoolTls = SchoolTlsPlugin()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -85,12 +87,6 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // 激励视频广告（看广告支持作者）
-        val rewardChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hanshang/reward_ad")
-        rewardChannel.setMethodCallHandler { call, result ->
-            RewardAdPlugin.handle(this, call, result)
-        }
-
         // 课前提醒通知快捷操作（勿扰模式开关）
         val reminderChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hanshang/reminder_action")
         reminderChannel.setMethodCallHandler { call, result ->
@@ -125,6 +121,22 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // 截图/Excel 课表导入文件选择
+        filePicker = ScheduleFilePickerPlugin(this)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hanshang/schedule_file_picker")
+            .setMethodCallHandler { call, result -> filePicker.handle(call, result) }
+
+        // 教务导入证书链补全校验
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hanshang/school_tls")
+            .setMethodCallHandler { call, result -> schoolTls.handle(call, result) }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        if (::filePicker.isInitialized && filePicker.onActivityResult(requestCode, resultCode, data)) {
+            return
+        }
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onDestroy() {

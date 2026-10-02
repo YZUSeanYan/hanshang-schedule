@@ -133,7 +133,13 @@ class CourseDetailSheet extends StatelessWidget {
           Divider(height: 1, color: colors.outlineVariant),
           SafeArea(
             top: false,
-            minimum: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            // 底部让出悬浮导航高度（76）+ 安全区（规范 §三.6）
+            minimum: EdgeInsets.fromLTRB(
+              16,
+              10,
+              16,
+              12 + MediaQuery.viewPaddingOf(context).bottom + 76,
+            ),
             child: OverflowBar(
               alignment: MainAxisAlignment.end,
               overflowAlignment: OverflowBarAlignment.end,
