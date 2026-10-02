@@ -2,11 +2,9 @@
 
 扬州大学专属课表 App（Android）。Flutter 工程。
 
-本目录是 `C:\dev\hanshang\` 开发根下的 `app\` 组件。同项目的其它组件（后端 `server\`、网页版 `web\`、官网 `site\`、管理后台、小程序、鸿蒙与手表工程等）见开发根目录的 `README.md`。
-
-- **当前版本**：`2.0.0+55`（`versionName+versionCode`，后端版本接口按 `versionCode` 比较）
+- **当前版本**：`2.0.4+68`（`versionName+versionCode`，后端版本接口按 `versionCode` 比较）
 - **包名**：`cn.yzu.schedule.yzu_schedule`
-- **版本控制基线**：2026-09-21 初始化 git，此前无版本控制（详见 `docs/代码来源与软著说明.md`）
+- **版本控制基线**：2026-09-21 初始化 git，此前无版本控制
 
 ---
 
