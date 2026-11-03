@@ -17,7 +17,7 @@
 | 路由 | `go_router` 14 |
 | 本地数据库 | `drift` 2.20 + `drift_flutter`（SQLite，含迁移） |
 | 网络 | `dio` 5.7（JWT 拦截、自动刷新） |
-| 教务导入 | `flutter_inappwebview` 6.2.0-beta.3（WebVPN 登录 + JS 嗅探）+ `html` 兜底解析 |
+| 教务导入 | WebView 引导 + 本地规则解析 + 表格/截图智能解析 + 按学校签名配置下发 |
 | 安全存储 | `flutter_secure_storage`（Keystore）+ `cryptography`（AES-GCM / PBKDF2） |
 | 通知 | `flutter_local_notifications` + `timezone` |
 | 桌面小组件 | `home_widget` 0.7 + 原生 Kotlin Provider |
@@ -26,6 +26,16 @@
 | 原生 | Android Kotlin（14 个文件） |
 
 依赖总数 25（`pubspec.yaml`）。
+
+---
+
+## 当前导入能力与隐私边界
+
+- WebView 登录由用户本人完成；教务账号密码只经过本机与学校系统，不读取密码框、不上传、不同步。
+- 支持手动文本、PNG/JPG/WebP 截图及 XLSX/XLS/CSV 表格；复杂表格和分小班课表由服务端规则优先解析，未命中时再使用 AI。
+- 页面内容在设备端抹除姓名、学号、手机号等身份信息，服务端再次脱敏；名单工作表不进入大模型，原始上传内容不落库、不写日志。
+- 按学校适配配置通过 import-runtime Ed25519 签名通道下发，无需更新 APK；校验失败时 fail-closed 到内置配置或最后一份有效配置。
+- 本仓库只公开客户端，不包含后端、运维脚本、真实课表样本、用户数据或任何私钥。
 
 ---
 
@@ -136,4 +146,4 @@ flutter test
 
 ## 相关文档
 
-- `docs/代码来源与软著说明.md` —— 代码来源事实、软著申请现状与可选路径
+- 项目功能、开源范围与隐私说明见[仓库首页](../README.md)。
