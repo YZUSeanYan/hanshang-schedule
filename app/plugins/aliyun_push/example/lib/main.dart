@@ -103,11 +103,11 @@ class _HomePageState extends BaseState<HomePage> {
     String appKey;
     String appSecret;
     if (Platform.isIOS) {
-      appKey = "335545903";
-      appSecret = "bf524eae098740c2bce55c968a082353";
+      appKey = "YOUR_IOS_PUSH_APP_KEY";
+      appSecret = "YOUR_IOS_PUSH_APP_SECRET";
     } else {
-      appKey = "335571660";
-      appSecret = "f56b5ac90f9a41598f64c8f6d73fe132";
+      appKey = "YOUR_ANDROID_PUSH_APP_KEY";
+      appSecret = "YOUR_ANDROID_PUSH_APP_SECRET";
     }
 
     _aliyunPush
