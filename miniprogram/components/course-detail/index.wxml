@@ -1,0 +1,44 @@
+<sheet show="{{show}}" title="课程详情" has-actions="{{true}}" bind:close="close">
+  <view class="detail-head">
+    <view class="detail-icon" style="background:{{paint.background}};">
+      <icon name="menu_book" size="42" tone="primary" />
+    </view>
+    <view class="col grow">
+      <text class="detail-title">{{course.name}}</text>
+      <text class="setting-row-desc">{{slotCount}} 个上课安排</text>
+    </view>
+  </view>
+
+  <view class="divider"></view>
+
+  <view class="detail-row" wx:if="{{course.teacher}}">
+    <icon name="person" size="36" tone="on-surface-variant" />
+    <text class="detail-text">{{course.teacher}}</text>
+  </view>
+
+  <view class="detail-slot" wx:for="{{lines}}" wx:key="key">
+    <view class="detail-row">
+      <icon name="schedule" size="36" tone="on-surface-variant" />
+      <view class="col grow">
+        <text class="detail-text">{{item.head}}</text>
+        <text class="detail-sub" wx:if="{{item.location}}">{{item.location}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="detail-row" wx:if="{{course.note}}">
+    <icon name="notes" size="36" tone="on-surface-variant" />
+    <text class="detail-text">{{course.note}}</text>
+  </view>
+
+  <text class="subtle" wx:if="{{!hasDetail}}">暂无详细信息</text>
+
+  <view slot="actions" class="sheet-actions-lead">
+    <view class="btn btn-danger btn-sm" bindtap="remove">
+      <icon name="delete" size="30" tone="on-error-container" />删除
+    </view>
+  </view>
+  <view slot="actions" class="btn btn-sm" bindtap="edit">
+    <icon name="edit" size="30" tone="on-primary" />编辑
+  </view>
+</sheet>

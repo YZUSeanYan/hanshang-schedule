@@ -1,0 +1,41 @@
+<sheet show="{{show}}" title="添加日程" sub="AI 识别" has-actions="{{true}}" bind:close="close">
+  <text class="field-hint">用一句话说清时间和事项，或者把通知截图交给 AI 识别。识别结果确认后才写入课表。</text>
+
+  <view class="field" style="margin-top:18rpx;">
+    <text class="field-label">描述你的日程</text>
+    <textarea class="field-input field-textarea" value="{{text}}" maxlength="500"
+              placeholder="例如：周五下午两点在文津楼开班会，记得带材料" bindinput="onText"></textarea>
+  </view>
+
+  <view class="file-choice-row">
+    <view class="btn btn-tonal grow {{busy ? 'btn-disabled' : ''}}" bindtap="parseText">
+      <icon name="auto_awesome" size="32" tone="on-secondary-container" />识别文字
+    </view>
+    <view class="btn btn-tonal grow {{busy ? 'btn-disabled' : ''}}" bindtap="pickImage">
+      <icon name="add_photo_alternate" size="32" tone="on-secondary-container" />识别截图
+    </view>
+  </view>
+
+  <text class="progress-stage" style="display:block;margin-top:14rpx;" wx:if="{{status}}">{{status}}</text>
+  <text class="field-hint" style="display:block;margin-top:10rpx;" wx:if="{{transcript}}">识别到的内容：{{transcript}}</text>
+
+  <!-- 识别结果：只有「新增」可在这里落地 -->
+  <view wx:if="{{ops.length}}" style="margin-top:18rpx;">
+    <view class="conflict-item" wx:for="{{ops}}" wx:key="index">
+      <view class="conflict-item-chip" style="background:var(--primary-container);"></view>
+      <view class="conflict-item-main">
+        <text class="conflict-item-title">{{item.title}}</text>
+        <text class="conflict-item-meta">{{item.actionLabel}} · {{item.meta}}</text>
+      </view>
+      <view class="btn btn-tonal btn-sm" wx:if="{{item.canAdd}}" data-index="{{index}}" bindtap="add">添加</view>
+      <view class="btn-text" wx:else bindtap="goAppHint">请在 App 完成</view>
+    </view>
+  </view>
+
+  <view class="field-error" style="margin-top:14rpx;">{{error}}</view>
+  <text class="security-note" style="display:block;margin-top:8rpx;">识别只在你主动发起时进行，文字与图片仅用于本次识别。</text>
+
+  <view slot="actions">
+    <view class="btn btn-sm" bindtap="close">关闭</view>
+  </view>
+</sheet>

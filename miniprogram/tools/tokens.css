@@ -1,0 +1,38 @@
+/* 网页版 M3 令牌（自动抽取，供 app.wxss 核对；小程序侧已改写为 page/组件选择器） */
+
+:root /* light */ {
+color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  /* M3 色板（浅色） */
+  --primary:#206A4E; --on-primary:#FFFFFF; --primary-container:#A8F2CE; --on-primary-container:#005138;
+  --secondary-container:#CFE9D9; --on-secondary-container:#354B40;
+  --tertiary-container:#C1E9FB;
+  --error:#BA1A1A; --on-error:#FFFFFF; --error-container:#FFDAD6; --on-error-container:#93000A;
+  --surface:#F5FBF5; --surface-lowest:#FFFFFF; --surface-low:#EFF5EF; --surface-c:#EAEFE9; --surface-high:#E4EAE4; --surface-highest:#DEE4DE;
+  --on-surface:#171D1A; --on-surface-variant:#404943; --outline:#707973; --outline-variant:#BFC9C2;
+  --inverse-surface:#2C322E; --inverse-on-surface:#EDF2EC;
+  /* 形状（与安卓一致） */
+  --r-card:16px; --r-control:14px; --r-dialog:22px; --r-sheet:24px; --r-snackbar:12px; --r-course:10px;
+  --ease-spring:cubic-bezier(.2,.9,.25,1.12); --ease-out:cubic-bezier(.22,.8,.3,1);
+  /* 状态层 */
+  --hover:color-mix(in srgb, var(--on-surface) 8%, transparent);
+  /* 毛玻璃（顶栏 70%/55% 与安卓一致；底栏按用户偏好更通透） */
+  --glass-bg:color-mix(in srgb, var(--surface) 70%, transparent);
+  --nav-glass-bg:color-mix(in srgb, var(--surface) 62%, transparent);
+  --glass-border:rgba(255,255,255,.6);
+  background: var(--surface); color: var(--on-surface);
+  -webkit-text-size-adjust:100%; text-size-adjust:100%;
+}
+
+[data-theme="dark"] {
+color-scheme: dark;
+  --primary:#8DD5B2; --on-primary:#003826; --primary-container:#005138; --on-primary-container:#A8F2CE;
+  --secondary-container:#354B40; --on-secondary-container:#CFE9D9;
+  --tertiary-container:#244C5B;
+  --error:#FFB4AB; --on-error:#690005; --error-container:#93000A; --on-error-container:#FFDAD6;
+  --surface:#121417; --surface-lowest:#0A0F0C; --surface-low:#171D1A; --surface-c:#1B211D; --surface-high:#252B28; --surface-highest:#303632;
+  --on-surface:#DEE4DE; --on-surface-variant:#BFC9C2; --outline:#8A938C; --outline-variant:#404943;
+  --inverse-surface:#DEE4DE; --inverse-on-surface:#2C322E;
+  --nav-glass-bg:color-mix(in srgb, var(--surface) 50%, transparent);
+  --glass-border:rgba(255,255,255,.10);
+}

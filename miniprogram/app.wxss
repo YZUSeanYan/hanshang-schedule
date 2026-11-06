@@ -1,0 +1,425 @@
+/*
+ * 邗上课表小程序设计系统。
+ *
+ * 与网页版 styles.css / index.html 内联样式同一套 M3 令牌（种子色 #158A63 邗上绿，
+ * 色板由 SchemeTonalSpot 生成，与 Flutter fromSeed 一致），保证三端观感统一。
+ *
+ * 三点与网页版不同，都是 WXSS 的限制决定的：
+ *   1. 不支持 `*` 通配选择器，所有节点显式写类名。
+ *   2. 组件默认不接受页面样式，本项目给每个组件开 styleIsolation: apply-shared，
+ *      于是这份全局样式对组件同样生效，无需为每个组件再写一份 wxss。
+ *   3. 小程序不支持 color-mix()，网页版用它算的毛玻璃底色在这里预先算成 rgba。
+ */
+
+/* ============ 令牌：浅色 ============ */
+.app-root {
+  --primary:#206A4E; --on-primary:#FFFFFF; --primary-container:#A8F2CE; --on-primary-container:#005138;
+  --secondary-container:#CFE9D9; --on-secondary-container:#354B40;
+  --tertiary-container:#C1E9FB;
+  --error:#BA1A1A; --on-error:#FFFFFF; --error-container:#FFDAD6; --on-error-container:#93000A;
+  --surface:#F5FBF5; --surface-lowest:#FFFFFF; --surface-low:#EFF5EF; --surface-c:#EAEFE9; --surface-high:#E4EAE4; --surface-highest:#DEE4DE;
+  --on-surface:#171D1A; --on-surface-variant:#404943; --outline:#707973; --outline-variant:#BFC9C2;
+  --inverse-surface:#2C322E; --inverse-on-surface:#EDF2EC;
+  --r-card:16px; --r-control:14px; --r-dialog:22px; --r-sheet:24px; --r-snackbar:12px; --r-course:10px;
+  --ease-spring:cubic-bezier(.2,.9,.25,1.12); --ease-out:cubic-bezier(.22,.8,.3,1);
+  --glass-bg:rgba(245,251,245,.72);
+  --nav-glass-bg:rgba(245,251,245,.86);
+  --glass-border:rgba(255,255,255,.6);
+  background: var(--surface);
+  color: var(--on-surface);
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+/* ============ 令牌：深色 ============ */
+.app-root.theme-dark {
+  --primary:#8DD5B2; --on-primary:#003826; --primary-container:#005138; --on-primary-container:#A8F2CE;
+  --secondary-container:#354B40; --on-secondary-container:#CFE9D9;
+  --tertiary-container:#244C5B;
+  --error:#FFB4AB; --on-error:#690005; --error-container:#93000A; --on-error-container:#FFDAD6;
+  --surface:#121417; --surface-lowest:#0A0F0C; --surface-low:#171D1A; --surface-c:#1B211D; --surface-high:#252B28; --surface-highest:#303632;
+  --on-surface:#DEE4DE; --on-surface-variant:#BFC9C2; --outline:#8A938C; --outline-variant:#404943;
+  --inverse-surface:#DEE4DE; --inverse-on-surface:#2C322E;
+  --glass-bg:rgba(18,20,23,.74);
+  --nav-glass-bg:rgba(18,20,23,.88);
+  --glass-border:rgba(255,255,255,.10);
+}
+
+/* ============ 图标 ============ */
+/* 图标用 base64/URL 编码的内联 SVG 作背景，颜色由 JS 注入（见 components/icon）。
+   小程序 <image> 对外部 SVG 支持不稳，且无法继承 currentColor，故走背景图。 */
+.icon { display:block; background-repeat:no-repeat; background-position:center; background-size:contain; flex:none; }
+
+/* ============ 通用布局 ============ */
+.page-body { padding: 0 32rpx 200rpx; box-sizing: border-box; }
+.page-body-flush { padding: 0 0 200rpx; box-sizing: border-box; }
+.row { display:flex; align-items:center; }
+.col { display:flex; flex-direction:column; }
+.grow { flex:1; min-width:0; }
+.hidden { display:none; }
+.muted { color: var(--on-surface-variant); }
+.subtle { color: var(--on-surface-variant); font-size: 26rpx; }
+.eyebrow { margin:0; color: var(--primary); font-weight:700; font-size:24rpx; }
+.divider { height:1rpx; background: var(--outline-variant); margin:24rpx 0; }
+
+/* ============ 顶栏（自绘，需自行避让状态栏与右上角胶囊） ============ */
+.app-header { display:flex; align-items:flex-end; justify-content:space-between; gap:16rpx; padding: 8rpx 32rpx 16rpx; }
+.app-header-main { display:flex; flex-direction:column; gap:2rpx; min-width:0; }
+.app-header-title { font-size:44rpx; font-weight:800; line-height:1.2; }
+.sync-hint { color: var(--on-surface-variant); font-size:22rpx; margin-right:8rpx; }
+.sync-hint-active { color: var(--primary); }
+
+/* ============ 卡片与列表 ============ */
+.card { background: var(--surface-lowest); border:1rpx solid var(--outline-variant); border-radius: var(--r-card); padding:32rpx; margin:0 0 24rpx; }
+.card-title-row { display:flex; align-items:flex-start; gap:16rpx; margin-bottom:16rpx; }
+.card-title { font-size:32rpx; font-weight:800; }
+.badge { display:inline-block; padding:6rpx 16rpx; border-radius:99rpx; background: var(--secondary-container); color: var(--on-secondary-container); font-size:22rpx; font-weight:700; }
+.badge-neutral { background: var(--surface-c); color: var(--on-surface-variant); }
+.settings-group { background: var(--surface-lowest); border:1rpx solid var(--outline-variant); border-radius: var(--r-card); overflow:hidden; margin:0 0 24rpx; }
+.setting-row { display:flex; align-items:center; gap:20rpx; padding:26rpx 30rpx; border-top:1rpx solid var(--outline-variant); }
+.setting-row-first { border-top:0; }
+.setting-row-icon { display:flex; align-items:center; justify-content:center; width:64rpx; height:64rpx; border-radius:18rpx; background: var(--surface-c); flex:none; }
+.setting-row-main { display:flex; flex-direction:column; gap:4rpx; flex:1; min-width:0; }
+.setting-row-title { font-size:30rpx; font-weight:700; }
+.setting-row-desc { color: var(--on-surface-variant); font-size:24rpx; }
+.setting-row-value { color: var(--outline); font-size:24rpx; text-align:right; }
+
+/* ============ 按钮 ============ */
+.btn { display:flex; align-items:center; justify-content:center; gap:10rpx; padding:24rpx 28rpx; border-radius: var(--r-control); background: var(--primary); color: var(--on-primary); font-size:30rpx; font-weight:700; border:0; }
+.btn:active { opacity:.86; }
+.btn-block { width:100%; }
+.btn-tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn-outline { background: transparent; color: var(--primary); border:1rpx solid var(--primary); }
+.btn-danger { background: var(--error-container); color: var(--on-error-container); }
+.btn-sm { padding:14rpx 22rpx; font-size:26rpx; }
+.btn-disabled { opacity:.5; }
+.btn-text { color: var(--primary); font-size:28rpx; font-weight:700; padding:8rpx 4rpx; }
+.icon-btn { display:flex; align-items:center; justify-content:center; width:80rpx; height:80rpx; border-radius:50%; background: var(--surface-lowest); border:1rpx solid var(--outline-variant); }
+.icon-btn:active { opacity:.8; }
+.icon-btn-plain { background: transparent; border:0; }
+
+/* ============ 表单 ============ */
+.field { display:flex; flex-direction:column; gap:10rpx; margin-bottom:22rpx; }
+.field-label { font-size:27rpx; font-weight:700; color: var(--on-surface); }
+.field-input { width:100%; box-sizing:border-box; padding:22rpx 24rpx; border:1rpx solid var(--outline-variant); border-radius: var(--r-control); background: var(--surface-lowest); color: var(--on-surface); font-size:30rpx; }
+.field-textarea { min-height:150rpx; }
+.field-row { display:flex; gap:20rpx; }
+.field-row .field { flex:1; min-width:0; }
+.field-hint { color: var(--on-surface-variant); font-size:24rpx; line-height:1.5; }
+.field-error { color: var(--error); font-size:25rpx; min-height:34rpx; }
+.switch-row { display:flex; align-items:center; justify-content:space-between; gap:20rpx; padding:16rpx 0; }
+
+/* ============ 课表面板 ============ */
+/* flex:1 而不是 height:100%：父级是 100vh 的 flex 列，上面还有状态栏与顶栏，
+   用 100% 会把工具栏顶出屏幕。min-height:0 是让内部可滚动区能真正收缩。 */
+.schedule-shell { display:flex; flex-direction:column; flex:1; min-height:0; }
+.schedule-toolbar { display:flex; align-items:center; gap:10rpx; padding:6rpx 24rpx 10rpx; }
+.week-heading { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:160rpx; }
+.week-label { font-size:30rpx; font-weight:800; }
+.week-range { color: var(--on-surface-variant); font-size:21rpx; font-weight:600; }
+.segmented { display:flex; margin-left:auto; padding:4rpx; border-radius:14rpx; background: var(--surface-c); }
+.segmented-item { min-width:70rpx; text-align:center; padding:10rpx 0; border-radius:10rpx; color: var(--on-surface-variant); font-size:26rpx; }
+.segmented-item-active { background: var(--surface-lowest); color: var(--primary); font-weight:800; }
+
+/* 天数选择器（日视图） */
+.day-selector { display:flex; gap:10rpx; padding:0 24rpx 14rpx; }
+.day-chip { flex:1; text-align:center; padding:14rpx 0; border-radius: var(--r-control); border:1rpx solid var(--outline-variant); background: var(--surface-lowest); color: var(--on-surface-variant); font-size:26rpx; }
+.day-chip-active { background: var(--primary); color: var(--on-primary); border-color: var(--primary); font-weight:700; }
+
+/* 周视图：绝对定位绘制（小程序 CSS Grid 的 grid-row span 在低版本内核表现不稳） */
+.week-host { position:relative; flex:1; min-height:0; margin:0 24rpx; touch-action: none; }
+.week-grid { position:relative; width:100%; height:100%; background: var(--surface-lowest); border:1rpx solid var(--outline-variant); border-radius:16rpx; overflow:hidden; }
+.week-corner { position:absolute; display:flex; align-items:center; justify-content:center; color: var(--on-surface-variant); font-size:21rpx; font-weight:700; background: var(--surface-low); border-right:1rpx solid var(--outline-variant); border-bottom:1rpx solid var(--outline-variant); box-sizing:border-box; }
+.week-day-head { position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; background: var(--surface-low); border-right:1rpx solid var(--outline-variant); border-bottom:1rpx solid var(--outline-variant); box-sizing:border-box; }
+.week-day-name { font-size:23rpx; font-weight:700; color: var(--on-surface-variant); }
+.week-day-num { font-size:28rpx; font-weight:800; color: var(--on-surface); }
+.week-day-head-today { background: var(--primary-container); }
+.week-day-head-today .week-day-name { color: var(--on-primary-container); }
+.week-day-head-today .week-day-num { color: var(--on-primary-container); }
+.week-section { position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; background: var(--surface-low); border-right:1rpx solid var(--outline-variant); border-bottom:1rpx solid var(--outline-variant); box-sizing:border-box; }
+.week-section-num { font-size:26rpx; font-weight:800; color: var(--on-surface); }
+.week-section-time { font-size:16rpx; color: var(--on-surface-variant); line-height:1.15; text-align:center; }
+.week-cell { position:absolute; border-right:1rpx solid var(--surface-high); border-bottom:1rpx solid var(--surface-high); box-sizing:border-box; }
+.week-cell-alt { background: var(--surface-low); }
+
+/* 课程块 */
+.course-block { position:absolute; display:flex; flex-direction:column; box-sizing:border-box; padding:8rpx 8rpx 8rpx 12rpx; border-radius: var(--r-course); border-left-width:6rpx; border-left-style:solid; overflow:hidden; }
+.course-block:active { opacity:.82; }
+.course-block-title { font-weight:800; line-height:1.1; overflow:hidden; }
+.course-block-meta { margin-top:4rpx; font-weight:700; line-height:1.15; overflow:hidden; }
+.course-block-room { color: inherit; }
+.course-block-building { opacity:.78; }
+.course-block-teacher { opacity:.72; }
+
+/* 日视图列表 */
+.day-group { background: var(--surface-lowest); border:1rpx solid var(--outline-variant); border-radius:16rpx; overflow:hidden; margin-bottom:20rpx; }
+.day-group-head { padding:18rpx 26rpx; color: var(--on-primary-container); background: var(--primary-container); font-size:29rpx; font-weight:700; }
+.slot-card { display:flex; align-items:stretch; gap:18rpx; padding:24rpx 26rpx; border-top:1rpx solid var(--surface-high); }
+.slot-color { width:10rpx; border-radius:6rpx; flex:none; }
+.slot-time { display:flex; flex-direction:column; align-items:flex-end; justify-content:center; min-width:110rpx; flex:none; }
+.slot-time-start { font-size:29rpx; font-weight:800; color: var(--on-surface); }
+.slot-time-end { font-size:23rpx; color: var(--on-surface-variant); }
+.slot-main { display:flex; flex-direction:column; gap:6rpx; min-width:0; flex:1; }
+.slot-title { font-size:30rpx; font-weight:800; }
+.slot-detail { font-size:25rpx; color: var(--on-surface-variant); }
+.slot-room { font-weight:800; color: var(--on-surface); }
+.empty-day { padding:24rpx 26rpx; color: var(--outline); font-size:26rpx; }
+
+/* 空状态 */
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18rpx; padding:120rpx 60rpx; text-align:center; }
+.empty-title { font-size:34rpx; font-weight:800; }
+.empty-desc { color: var(--on-surface-variant); font-size:26rpx; line-height:1.6; }
+
+/* ============ 弹层（替代网页版 <dialog>） ============ */
+.sheet-mask { position:fixed; inset:0; z-index:100; background: rgba(16,40,29,.45); display:flex; align-items:flex-end; justify-content:center; }
+.sheet-panel { width:100%; max-width:760rpx; max-height:86vh; background: var(--surface-lowest); border-radius: var(--r-sheet) var(--r-sheet) 0 0; display:flex; flex-direction:column; overflow:hidden; animation: sheet-in .28s var(--ease-spring); }
+@keyframes sheet-in { from { transform: translateY(40rpx); opacity:0; } }
+.sheet-head { display:flex; align-items:center; justify-content:space-between; gap:16rpx; padding:30rpx 32rpx 12rpx; flex:none; }
+.sheet-title { font-size:34rpx; font-weight:800; }
+.sheet-sub { color: var(--on-surface-variant); font-size:24rpx; }
+.sheet-close { display:flex; align-items:center; justify-content:center; width:56rpx; height:56rpx; border-radius:50%; background: var(--surface-c); flex:none; }
+.sheet-body { padding:12rpx 32rpx 40rpx; overflow-y:auto; flex:1; min-height:0; }
+.sheet-actions { display:flex; align-items:center; justify-content:flex-end; gap:16rpx; padding:16rpx 32rpx calc(28rpx + env(safe-area-inset-bottom)); flex:none; }
+.sheet-actions-lead { margin-right:auto; }
+
+/* ============ 底部导航（自定义 tabBar） ============ */
+.tabbar { position:fixed; left:0; right:0; bottom:0; z-index:90; display:flex; padding:8rpx 20rpx calc(8rpx + env(safe-area-inset-bottom)); background: var(--nav-glass-bg); border-top:1rpx solid var(--outline-variant); }
+.tabbar-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4rpx; padding:10rpx 0; color: var(--outline); font-size:22rpx; }
+.tabbar-item-active { color: var(--primary); font-weight:700; }
+
+/* ============ 导入页 ============ */
+.import-choice-head { padding:8rpx 0 20rpx; }
+.file-choice { display:flex; align-items:center; justify-content:center; gap:12rpx; padding:30rpx 20rpx; border-radius: var(--r-control); font-size:29rpx; font-weight:700; }
+.file-choice-filled { background: var(--primary); color: var(--on-primary); }
+.file-choice-tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.file-choice-row { display:flex; gap:20rpx; }
+.file-choice-row .file-choice { flex:1; flex-direction:column; gap:14rpx; text-align:center; }
+.file-selection { text-align:center; color: var(--on-surface-variant); font-size:25rpx; margin:20rpx 0; }
+.import-note { font-size:24rpx; line-height:1.55; color:#8A5A00; background:#FFF4D6; border:1rpx solid #F0D48A; border-radius:12rpx; padding:18rpx 22rpx; margin-top:18rpx; }
+.file-privacy { color: var(--on-surface-variant); font-size:23rpx; line-height:1.6; }
+.consent-row { display:flex; align-items:flex-start; gap:14rpx; margin:18rpx 0; }
+.consent-text { font-size:25rpx; line-height:1.5; color: var(--on-surface-variant); flex:1; }
+.progress-wrap { display:flex; flex-direction:column; align-items:center; gap:12rpx; padding:24rpx 0; }
+.progress-meter { width:100%; height:10rpx; border-radius:99rpx; background: var(--surface-high); overflow:hidden; }
+.progress-bar { height:100%; background: var(--primary); border-radius:99rpx; transition: width .3s linear; }
+.progress-stage { color: var(--on-surface-variant); font-size:24rpx; }
+.course-item { display:flex; flex-direction:column; gap:6rpx; padding:20rpx 0; border-top:1rpx solid var(--outline-variant); }
+.course-item-name { font-size:29rpx; font-weight:700; }
+.course-item-detail { color: var(--on-surface-variant); font-size:24rpx; line-height:1.5; }
+
+/* ============ 口令 / 分享 ============ */
+.share-code-input { text-align:center; font-size:44rpx; font-weight:800; letter-spacing:10rpx; text-transform:uppercase; }
+.share-code-display { text-align:center; font-size:64rpx; font-weight:800; letter-spacing:12rpx; color: var(--primary); padding:30rpx; background: var(--surface-c); border-radius: var(--r-control); }
+
+/* ============ 「我的」页 ============ */
+.profile-card { display:flex; align-items:center; gap:24rpx; padding:36rpx 32rpx; background: var(--surface-lowest); border:1rpx solid var(--outline-variant); border-radius: var(--r-card); margin-bottom:24rpx; }
+.avatar { display:flex; align-items:center; justify-content:center; width:108rpx; height:108rpx; border-radius:34rpx; background: linear-gradient(135deg,#09956A,#075D45); color:#fff; font-size:44rpx; font-weight:800; flex:none; }
+.profile-name { font-size:36rpx; font-weight:800; }
+.profile-desc { color: var(--on-surface-variant); font-size:24rpx; margin-top:6rpx; }
+.theme-seg { display:flex; gap:10rpx; padding:18rpx 30rpx; }
+.theme-seg-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:8rpx; padding:18rpx 0; border-radius: var(--r-control); background: var(--surface-c); color: var(--on-surface-variant); font-size:24rpx; }
+.theme-seg-item-active { background: var(--primary); color: var(--on-primary); font-weight:700; }
+.beian-footer { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10rpx 24rpx; margin:40rpx 0 8rpx; font-size:23rpx; font-weight:600; color: var(--outline); }
+.beian-link { color: var(--outline); }
+
+/* ============ 通知中心 ============ */
+.notification-list { display:flex; flex-direction:column; gap:16rpx; }
+.notification-item { display:flex; gap:18rpx; padding:22rpx; border-radius: var(--r-card); background: var(--surface-low); }
+.notification-main { display:flex; flex-direction:column; gap:6rpx; flex:1; min-width:0; }
+.notification-title { font-size:29rpx; font-weight:700; }
+.notification-body { color: var(--on-surface-variant); font-size:25rpx; line-height:1.5; }
+.notification-time { color: var(--outline); font-size:22rpx; }
+.notification-empty { text-align:center; color: var(--on-surface-variant); padding:60rpx 20rpx; }
+
+/* ============ 关于 / 隐私 ============ */
+.about-content { display:flex; flex-direction:column; align-items:center; gap:22rpx; }
+.about-avatar { width:200rpx; height:200rpx; border-radius:50%; background: var(--surface-c); }
+.about-name { font-size:38rpx; font-weight:800; color: var(--primary); }
+.about-intro { width:100%; box-sizing:border-box; padding:28rpx; border-radius: var(--r-card); background: var(--surface-low); color: var(--on-surface-variant); line-height:1.7; font-size:26rpx; }
+.about-link { width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:space-between; padding:26rpx 28rpx; border-radius: var(--r-control); background: var(--surface-low); font-size:28rpx; font-weight:700; }
+.privacy-section { margin-bottom:24rpx; }
+.privacy-heading { font-size:29rpx; font-weight:800; color: var(--primary); margin-bottom:10rpx; }
+.privacy-text { font-size:26rpx; line-height:1.7; color: var(--on-surface-variant); }
+
+/* ============ 共同空闲 ============ */
+.avail-hero { display:flex; flex-direction:column; align-items:center; gap:10rpx; padding:36rpx 20rpx 24rpx; }
+.avail-partner { font-size:36rpx; font-weight:800; }
+.avail-week-nav { display:flex; align-items:center; justify-content:center; gap:24rpx; padding:10rpx 0 20rpx; }
+.avail-day { background: var(--surface-lowest); border:1rpx solid var(--outline-variant); border-radius: var(--r-card); margin-bottom:18rpx; overflow:hidden; }
+.avail-day-head { display:flex; align-items:center; justify-content:space-between; padding:20rpx 26rpx; }
+.avail-day-title { font-size:29rpx; font-weight:700; }
+.avail-day-free { font-size:24rpx; color: var(--primary); font-weight:700; }
+.avail-day-free-none { color: var(--outline); font-weight:600; }
+.avail-strip { display:flex; gap:4rpx; padding:0 20rpx 22rpx; }
+.avail-cell { flex:1; text-align:center; padding:14rpx 0; border-radius:8rpx; font-size:22rpx; font-weight:700; }
+.state-both_free { background: var(--primary); color: var(--on-primary); }
+.state-both_busy { background: var(--surface-highest); color: var(--on-surface-variant); }
+.state-me_busy { background: var(--tertiary-container); color:#0A4A5E; }
+.state-partner_busy { background: var(--secondary-container); color: var(--on-secondary-container); }
+.avail-legend { display:flex; flex-wrap:wrap; gap:14rpx 22rpx; padding:16rpx 0; }
+.avail-legend-item { display:flex; align-items:center; gap:8rpx; font-size:23rpx; color: var(--on-surface-variant); }
+.avail-legend-dot { width:22rpx; height:22rpx; border-radius:6rpx; }
+.invite-row { display:flex; align-items:center; justify-content:space-between; gap:16rpx; padding:20rpx 0; }
+
+/* ============ 启动 / 登录 ============ */
+.boot { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18rpx; min-height:80vh; }
+.boot-text { color: var(--on-surface-variant); font-size:27rpx; }
+.login-hero { display:flex; flex-direction:column; align-items:center; text-align:center; gap:12rpx; padding:70rpx 20rpx 40rpx; }
+.login-title { font-size:46rpx; font-weight:800; line-height:1.25; }
+.security-note { color: var(--on-surface-variant); font-size:23rpx; line-height:1.55; text-align:center; }
+
+/* ============ 主页面：整屏 flex 列，周网格自己撑满剩余高度 ============ */
+/* 课表页不跟随页面滚动，所以用 100vh 的 flex 列把工具栏钉住、网格吃掉剩余空间；
+   底部留出自定义 tabBar 的高度（由 JS 按安全区算好传进来）。 */
+.schedule-root { display:flex; flex-direction:column; height:100vh; box-sizing:border-box; overflow:hidden; }
+.day-scroll { flex:1; min-height:0; padding:0 32rpx; box-sizing:border-box; }
+.day-chip-row { display:flex; gap:10rpx; }
+
+/* 游客模式提示条 */
+.guest-bar { display:flex; align-items:center; justify-content:space-between; gap:16rpx; margin:0 32rpx 12rpx; padding:16rpx 22rpx; border-radius: var(--r-control); background: var(--secondary-container); flex:none; }
+.guest-bar-text { color: var(--on-secondary-container); font-size:24rpx; flex:1; }
+
+/* 周格翻页动画：只做滑入，跟手拖拽见 pages/schedule/index.js 顶部说明 */
+.week-slide-next { animation: week-slide-next .22s var(--ease-out); }
+.week-slide-prev { animation: week-slide-prev .22s var(--ease-out); }
+@keyframes week-slide-next { from { opacity:.25; transform: translateX(24rpx); } }
+@keyframes week-slide-prev { from { opacity:.25; transform: translateX(-24rpx); } }
+
+/* 课程块：标题与元信息都按行数截断，避免长课名把块撑破 */
+.course-block-title { display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
+.course-block-meta { display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* ============ 课程表单里的时间段编辑器 ============ */
+.slot-editor { display:flex; flex-direction:column; gap:14rpx; padding:22rpx; border:1rpx solid var(--outline-variant); border-radius: var(--r-control); background: var(--surface-low); margin-bottom:18rpx; }
+
+/* ============ 课表管理列表 ============ */
+.semester-list { display:flex; flex-direction:column; gap:12rpx; }
+.semester-row { display:flex; align-items:center; gap:16rpx; padding:22rpx; border-radius: var(--r-control); border:1rpx solid var(--outline-variant); background: var(--surface-lowest); }
+.semester-row-current { background: var(--surface-low); border-color: var(--primary); }
+
+/* ============ 课程详情 ============ */
+.detail-head { display:flex; align-items:center; gap:20rpx; }
+.detail-icon { display:flex; align-items:center; justify-content:center; width:88rpx; height:88rpx; border-radius:26rpx; flex:none; }
+.detail-title { font-size:36rpx; font-weight:800; }
+.detail-row { display:flex; align-items:flex-start; gap:16rpx; padding:12rpx 0; }
+.detail-text { font-size:28rpx; line-height:1.5; flex:1; }
+.detail-sub { font-size:24rpx; color: var(--on-surface-variant); margin-top:4rpx; }
+.detail-slot { border-top:1rpx solid var(--outline-variant); padding:10rpx 0; margin-top:10rpx; }
+
+/* ============ 自绘勾选框（AI 识别同意） ============ */
+.consent-box { display:flex; align-items:center; justify-content:center; width:40rpx; height:40rpx; border-radius:8rpx; border:2rpx solid var(--outline); flex:none; margin-top:4rpx; }
+.consent-box-on { background: var(--primary); border-color: var(--primary); }
+
+/* ============ 共同空闲：用户名搜索结果 ============ */
+.search-result { display:flex; align-items:center; gap:14rpx; padding:20rpx 18rpx; border-radius: var(--r-control); border:1rpx solid var(--outline-variant); margin-top:12rpx; background: var(--surface-lowest); }
+
+/* ============ 关于页收款码 ============ */
+.about-payment { display:flex; flex-direction:column; align-items:center; gap:12rpx; width:100%; padding-top:20rpx; border-top:1rpx solid var(--outline-variant); }
+.payment-qr { width:100%; border-radius: var(--r-control); }
+
+/* ============ 每节课时间编辑器 ============ */
+.time-row { display:flex; align-items:center; gap:14rpx; padding:12rpx 0; }
+.time-row-label { width:130rpx; font-size:26rpx; font-weight:700; flex:none; }
+.time-row-sep { color: var(--outline); font-size:24rpx; }
+.time-cell { min-width:130rpx; text-align:center; padding:16rpx 18rpx; border:1rpx solid var(--outline-variant); border-radius:12rpx; background: var(--surface-lowest); font-size:28rpx; }
+.time-cell-disabled { opacity:.5; }
+
+/* ============ 通知中心工具条 ============ */
+.inbox-toolbar { display:flex; align-items:center; justify-content:flex-end; gap:16rpx; padding:0 0 18rpx; border-bottom:1rpx solid var(--outline-variant); margin-bottom:20rpx; }
+
+/* ============ 原生 button 适配 ============ */
+/* 小程序 <button> 自带 ::after 边框与背景，用作自绘样式按钮时要去掉。
+   只在少数需要 open-type 的场景（如隐私授权）才会用到原生 button。 */
+.btn-plain { line-height:normal; }
+.btn-plain::after { border:none; }
+
+/* ============ 自定义 tabBar 的作用域 ============ */
+/* 自定义 tabBar 的根节点套了 app-root 来拿 M3 令牌，但它盖在页面之上，
+   必须把 app-root 附带的「页面级」样式（铺满全屏 + 不透明底色）抵消掉，
+   否则底栏会变成一层全屏遮罩把页面内容整块盖住。 */
+.tabbar-scope { min-height:0; background:transparent; }
+
+/* ============ 调休（放假 / 补课） ============ */
+/* 表头的「放假」标记：字号很小，叠在星期几与日期下方 */
+.week-day-off { font-size:14rpx; font-weight:800; line-height:1; color:var(--error); letter-spacing:.02em; }
+.holiday-row { display:flex; align-items:center; gap:16rpx; padding:18rpx 20rpx; border-radius: var(--r-control); border:1rpx solid var(--outline-variant); background: var(--surface-lowest); margin-bottom:12rpx; }
+.holiday-row-main { display:flex; flex-direction:column; gap:4rpx; flex:1; min-width:0; }
+.holiday-row-date { font-size:28rpx; font-weight:800; }
+.holiday-row-kind { font-size:23rpx; color: var(--on-surface-variant); }
+.holiday-row-off { color: var(--error); }
+.holiday-row-makeup { color: var(--primary); }
+.holiday-pick { display:flex; align-items:flex-start; gap:14rpx; padding:14rpx 4rpx; }
+.holiday-pick-box { width:36rpx; height:36rpx; border:2rpx solid var(--outline); border-radius:8rpx; flex:none; margin-top:3rpx; display:flex; align-items:center; justify-content:center; }
+.holiday-pick-box-on { background: var(--primary); border-color: var(--primary); }
+.holiday-pick-text { font-size:26rpx; flex:1; }
+.holiday-empty { color: var(--on-surface-variant); font-size:25rpx; padding:24rpx 4rpx; }
+
+/* ============ 日程块与冲突合并块（App 的 _EventBlock / 冲突合并块形态） ============ */
+/* 日程块：chrome 与课程块统一，配色走另一档透明度（见 utils/events.js 的 eventPaint），
+   用虚线左条与课程块区分，一眼能看出「这是日程不是课」。 */
+.event-block { border-left-style:dashed; }
+
+/*
+ * 冲突合并块：同一时段有多个活动时不再分栏变窄（那样文字根本看不清），
+ * 而是占满整列、内含 N 个彩色小方块，点按展开完整列表——这是 App 的定稿形态。
+ * 块本体 chrome 与全 App 统一，小方块各用自身活动的主色铺满。
+ */
+.conflict-block {
+  position:absolute;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  gap:4rpx;
+  padding:6rpx;
+  border-radius: var(--r-course);
+  border:1rpx solid var(--outline-variant);
+  background: var(--surface-low);
+  overflow:hidden;
+}
+.conflict-block:active { opacity:.85; }
+.conflict-squares { display:flex; gap:4rpx; flex:1; min-height:0; }
+.conflict-square {
+  flex:1;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:6rpx;
+  overflow:hidden;
+  padding:4rpx;
+}
+.conflict-square-text {
+  font-size:16rpx;
+  font-weight:800;
+  line-height:1.05;
+  text-align:center;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  -webkit-line-clamp:3;
+}
+/* 右上角的活动数标记，说明这里不止一个 */
+.conflict-badge {
+  position:absolute;
+  top:4rpx;
+  right:6rpx;
+  min-width:28rpx;
+  height:28rpx;
+  padding:0 6rpx;
+  border-radius:99rpx;
+  background: rgba(0,0,0,.42);
+  color:#fff;
+  font-size:18rpx;
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+/* 冲突展开列表里的一行 */
+.conflict-item { display:flex; gap:16rpx; align-items:flex-start; padding:18rpx 0; border-top:1rpx solid var(--outline-variant); }
+.conflict-item-chip { width:14rpx; align-self:stretch; border-radius:6rpx; flex:none; }
+.conflict-item-main { display:flex; flex-direction:column; gap:4rpx; flex:1; min-width:0; }
+.conflict-item-title { font-size:29rpx; font-weight:800; }
+.conflict-item-meta { font-size:24rpx; color: var(--on-surface-variant); }

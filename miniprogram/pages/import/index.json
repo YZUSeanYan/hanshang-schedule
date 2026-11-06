@@ -1,0 +1,8 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "icon": "../../components/icon/index",
+    "sheet": "../../components/sheet/index",
+    "privacy-sheet": "../../components/privacy-sheet/index"
+  }
+}

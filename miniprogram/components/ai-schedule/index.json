@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "styleIsolation": "apply-shared",
+  "usingComponents": {
+    "icon": "../icon/index",
+    "sheet": "../sheet/index"
+  }
+}

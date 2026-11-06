@@ -1,0 +1,60 @@
+<sheet show="{{show}}" title="{{title}}" mask-closable="{{false}}" has-actions="{{true}}" bind:close="close">
+  <view class="field">
+    <text class="field-label">课程名称</text>
+    <input class="field-input" value="{{name}}" maxlength="128" placeholder="例如 高等数学" bindinput="onNameInput" />
+  </view>
+
+  <view class="field">
+    <text class="field-label">教师</text>
+    <input class="field-input" value="{{teacher}}" maxlength="128" placeholder="选填" bindinput="onTeacherInput" />
+  </view>
+
+  <view class="row" style="justify-content:space-between;margin:8rpx 0 16rpx;">
+    <text class="field-label">上课时间段</text>
+    <view class="btn-text" bindtap="addSlot">+ 加一段</view>
+  </view>
+
+  <view class="slot-editor" wx:for="{{slots}}" wx:key="index">
+    <view class="field-row">
+      <view class="field">
+        <text class="field-label">星期</text>
+        <picker mode="selector" range="{{dayRange}}" value="{{item.dayIndex}}" data-index="{{index}}" data-field="dayIndex" bindchange="onSlotPicker">
+          <view class="field-input">{{dayRange[item.dayIndex]}}</view>
+        </picker>
+      </view>
+      <view class="field">
+        <text class="field-label">周次</text>
+        <picker mode="selector" range="{{weekRange}}" value="{{item.weeksIndex}}" data-index="{{index}}" data-field="weeksIndex" bindchange="onSlotPicker">
+          <view class="field-input">{{weekRange[item.weeksIndex]}}</view>
+        </picker>
+      </view>
+    </view>
+    <view class="field-row">
+      <view class="field">
+        <text class="field-label">开始节次</text>
+        <input class="field-input" type="number" value="{{item.startSection}}" data-index="{{index}}" data-field="startSection" bindinput="onSlotInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">结束节次</text>
+        <input class="field-input" type="number" value="{{item.endSection}}" data-index="{{index}}" data-field="endSection" bindinput="onSlotInput" />
+      </view>
+    </view>
+    <view class="field" wx:if="{{item.weeksIndex === 3}}">
+      <text class="field-label">自定义周次</text>
+      <input class="field-input" value="{{item.customWeeks}}" placeholder="例如 1-8,10,12" data-index="{{index}}" data-field="customWeeks" bindinput="onSlotInput" />
+    </view>
+    <view class="field">
+      <text class="field-label">地点</text>
+      <input class="field-input" value="{{item.location}}" maxlength="255" placeholder="例如 文津楼N204" data-index="{{index}}" data-field="location" bindinput="onSlotInput" />
+    </view>
+    <view class="btn-text" style="align-self:flex-end;color:#BA1A1A;" data-index="{{index}}" bindtap="removeSlot">删除此段</view>
+  </view>
+
+  <view class="field-error">{{error}}</view>
+
+  <view slot="actions" class="sheet-actions-lead">
+    <view class="btn btn-danger btn-sm" wx:if="{{showDelete}}" bindtap="remove">删除课程</view>
+  </view>
+  <view slot="actions" class="btn btn-sm" bindtap="close">取消</view>
+  <view slot="actions" class="btn btn-sm {{saving ? 'btn-disabled' : ''}}" bindtap="save">{{saving ? '保存中…' : '保存课程'}}</view>
+</sheet>

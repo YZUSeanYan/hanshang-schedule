@@ -1,0 +1,29 @@
+<sheet show="{{show}}" title="关于邗上课表" has-actions="{{true}}" bind:close="close">
+  <text class="notification-empty" wx:if="{{loading}}">正在读取最新介绍…</text>
+
+  <view wx:elif="{{error}}">
+    <text class="notification-empty">{{error}}</text>
+    <view class="btn btn-tonal btn-block btn-sm" bindtap="load">重新加载</view>
+  </view>
+
+  <view class="about-content" wx:else>
+    <image class="about-avatar" wx:if="{{avatar}}" src="{{avatar}}" mode="aspectFill" />
+    <text class="about-name">{{name}}</text>
+    <text class="setting-row-desc" wx:if="{{version}}">{{version}}</text>
+    <text class="about-intro" wx:if="{{intro}}">{{intro}}</text>
+    <view class="about-link" wx:if="{{website}}" bindtap="copyWebsite">
+      <text>访问官方网站</text>
+      <icon name="open_in_new" size="36" tone="on-surface-variant" />
+    </view>
+    <text class="field-hint" wx:if="{{website}}">个人主体小程序不支持内置网页，长按或点按可复制链接到浏览器打开</text>
+    <view class="about-payment" wx:if="{{paymentQr}}">
+      <text class="privacy-heading">支持作者</text>
+      <image class="payment-qr" src="{{paymentQr}}" mode="widthFix" />
+      <text class="field-hint">请在确认收款人信息后自愿支持</text>
+    </view>
+  </view>
+
+  <view slot="actions" class="sheet-actions-lead">
+    <view class="btn-text" bindtap="close">关闭</view>
+  </view>
+</sheet>

@@ -19,6 +19,7 @@
 | `app/` | Flutter Android 主 App |
 | `server/` | FastAPI、SQLAlchemy 后端与管理接口 |
 | `web/` | PWA 网页版 |
+| `miniprogram/` | 微信原生小程序 |
 | `site/` | 官网静态站点 |
 | `admin-web/` | 管理后台网页源码 |
 | `admin-app/` | Flutter 管理端 |

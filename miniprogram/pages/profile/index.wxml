@@ -1,0 +1,175 @@
+<view class="app-root {{themeClass}}">
+  <view style="height:{{statusBarHeight}}px;"></view>
+
+  <view class="app-header">
+    <view class="app-header-main">
+      <text class="eyebrow">账号与设置</text>
+      <text class="app-header-title">我的</text>
+    </view>
+  </view>
+
+  <view class="page-body">
+    <view class="profile-card">
+      <view class="avatar">{{avatarChar}}</view>
+      <view class="col grow">
+        <text class="profile-name">{{userName}}</text>
+        <text class="profile-desc">{{userDesc}}</text>
+      </view>
+      <view class="btn btn-tonal btn-sm" wx:if="{{guest}}" bindtap="goLogin">登录</view>
+    </view>
+
+    <view class="settings-group">
+      <view class="setting-row setting-row-first" bindtap="refreshNow">
+        <view class="setting-row-icon"><icon name="cloud_sync" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">立即同步</text>
+          <text class="setting-row-desc">重新从云端读取最新课表</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+
+      <view class="theme-seg">
+        <view class="theme-seg-item {{themeMode === 'system' ? 'theme-seg-item-active' : ''}}" data-mode="system" bindtap="setTheme">
+          <icon name="brightness_auto" size="40" tone="{{themeMode === 'system' ? 'on-primary' : 'on-surface-variant'}}" />
+          <text>跟随系统</text>
+        </view>
+        <view class="theme-seg-item {{themeMode === 'light' ? 'theme-seg-item-active' : ''}}" data-mode="light" bindtap="setTheme">
+          <icon name="light_mode" size="40" tone="{{themeMode === 'light' ? 'on-primary' : 'on-surface-variant'}}" />
+          <text>浅色</text>
+        </view>
+        <view class="theme-seg-item {{themeMode === 'dark' ? 'theme-seg-item-active' : ''}}" data-mode="dark" bindtap="setTheme">
+          <icon name="dark_mode" size="40" tone="{{themeMode === 'dark' ? 'on-primary' : 'on-surface-variant'}}" />
+          <text>深色</text>
+        </view>
+      </view>
+
+      <view class="setting-row" bindtap="toggleCardDetail">
+        <view class="setting-row-icon"><icon name="person" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">卡片显示教师与校区</text>
+          <text class="setting-row-desc">默认收起，点开课程查看完整详情</text>
+        </view>
+        <text class="setting-row-value">{{cardDetail ? '已显示' : '已收起'}}</text>
+      </view>
+
+      <view class="setting-row" bindtap="openCouple">
+        <view class="setting-row-icon"><icon name="people_alt" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">共同空闲</text>
+          <text class="setting-row-desc">邀请同学或朋友，一起找都有空的节次</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+
+      <view class="setting-row" bindtap="openShare">
+        <view class="setting-row-icon"><icon name="share" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">分享当前课表</text>
+          <text class="setting-row-desc">生成 7 天有效的 6 位口令，也可直接用微信分享</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+
+      <view class="setting-row" bindtap="openSectionTime">
+        <view class="setting-row-icon"><icon name="schedule" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">每节课时间</text>
+          <text class="setting-row-desc">扬大默认作息 · 自定义上下课时间</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+
+      <view class="setting-row" bindtap="openHoliday">
+        <view class="setting-row-icon"><icon name="event_available" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">调休课表</text>
+          <text class="setting-row-desc">放假 / 补课，可截图或粘贴通知交给 AI 识别</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+
+      <view class="setting-row" bindtap="openInbox">
+        <view class="setting-row-icon"><icon name="mail" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">账户通知</text>
+          <text class="setting-row-desc">{{notifySummary}}</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+
+      <view class="setting-row" bindtap="requestSubscribe">
+        <view class="setting-row-icon"><icon name="notifications" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">课前提醒</text>
+          <text class="setting-row-desc">{{subscribeStatus}}</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+
+      <view class="setting-row" bindtap="openAbout">
+        <view class="setting-row-icon"><icon name="info" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">关于邗上课表</text>
+          <text class="setting-row-desc">{{aboutSummary}}</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+    </view>
+
+    <view class="btn btn-outline btn-block" wx:if="{{!guest}}" bindtap="logout">
+      <icon name="logout" size="32" tone="primary" />退出登录
+    </view>
+
+    <view class="beian-footer">
+      <view class="beian-link" bindtap="openPrivacy">《隐私政策》</view>
+      <text class="beian-link">苏ICP备2026057230号</text>
+      <text class="beian-link">苏公网安备32100302011719号</text>
+    </view>
+  </view>
+
+  <!-- 分享口令 -->
+  <sheet show="{{showShare}}" title="分享给同学" bind:close="closeSheet" data-key="showShare" has-actions="{{true}}">
+    <text class="field-hint">同学登录邗上课表后输入这个口令，即可领取一份可独立编辑的课表。</text>
+    <text class="share-code-display">{{shareCode}}</text>
+    <text class="field-hint" style="text-align:center;">口令 7 天内有效</text>
+    <view slot="actions">
+      <view class="btn btn-sm" bindtap="copyShareCode">
+        <icon name="content_copy" size="30" tone="on-primary" />复制口令
+      </view>
+      <!--
+        原生转发：open-type="share" 触发本页的 onShareAppMessage，分享出去的卡片
+        会带上 /pages/import/index?code=口令，同学点开即可自动填好。
+        用 btn-plain 抵消小程序 <button> 自带的 ::after 边框与默认背景。
+      -->
+      <button class="btn btn-sm btn-plain" open-type="share">
+        <icon name="share" size="30" tone="on-primary" />发给同学
+      </button>
+    </view>
+  </sheet>
+
+  <!-- 订阅提醒说明 -->
+  <sheet show="{{showSubscribe}}" title="课前提醒说明" bind:close="closeSheet" data-key="showSubscribe" has-actions="{{true}}">
+    <view class="privacy-section">
+      <text class="privacy-heading">为什么和 App 不一样</text>
+      <text class="privacy-text">微信小程序没有后台推送能力，也没有本地定时通知。可用的只有「订阅消息」，而且微信要求每一次发送都要由你点击授权一次——授权一次换一条发送额度，做不到 App 那样开启一次就长期自动提醒。</text>
+    </view>
+    <view class="privacy-section">
+      <text class="privacy-heading">现在的做法</text>
+      <text class="privacy-text">每次点「课前提醒」会攒下一次发送额度（微信会记住你的选择，之后不再弹窗）。在没有新授权时不会发送，也不会打扰你。</text>
+    </view>
+    <view class="privacy-section" wx:if="{{!subscribeReady}}">
+      <text class="privacy-heading">还差一步</text>
+      <text class="privacy-text">订阅消息模板尚未配置。需要在微信公众平台按小程序类目申请一次性订阅模板，把模板 ID 填入 utils/config.js；服务端也需要按作息扫课并调用微信的发送接口，这部分属于后端新增能力。在完成之前，这个入口不会假装可用。</text>
+    </view>
+    <text class="security-note">不开启提醒不影响课表、导入、同步等全部其他功能。</text>
+    <view slot="actions">
+      <view class="btn btn-sm" bindtap="closeSheet" data-key="showSubscribe">我知道了</view>
+    </view>
+  </sheet>
+
+  <section-time id="sectionTime" show="{{showSectionTime}}" bind:close="closeSheet" data-key="showSectionTime" />
+  <holiday id="holiday" show="{{showHoliday}}" bind:saved="onHolidaySaved" bind:close="closeSheet" data-key="showHoliday" />
+  <notification-inbox id="inbox" show="{{showInbox}}" bind:unread="onUnread" bind:close="closeSheet" data-key="showInbox" />
+  <about-sheet id="about" show="{{showAbout}}" bind:name="onAboutName" bind:close="closeSheet" data-key="showAbout" />
+  <privacy-sheet show="{{showPrivacy}}" bind:close="closeSheet" data-key="showPrivacy" />
+</view>

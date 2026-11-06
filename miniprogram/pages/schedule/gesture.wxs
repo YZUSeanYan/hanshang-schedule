@@ -1,0 +1,86 @@
+/*
+ * 跟手拖拽切周 / 切日。
+ *
+ * 为什么必须用 WXS：小程序里改样式只有两条路——setData（一次往返约 10-30ms，
+ * 追不上 60fps，跟手会掉帧）与 WXS（在渲染层直接改样式，无往返）。
+ * 网页版用 Pointer 事件做跟手，小程序要同样的手感就只有 WXS 这一条路。
+ *
+ * 分工：这里只负责「手指跟着走」的视觉反馈；松手后是否真的翻页，交给页面的
+ * onSwipeCommit 方法（那里有越界判断与周次状态），这样功能路径不因本文件而变。
+ *
+ * 一个必须处理的边界：快速轻扫可能根本不产生 touchmove，如果只在 touchmove 里
+ * 置位 following，松手时就会什么都不做（曾经因此右滑失效）。所以 touchend
+ * 必须独立用「首尾位移」判定一次，不能依赖 touchmove 先跑过。
+ */
+
+var startX = 0;
+var startY = 0;
+var lastX = 0;
+var lastY = 0;
+var following = false;
+var activeNode = null;
+
+var TOUCH_SLOP = 8;
+
+function findNode(ownerInstance) {
+  // 周视图与日视图都要能跟手，取当前存在的那个
+  var node = ownerInstance.selectComponent('.week-grid');
+  if (!node) node = ownerInstance.selectComponent('.day-scroll-body');
+  return node;
+}
+
+// 是否应判定为一次横向手势（与网页版同一套判定：够位移且明显偏横向）
+function isHorizontal(dx, dy) {
+  var adx = dx < 0 ? -dx : dx;
+  var ady = dy < 0 ? -dy : dy;
+  return adx > TOUCH_SLOP && adx > ady * 1.2;
+}
+
+function touchstart(event, ownerInstance) {
+  var touch = event.touches[0];
+  startX = touch.clientX;
+  startY = touch.clientY;
+  lastX = startX;
+  lastY = startY;
+  following = false;
+  activeNode = findNode(ownerInstance);
+}
+
+function touchmove(event, ownerInstance) {
+  var touch = event.touches[0];
+  var dx = touch.clientX - startX;
+  var dy = touch.clientY - startY;
+  lastX = touch.clientX;
+  lastY = touch.clientY;
+
+  if (!following) {
+    if (!isHorizontal(dx, dy)) return;   // 纵向为主则让位给滚动
+    following = true;
+    activeNode = activeNode || findNode(ownerInstance);
+  }
+  if (activeNode) activeNode.setStyle({ transform: 'translateX(' + dx + 'px)' });
+}
+
+function touchend(event, ownerInstance) {
+  var touch = event.changedTouches && event.changedTouches[0];
+  var endX = touch ? touch.clientX : lastX;
+  var endY = touch ? touch.clientY : lastY;
+  var dx = endX - startX;
+  var dy = endY - startY;
+
+  if (!following && !isHorizontal(dx, dy)) return;
+  following = false;
+
+  if (activeNode) {
+    // 松手归位；页面提交后会重新渲染，滑入动画由页面的 CSS 类负责
+    activeNode.setStyle({ transform: 'translateX(0px)' });
+    activeNode = null;
+  }
+  ownerInstance.callMethod('onSwipeCommit', dx);
+}
+
+module.exports = {
+  touchstart: touchstart,
+  touchmove: touchmove,
+  touchend: touchend
+};

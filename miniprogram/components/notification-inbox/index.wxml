@@ -1,0 +1,36 @@
+<sheet show="{{show}}" title="通知中心" sub="{{unreadLabel}}" has-actions="{{true}}" bind:close="close">
+  <view class="inbox-toolbar">
+    <view class="btn-text" bindtap="readAll">全部已读</view>
+    <view class="icon-btn icon-btn-plain" bindtap="clearAll">
+      <icon name="delete_sweep" size="38" tone="on-surface-variant" />
+    </view>
+  </view>
+
+  <view class="notification-list" wx:if="{{items.length}}">
+    <view class="notification-item" wx:for="{{items}}" wx:key="id"
+          data-id="{{item.id}}" bindtap="openItem">
+      <icon name="{{item.unread ? 'notifications_active' : 'notifications_none'}}" size="40" tone="{{item.unread ? 'primary' : 'outline'}}" />
+      <view class="notification-main">
+        <view class="row" style="justify-content:space-between;gap:12rpx;">
+          <text class="notification-title grow">{{item.title}}</text>
+          <text class="notification-time">{{item.time}}</text>
+        </view>
+        <text class="notification-body" wx:if="{{item.body}}">{{item.body}}</text>
+        <text class="notification-body" style="color:var(--primary);" wx:if="{{item.isInvite}}">点按查看共同空闲</text>
+      </view>
+      <view class="icon-btn icon-btn-plain" catchtap="removeItem" data-id="{{item.id}}">
+        <icon name="delete" size="34" tone="outline" />
+      </view>
+    </view>
+  </view>
+
+  <text class="notification-empty" wx:elif="{{loading}}">正在读取通知…</text>
+  <text class="notification-empty" wx:elif="{{error}}">{{error}}</text>
+  <text class="notification-empty" wx:else>暂无通知</text>
+
+  <view class="btn-text" style="text-align:center;padding:20rpx;" wx:if="{{hasMore}}" bindtap="loadMore">加载更多</view>
+
+  <view slot="actions">
+    <view class="btn btn-sm" bindtap="close">关闭</view>
+  </view>
+</sheet>

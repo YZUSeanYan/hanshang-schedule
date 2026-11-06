@@ -1,0 +1,45 @@
+<sheet show="{{show}}" title="课表管理" mask-closable="{{false}}" has-actions="{{true}}" bind:close="close">
+  <view class="btn btn-tonal btn-block btn-sm" style="margin-bottom:20rpx;" bindtap="onNew">
+    <icon name="add" size="30" tone="on-secondary-container" />新建课表
+  </view>
+
+  <view class="semester-list">
+    <view class="semester-row {{item.isCurrent ? 'semester-row-current' : ''}}" wx:for="{{list}}" wx:key="uuid" data-uuid="{{item.uuid}}" bindtap="onSelect">
+      <view class="grow col">
+        <text class="setting-row-title">{{item.name}}{{item.isCurrent ? ' · 当前' : ''}}</text>
+        <text class="setting-row-desc">{{item.meta}}</text>
+      </view>
+      <view class="btn btn-tonal btn-sm" wx:if="{{!item.isCurrent}}" catchtap="onActivate" data-uuid="{{item.uuid}}">设为当前</view>
+      <icon name="chevron_right" size="34" tone="outline" />
+    </view>
+  </view>
+
+  <view class="divider"></view>
+
+  <text class="sheet-title" style="font-size:30rpx;">{{formTitle}}</text>
+
+  <view class="field" style="margin-top:18rpx;">
+    <text class="field-label">课表名称</text>
+    <input class="field-input" value="{{name}}" maxlength="64" placeholder="例如 2026 秋季学期" bindinput="onNameInput" />
+  </view>
+
+  <view class="field">
+    <text class="field-label">第一周的周一</text>
+    <picker mode="date" value="{{startDate}}" bindchange="onDateChange">
+      <view class="field-input">{{startDate}}</view>
+    </picker>
+  </view>
+
+  <view class="field">
+    <text class="field-label">总周数</text>
+    <input class="field-input" type="number" value="{{totalWeeks}}" bindinput="onWeeksInput" />
+  </view>
+
+  <view class="field-error">{{error}}</view>
+
+  <view slot="actions" class="sheet-actions-lead">
+    <view class="btn btn-danger btn-sm" wx:if="{{showDelete}}" bindtap="remove">删除此课表</view>
+  </view>
+  <view slot="actions" class="btn btn-sm" bindtap="close">关闭</view>
+  <view slot="actions" class="btn btn-sm {{busy ? 'btn-disabled' : ''}}" bindtap="save">保存课表</view>
+</sheet>

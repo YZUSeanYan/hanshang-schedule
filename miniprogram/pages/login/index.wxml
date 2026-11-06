@@ -1,0 +1,58 @@
+<view class="app-root {{themeClass}}">
+  <view style="height:{{statusBarHeight}}px;"></view>
+
+  <view class="app-header">
+    <view class="icon-btn icon-btn-plain" bindtap="continueAsGuest">
+      <icon name="arrow_back" size="40" tone="primary" />
+    </view>
+    <view class="app-header-main grow" style="margin-left:12rpx;">
+      <text class="eyebrow">邗上课表</text>
+      <text class="app-header-title">登录同步</text>
+    </view>
+  </view>
+
+  <view class="page-body">
+    <view class="card">
+      <text class="field-hint">登录后课表会与 Android App、网页版同步，并可导入课表、参与共同空闲、接收账户通知。不登录也能查看和手动创建本机课表。</text>
+    </view>
+
+    <view class="segmented" style="margin:0 0 24rpx;">
+      <view class="segmented-item grow {{mode === 'login' ? 'segmented-item-active' : ''}}" data-mode="login" bindtap="switchMode">登录</view>
+      <view class="segmented-item grow {{mode === 'register' ? 'segmented-item-active' : ''}}" data-mode="register" bindtap="switchMode">注册</view>
+    </view>
+
+    <view class="card" wx:if="{{mode === 'login'}}">
+      <view class="field">
+        <text class="field-label">用户名或邮箱</text>
+        <input class="field-input" value="{{account}}" data-field="account" placeholder="请输入用户名或邮箱" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">账号密码</text>
+        <input class="field-input" value="{{password}}" password data-field="password" placeholder="请输入密码" bindinput="onInput" />
+      </view>
+      <view class="btn btn-block {{busy ? 'btn-disabled' : ''}}" bindtap="submitLogin">{{busy ? '正在登录…' : '登录'}}</view>
+    </view>
+
+    <view class="card" wx:else>
+      <view class="field">
+        <text class="field-label">用户名</text>
+        <input class="field-input" value="{{username}}" data-field="username" maxlength="32" placeholder="3-32 个字符" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">邮箱</text>
+        <input class="field-input" value="{{email}}" data-field="email" placeholder="用于找回账号" bindinput="onInput" />
+      </view>
+      <view class="field">
+        <text class="field-label">设置密码</text>
+        <input class="field-input" value="{{registerPassword}}" password data-field="registerPassword" placeholder="至少 8 位" bindinput="onInput" />
+      </view>
+      <view class="btn btn-block {{busy ? 'btn-disabled' : ''}}" bindtap="submitRegister">{{busy ? '正在创建账号…' : '注册并登录'}}</view>
+    </view>
+
+    <text class="field-error" style="text-align:center;">{{error}}</text>
+
+    <view class="btn-text" style="text-align:center;padding:20rpx;" bindtap="continueAsGuest">暂不登录，继续使用本机课表</view>
+
+    <text class="security-note" style="display:block;margin-top:24rpx;">密码不写入本机存储；登录凭据仅用于向你自己的账号换取访问令牌，可随时在「我的 → 退出登录」撤销。</text>
+  </view>
+</view>

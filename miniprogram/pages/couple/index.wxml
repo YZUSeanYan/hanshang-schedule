@@ -1,0 +1,138 @@
+<view class="app-root {{themeClass}}">
+  <view style="height:{{statusBarHeight}}px;"></view>
+
+  <view class="app-header">
+    <view class="icon-btn icon-btn-plain" bindtap="back">
+      <icon name="arrow_back" size="40" tone="primary" />
+    </view>
+    <view class="app-header-main grow" style="margin-left:12rpx;">
+      <text class="eyebrow">一起找空档</text>
+      <text class="app-header-title">共同空闲</text>
+    </view>
+  </view>
+
+  <view class="page-body">
+    <text class="field-error" style="text-align:center;" wx:if="{{message}}">
+      <text style="color:{{messageError ? 'var(--error)' : 'var(--primary)'}};">{{message}}</text>
+    </text>
+
+    <!-- 读取中 -->
+    <view class="boot" wx:if="{{view === 'loading'}}">
+      <text class="boot-text">正在读取连接状态…</text>
+    </view>
+
+    <!-- 未连接 -->
+    <block wx:elif="{{view === 'disconnected'}}">
+      <view class="card" wx:if="{{invitations.length}}">
+        <text class="card-title">收到的邀请</text>
+        <view class="invite-row" wx:for="{{invitations}}" wx:key="id">
+          <text class="course-item-name grow">{{item.label}}</text>
+          <view class="btn btn-sm btn-outline" data-id="{{item.id}}" data-accept="false" bindtap="respond">拒绝</view>
+          <view class="btn btn-sm" data-id="{{item.id}}" data-accept="true" bindtap="respond">接受</view>
+        </view>
+      </view>
+
+      <view class="card">
+        <view class="card-title-row">
+          <icon name="person" size="40" tone="primary" />
+          <text class="card-title grow">方式一 · 按用户名邀请</text>
+        </view>
+        <text class="field-hint">需要对方完整用户名（不提供模糊搜索），发出后等待对方确认。</text>
+        <view class="field" style="margin-top:18rpx;">
+          <input class="field-input" value="{{inviteUsername}}" placeholder="对方完整用户名" bindinput="onUsernameInput" />
+        </view>
+        <view class="search-result" wx:for="{{searchResults}}" wx:key="*this" data-name="{{item}}" bindtap="pickUser">
+          <icon name="person" size="34" tone="on-surface-variant" />
+          <text class="grow">{{item}}</text>
+          <text class="btn-text">邀请</text>
+        </view>
+        <text class="field-hint" wx:if="{{searchEmpty}}">没有找到匹配的用户名</text>
+        <view class="btn btn-block" style="margin-top:18rpx;" bindtap="sendInvite">发送邀请</view>
+      </view>
+
+      <view class="card">
+        <view class="card-title-row">
+          <icon name="key" size="40" tone="primary" />
+          <text class="card-title grow">方式二 · 使用邀请码</text>
+        </view>
+        <text class="field-hint">你生成邀请码发给对方，或输入对方给你的 8 位邀请码。</text>
+        <view class="field" style="margin-top:18rpx;">
+          <input class="field-input share-code-input" style="font-size:36rpx;letter-spacing:6rpx;" value="{{claimCode}}" maxlength="8" placeholder="输入对方的邀请码" bindinput="onClaimInput" />
+        </view>
+        <view class="file-choice-row">
+          <view class="btn btn-tonal grow" bindtap="claimCode">连接</view>
+          <view class="btn btn-outline grow" bindtap="createCode">生成我的邀请码</view>
+        </view>
+      </view>
+
+      <text class="security-note">双方只看到每节课的忙闲结果和用户名，不会看到课程名、教师、教室或备注。连接可随时解除。</text>
+    </block>
+
+    <!-- 等待对方 -->
+    <block wx:elif="{{view === 'waiting'}}">
+      <view class="card">
+        <view class="avail-hero">
+          <icon name="hourglass_top" size="88" tone="primary" />
+          <text class="avail-partner" wx:if="{{waitingKind === 'username'}}">等待 {{outgoingName}} 确认</text>
+          <text class="avail-partner" wx:elif="{{waitingKind === 'code'}}">把邀请码发给对方</text>
+          <text class="avail-partner" wx:else>邀请码未在本机保存</text>
+        </view>
+
+        <block wx:if="{{waitingKind === 'code'}}">
+          <text class="share-code-display" bindtap="copyCode">{{inviteCode}}</text>
+          <text class="field-hint" style="display:block;text-align:center;margin-top:12rpx;">{{codeExpiry}}</text>
+        </block>
+        <text class="field-hint" wx:elif="{{waitingKind === 'missing'}}">邀请码仍在等待使用，但本机没有保存它。可以取消后重新生成一个。</text>
+        <text class="field-hint" wx:else>对方接受后即可查看共同空闲。</text>
+
+        <view class="file-choice-row" style="margin-top:24rpx;">
+          <view class="btn btn-outline grow" wx:if="{{waitingKind === 'code'}}" bindtap="copyCode">复制邀请码</view>
+          <!-- 原生转发：卡片带上 ?code=邀请码，对方点开自动填好 -->
+          <button class="btn btn-outline grow btn-plain" wx:if="{{waitingKind === 'code'}}" open-type="share">发给对方</button>
+          <view class="btn btn-outline grow" wx:if="{{waitingKind === 'code'}}" bindtap="createCode">重新生成</view>
+          <view class="btn btn-outline grow" bindtap="cancelCode" wx:if="{{waitingKind !== 'username'}}">取消邀请码</view>
+          <view class="btn btn-outline grow" bindtap="cancelInvite" wx:else>撤回邀请</view>
+          <view class="btn grow" bindtap="refresh">刷新状态</view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 已连接 -->
+    <block wx:else>
+      <view class="card">
+        <view class="avail-hero">
+          <view class="avatar">{{partnerChar}}</view>
+          <text class="avail-partner">{{partnerName}}</text>
+          <text class="field-hint">已连接 · 只共享忙闲状态</text>
+        </view>
+        <view class="avail-week-nav">
+          <view class="icon-btn icon-btn-plain" bindtap="prevWeek">
+            <icon name="chevron_left" size="40" tone="primary" />
+          </view>
+          <text class="row" style="font-weight:700;">{{weekRange}}</text>
+          <view class="icon-btn icon-btn-plain" bindtap="nextWeek">
+            <icon name="chevron_right" size="40" tone="primary" />
+          </view>
+        </view>
+        <view class="avail-legend">
+          <view class="avail-legend-item" wx:for="{{legend}}" wx:key="state">
+            <view class="avail-legend-dot state-{{item.state}}"></view>
+            <text>{{item.text}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="avail-day" wx:for="{{days}}" wx:key="key">
+        <view class="avail-day-head">
+          <text class="avail-day-title">{{item.title}}</text>
+          <text class="avail-day-free {{item.hasFree ? '' : 'avail-day-free-none'}}">{{item.free}}</text>
+        </view>
+        <view class="avail-strip">
+          <view class="avail-cell state-{{cell.state}}" wx:for="{{item.cells}}" wx:for-item="cell" wx:key="key">{{cell.num}}</view>
+        </view>
+      </view>
+
+      <view class="btn btn-outline btn-block" style="margin-top:20rpx;" bindtap="disconnect">解除连接</view>
+    </block>
+  </view>
+</view>

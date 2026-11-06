@@ -1,0 +1,226 @@
+<!-- padding-bottom 让出固定底栏的高度，否则周网格底部会被 tabBar 盖住 -->
+<wxs src="./gesture.wxs" module="gesture" />
+<view class="app-root {{themeClass}} schedule-root" style="padding-bottom:{{tabBarHeight}}px;">
+  <view style="height:{{statusBarHeight}}px;flex:none;"></view>
+
+  <view class="app-header" style="flex:none;">
+    <view class="app-header-main grow">
+      <text class="eyebrow">{{eyebrow}}</text>
+      <text class="app-header-title">{{title}}</text>
+    </view>
+    <text class="sync-hint {{syncHintActive ? 'sync-hint-active' : ''}}" wx:if="{{syncHint}}">{{syncHint}}</text>
+    <view class="icon-btn" bindtap="openMenu">
+      <icon name="more_vert" size="40" tone="primary" />
+    </view>
+  </view>
+
+  <!-- 游客模式提示条：手动建课不需要登录，登录后才云同步 -->
+  <view class="guest-bar" wx:if="{{guest}}">
+    <text class="guest-bar-text">当前为本机课表（不会上传）</text>
+    <view class="btn btn-tonal btn-sm" bindtap="goLogin">登录并同步</view>
+  </view>
+
+  <view class="schedule-shell">
+    <view class="schedule-toolbar" style="flex:none;">
+      <view class="icon-btn icon-btn-plain {{canPrev ? '' : 'btn-disabled'}}" bindtap="prevWeek">
+        <icon name="chevron_left" size="40" tone="{{canPrev ? 'primary' : 'outline'}}" />
+      </view>
+      <view class="week-heading">
+        <text class="week-label">{{weekLabel}}</text>
+        <text class="week-range">{{weekRange}}</text>
+      </view>
+      <view class="icon-btn icon-btn-plain {{canNext ? '' : 'btn-disabled'}}" bindtap="nextWeek">
+        <icon name="chevron_right" size="40" tone="{{canNext ? 'primary' : 'outline'}}" />
+      </view>
+      <view class="segmented">
+        <view class="segmented-item {{viewMode === 'week' ? 'segmented-item-active' : ''}}" data-mode="week" bindtap="switchView">周</view>
+        <view class="segmented-item {{viewMode === 'day' ? 'segmented-item-active' : ''}}" data-mode="day" bindtap="switchView">日</view>
+      </view>
+    </view>
+
+    <scroll-view class="day-selector" scroll-x wx:if="{{viewMode === 'day'}}" style="flex:none;">
+      <view class="day-chip-row">
+        <view class="day-chip {{item.active ? 'day-chip-active' : ''}}" wx:for="{{dayChips}}" wx:key="key"
+              data-day="{{item.day}}" bindtap="selectDay">{{item.label}}</view>
+      </view>
+    </scroll-view>
+
+    <text class="security-note" wx:if="{{timeTransition}}" style="flex:none;padding:0 32rpx 8rpx;">本周作息切换：时间栏上行为切换前，下行为切换后</text>
+
+    <!-- 周视图 -->
+    <view class="week-host" wx:if="{{hasCourses && viewMode === 'week'}}"
+          bindtouchstart="{{gesture.touchstart}}" bindtouchmove="{{gesture.touchmove}}" bindtouchend="{{gesture.touchend}}">
+      <view class="week-grid {{grid.animClass}}" wx:if="{{grid}}" style="height:{{grid.height}}px;">
+        <view class="week-corner" style="{{grid.cornerStyle}}">节次</view>
+
+        <view class="week-day-head {{item.today ? 'week-day-head-today' : ''}}" wx:for="{{grid.heads}}" wx:key="key" style="{{item.style}}">
+          <text class="week-day-name">{{item.name}}</text>
+          <text class="week-day-num">{{item.num}}</text>
+          <!-- 调休：这天放假，不排课 -->
+          <text class="week-day-off" wx:if="{{item.off}}">放假</text>
+        </view>
+
+        <view class="week-cell {{item.alt ? 'week-cell-alt' : ''}}" wx:for="{{grid.cells}}" wx:key="key" style="{{item.style}}"></view>
+
+        <view class="week-section" wx:for="{{grid.sections}}" wx:key="key" style="{{item.style}}">
+          <text class="week-section-num">{{item.num}}</text>
+          <text class="week-section-time">{{item.time}}</text>
+        </view>
+
+        <block wx:for="{{grid.blocks}}" wx:key="key">
+          <!-- 普通块：课程或日程 -->
+          <view class="course-block {{item.kind === 'event' ? 'event-block' : ''}}" wx:if="{{!item.merged}}"
+                style="{{item.style}}" data-uuid="{{item.uuid}}" data-kind="{{item.kind}}" bindtap="openBlockDetail">
+            <view class="course-block-title" style="{{item.titleStyle}}">{{item.title}}</view>
+            <view class="course-block-meta course-block-{{meta.kind}}" wx:for="{{item.meta}}" wx:for-item="meta" wx:key="text"
+                  style="{{item.metaStyle}}">{{meta.text}}</view>
+          </view>
+
+          <!-- 冲突合并块：N 个彩色小方块占满，点按展开列表（App 的定稿形态） -->
+          <view class="conflict-block" wx:else style="{{item.style}}" data-key="{{item.key}}" bindtap="openConflict">
+            <view class="conflict-squares">
+              <view class="conflict-square" wx:for="{{item.items}}" wx:for-item="sq" wx:key="uuid"
+                    style="background:{{sq.base}};color:{{sq.text}};">
+                <text class="conflict-square-text">{{sq.title}}</text>
+              </view>
+            </view>
+            <text class="conflict-badge">{{item.count}}</text>
+          </view>
+        </block>
+      </view>
+    </view>
+
+    <!-- 日视图 -->
+    <scroll-view class="day-scroll" scroll-y wx:if="{{hasCourses && viewMode === 'day'}}"
+                 bindtouchstart="{{gesture.touchstart}}" bindtouchmove="{{gesture.touchmove}}" bindtouchend="{{gesture.touchend}}">
+      <view class="day-group" wx:for="{{days}}" wx:key="key">
+        <view class="day-group-head">{{item.title}}</view>
+        <view class="empty-day" wx:if="{{item.empty}}">{{item.off ? '今天放假，不上课' : '本周无课'}}</view>
+        <!-- 日程（与课程同列表，排序口径一致） -->
+        <view class="slot-card" wx:for="{{item.events}}" wx:for-item="eventCard" wx:key="key"
+              data-uuid="{{eventCard.uuid}}" data-kind="event" bindtap="openBlockDetail">
+          <view class="slot-color" style="background:{{eventCard.paint.base}};"></view>
+          <view class="slot-time">
+            <text class="slot-time-start">{{eventCard.startTime}}</text>
+            <text class="slot-time-end" wx:if="{{eventCard.endTime}}">{{eventCard.endTime}}</text>
+          </view>
+          <view class="slot-main">
+            <text class="slot-title">{{eventCard.title}}</text>
+            <text class="slot-detail">{{eventCard.detail}}</text>
+          </view>
+        </view>
+        <view class="slot-card" wx:for="{{item.slots}}" wx:for-item="slotCard" wx:key="key"
+              data-uuid="{{slotCard.uuid}}" bindtap="openCourseDetail">
+          <view class="slot-color" style="background:{{slotCard.paint.base}};"></view>
+          <view class="slot-time">
+            <text class="slot-time-start">{{slotCard.startTime}}</text>
+            <text class="slot-time-end">{{slotCard.endTime}}</text>
+          </view>
+          <view class="slot-main">
+            <text class="slot-title">{{slotCard.title}}</text>
+            <text class="slot-detail">{{slotCard.detail}}<text class="slot-room" wx:if="{{slotCard.room}}"> {{slotCard.room}}</text></text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{!hasCourses}}">
+      <icon name="playlist_add" size="96" tone="outline" />
+      <text class="empty-title">还没有课程</text>
+      <text class="empty-desc">从「导入」页读取教务课表，或直接手动添加。手动添加无需登录。</text>
+      <view class="btn" bindtap="addCourse">
+        <icon name="add" size="34" tone="on-primary" />手动添加课程
+      </view>
+    </view>
+  </view>
+
+  <!-- 课表菜单 -->
+  <sheet show="{{showMenu}}" title="课表菜单" bind:close="closeMenu">
+    <view class="settings-group" style="margin-top:0;">
+      <view class="setting-row setting-row-first" bindtap="addCourse">
+        <view class="setting-row-icon"><icon name="add" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">添加课程</text>
+          <text class="setting-row-desc">手动创建课程与上课时间</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+      <view class="setting-row" bindtap="addAiSchedule">
+        <view class="setting-row-icon"><icon name="auto_awesome" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">添加日程</text>
+          <text class="setting-row-desc">一句话或一张截图，由 AI 记进课表</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+      <view class="setting-row" bindtap="openSemesterForm">
+        <view class="setting-row-icon"><icon name="settings" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">{{semesterName}}</text>
+          <text class="setting-row-desc">{{semesterMeta}}</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+      <view class="setting-row" bindtap="exportCalendar">
+        <view class="setting-row-icon"><icon name="calendar_add_on" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">导出到日历</text>
+          <text class="setting-row-desc">生成 .ics 文件，分享到聊天后可用系统日历打开</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+      <view class="setting-row" bindtap="backToToday">
+        <view class="setting-row-icon"><icon name="today" size="36" tone="primary" /></view>
+        <view class="setting-row-main">
+          <text class="setting-row-title">回到本周</text>
+          <text class="setting-row-desc">跳回当前日期所在周</text>
+        </view>
+        <icon name="chevron_right" size="34" tone="outline" />
+      </view>
+    </view>
+  </sheet>
+
+  <course-form id="courseForm" bind:saved="onFormSaved" bind:close="noop" />
+  <ai-schedule id="aiSchedule" bind:saved="onFormSaved" bind:close="noop" />
+  <semester-form id="semesterForm" bind:saved="onFormSaved" bind:close="noop" />
+  <course-detail id="courseDetail" bind:edit="onDetailEdit" bind:delete="onDetailDelete" bind:close="noop" />
+
+  <!-- 日程详情 -->
+  <sheet show="{{showEventDetail}}" title="日程详情" has-actions="{{true}}" bind:close="closeEventDetail">
+    <view class="detail-head">
+      <view class="detail-icon" style="background:{{eventDetail.background || 'rgba(32,106,78,0.12)'}};">
+        <icon name="{{eventDetail.typeIcon}}" size="42" tone="primary" />
+      </view>
+      <view class="col grow">
+        <text class="detail-title">{{eventDetail.title}}</text>
+        <text class="setting-row-desc">{{eventDetail.typeLabel}}</text>
+      </view>
+    </view>
+    <view class="divider"></view>
+    <view class="detail-row"><icon name="event_available" size="36" tone="on-surface-variant" />
+      <text class="detail-text">{{eventDetail.dateLabel}}<text wx:if="{{eventDetail.timeLabel}}">  {{eventDetail.timeLabel}}</text></text></view>
+    <view class="detail-row" wx:if="{{eventDetail.location}}"><icon name="pin" size="36" tone="on-surface-variant" />
+      <text class="detail-text">{{eventDetail.location}}</text></view>
+    <view class="detail-row" wx:if="{{eventDetail.note}}"><icon name="notes" size="36" tone="on-surface-variant" />
+      <text class="detail-text">{{eventDetail.note}}</text></view>
+    <view slot="actions">
+      <view class="sheet-actions-lead"><view class="btn btn-danger btn-sm" bindtap="deleteEvent">删除</view></view>
+      <view class="btn btn-sm" bindtap="closeEventDetail">关闭</view>
+    </view>
+  </sheet>
+
+  <!-- 冲突合并块的点按展开 -->
+  <sheet show="{{showConflict}}" title="同一时段有 {{conflictItems.length}} 个安排" sub="与课表同规则排序" has-actions="{{true}}" bind:close="closeConflict">
+    <view class="conflict-item" wx:for="{{conflictItems}}" wx:key="title" style="background:{{item.background}};">
+      <view class="conflict-item-chip" style="background:{{item.chip}};"></view>
+      <view class="conflict-item-main">
+        <text class="conflict-item-title">{{item.title}}</text>
+        <text class="conflict-item-meta">{{item.kindLabel}} · {{item.detail}}</text>
+      </view>
+    </view>
+    <view slot="actions">
+      <view class="btn btn-sm" bindtap="closeConflict">关闭</view>
+    </view>
+  </sheet>
+</view>

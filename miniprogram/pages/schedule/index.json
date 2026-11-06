@@ -1,0 +1,11 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "icon": "../../components/icon/index",
+    "sheet": "../../components/sheet/index",
+    "course-form": "../../components/course-form/index",
+    "semester-form": "../../components/semester-form/index",
+    "course-detail": "../../components/course-detail/index",
+    "ai-schedule": "../../components/ai-schedule/index"
+  }
+}

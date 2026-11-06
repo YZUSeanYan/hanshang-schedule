@@ -1,0 +1,19 @@
+<view class="sheet-mask" wx:if="{{show}}" bindtap="onMaskTap" catchtouchmove="noop">
+  <view class="sheet-panel" catchtap="noop">
+    <view class="sheet-head">
+      <view class="col grow">
+        <text class="sheet-title">{{title}}</text>
+        <text class="sheet-sub" wx:if="{{sub}}">{{sub}}</text>
+      </view>
+      <view class="sheet-close" bindtap="onCloseTap">
+        <icon name="close" size="36" tone="on-surface-variant" />
+      </view>
+    </view>
+    <scroll-view class="sheet-body" scroll-y>
+      <slot></slot>
+    </scroll-view>
+    <view class="sheet-actions" wx:if="{{hasActions}}">
+      <slot name="actions"></slot>
+    </view>
+  </view>
+</view>

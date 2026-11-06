@@ -1,0 +1,32 @@
+{
+  "pages": [
+    "pages/schedule/index",
+    "pages/import/index",
+    "pages/profile/index",
+    "pages/login/index",
+    "pages/couple/index"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "@backgroundColor",
+    "backgroundTextStyle": "@backgroundTextStyle",
+    "navigationBarTextStyle": "@navigationBarTextStyle"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "@tabColor",
+    "selectedColor": "@tabSelectedColor",
+    "backgroundColor": "@tabBackgroundColor",
+    "borderStyle": "@tabBorderStyle",
+    "list": [
+      { "pagePath": "pages/schedule/index", "text": "课表" },
+      { "pagePath": "pages/import/index", "text": "导入" },
+      { "pagePath": "pages/profile/index", "text": "我的" }
+    ]
+  },
+  "darkmode": true,
+  "themeLocation": "theme.json",
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

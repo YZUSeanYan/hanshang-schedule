@@ -1,0 +1,32 @@
+<sheet show="{{show}}" title="每节课时间" mask-closable="{{false}}" has-actions="{{true}}" bind:close="close">
+  <view class="switch-row">
+    <text class="field-label">使用扬大默认作息</text>
+    <switch checked="{{automatic}}" bindchange="toggleAutomatic" color="#206A4E" />
+  </view>
+
+  <text class="field-hint">默认按上课日期切换：10 月 1 日起下午首节 14:00，5 月 1 日起 14:30，后续各节相应调整 30 分钟。</text>
+
+  <view class="field-row" style="margin:20rpx 0;">
+    <view class="btn btn-outline btn-sm" data-season="summer" bindtap="fillSeason">填入春夏时间</view>
+    <view class="btn btn-outline btn-sm" data-season="winter" bindtap="fillSeason">填入秋冬时间</view>
+  </view>
+
+  <view class="time-row" wx:for="{{rows}}" wx:key="key">
+    <text class="time-row-label">{{item.label}}</text>
+    <picker mode="time" value="{{item.start}}" disabled="{{automatic}}" data-index="{{index}}" data-field="start" bindchange="onTimeChange">
+      <view class="time-cell {{automatic ? 'time-cell-disabled' : ''}}">{{item.start}}</view>
+    </picker>
+    <text class="time-row-sep">至</text>
+    <picker mode="time" value="{{item.end}}" disabled="{{automatic}}" data-index="{{index}}" data-field="end" bindchange="onTimeChange">
+      <view class="time-cell {{automatic ? 'time-cell-disabled' : ''}}">{{item.end}}</view>
+    </picker>
+  </view>
+
+  <text class="security-note" style="text-align:left;margin-top:16rpx;">自定义时间全年固定，适用于本小程序内所有课表，独立于 Android 设置。</text>
+  <view class="field-error" style="margin-top:12rpx;">{{error}}</view>
+
+  <view slot="actions">
+    <view class="btn btn-sm" bindtap="close">取消</view>
+    <view class="btn btn-sm {{saving ? 'btn-disabled' : ''}}" bindtap="save">保存时间</view>
+  </view>
+</sheet>

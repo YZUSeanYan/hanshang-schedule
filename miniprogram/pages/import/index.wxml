@@ -1,0 +1,168 @@
+<view class="app-root {{themeClass}}">
+  <view style="height:{{statusBarHeight}}px;"></view>
+
+  <view class="app-header">
+    <view class="app-header-main">
+      <text class="eyebrow">安全导入</text>
+      <text class="app-header-title">导入课表</text>
+    </view>
+  </view>
+
+  <view class="page-body">
+    <!-- 识别结果预览 -->
+    <view class="card" id="education-preview" wx:if="{{previewCourses.length}}">
+      <view class="card-title-row">
+        <icon name="menu_book" size="40" tone="primary" />
+        <view class="grow col">
+          <text class="card-title">识别结果预览</text>
+          <text class="field-hint">保存前请核对</text>
+        </view>
+      </view>
+      <view class="course-item" wx:for="{{previewCourses}}" wx:key="key">
+        <text class="course-item-name">{{item.name}}</text>
+        <text class="course-item-detail">{{item.detail}}</text>
+      </view>
+
+      <view class="field" style="margin-top:24rpx;">
+        <text class="field-label">学期名称</text>
+        <input class="field-input" value="{{semesterName}}" maxlength="64" data-field="semesterName" bindinput="onSemesterInput" />
+      </view>
+      <view class="field-row">
+        <view class="field">
+          <text class="field-label">第一周的周一</text>
+          <picker mode="date" value="{{semesterStart}}" bindchange="onSemesterDate">
+            <view class="field-input">{{semesterStart}}</view>
+          </picker>
+        </view>
+        <view class="field">
+          <text class="field-label">总周数</text>
+          <input class="field-input" type="number" value="{{totalWeeks}}" data-field="totalWeeks" bindinput="onSemesterInput" />
+        </view>
+      </view>
+      <text class="field-hint">提示：本学期第一周的周一是 <text style="color:var(--primary);font-weight:700;" bindtap="fillSuggestedStart">{{semesterStart}}</text>（点按填入；导入其他学期请手动选择）。</text>
+
+      <view class="btn btn-block" style="margin-top:24rpx;" bindtap="savePreview">
+        <icon name="check" size="34" tone="on-primary" />保存到我的课表
+      </view>
+    </view>
+
+    <view class="import-choice-head">
+      <text class="card-title">选择导入方式</text>
+      <text class="field-hint">截图或表格由 AI 识别，也可以输入同学分享的口令；按你手边已有的内容选择即可。</text>
+    </view>
+
+    <!-- AI 文件识别 -->
+    <view class="card">
+      <view class="card-title-row">
+        <icon name="auto_awesome" size="40" tone="primary" />
+        <view class="grow col">
+          <text class="card-title">截图或 Excel 导入</text>
+          <text class="field-hint">AI 文件识别</text>
+        </view>
+      </view>
+      <text class="field-hint">直接选择完整课表截图或表格文件，由 AI 识别课程、星期、节次、周次和地点，识别后先预览核对再保存。</text>
+
+      <view class="file-choice-row" style="margin-top:24rpx;">
+        <view class="file-choice file-choice-filled" bindtap="chooseImage">
+          <icon name="add_photo_alternate" size="48" tone="on-primary" />
+          <text>选择课表截图</text>
+        </view>
+        <view class="file-choice file-choice-tonal" bindtap="chooseTable">
+          <icon name="table_chart" size="48" tone="on-secondary-container" />
+          <text>选择 Excel 表格</text>
+        </view>
+      </view>
+
+      <text class="file-selection">{{fileSummary}}</text>
+
+      <view class="consent-row" bindtap="toggleConsent">
+        <!-- 用自绘方框勾选：Material Symbols 里没有对勾方框这个态，且网页版用的是原生 checkbox，
+             这里保持一致的自绘外观，不去引一套额外的图标 -->
+        <view class="consent-box {{aiConsent ? 'consent-box-on' : ''}}">
+          <icon name="check" size="30" tone="{{aiConsent ? 'on-primary' : 'outline'}}" wx:if="{{aiConsent}}" />
+        </view>
+        <text class="consent-text">我已核对文件内容，并同意将该文件用于本次小米 MiMo 智能识别。</text>
+      </view>
+
+      <view class="btn btn-block {{(!fileReady || parsing) ? 'btn-disabled' : ''}}" bindtap="parseFile">
+        <icon name="auto_awesome" size="34" tone="on-primary" />{{parsing ? '正在识别…' : 'AI 识别并预览'}}
+      </view>
+
+      <!-- 识别进度 -->
+      <view class="progress-wrap" wx:if="{{parsing}}">
+        <text class="card-title" style="font-size:29rpx;">{{progressTitle}}</text>
+        <text class="progress-stage">{{progressEta}}</text>
+        <view class="progress-meter">
+          <view class="progress-bar" style="width:{{progress}}%;"></view>
+        </view>
+        <text class="progress-stage">{{progressStage}}</text>
+        <view class="btn-text" bindtap="openPrivacy">文件仅用于本次识别 · 查看隐私政策</view>
+      </view>
+
+      <!-- 识别失败 -->
+      <view class="card" wx:if="{{showError}}" style="margin:24rpx 0 0;border-color:#F0D48A;background:#FFF4D6;">
+        <text class="card-title" style="color:#8A5A00;">{{errorTitle}}</text>
+        <text class="course-item-detail" style="color:#8A5A00;">{{errorDetail}}</text>
+        <view class="file-choice-row" style="margin-top:18rpx;">
+          <view class="btn btn-outline btn-sm" bindtap="retryParse">
+            <icon name="refresh" size="30" tone="primary" />重新识别
+          </view>
+          <view class="btn-text" bindtap="reselect">选择其他文件</view>
+        </view>
+      </view>
+
+      <text class="file-privacy" style="display:block;margin-top:20rpx;">文件仅用于本次解析，不保存到服务器。截图会发送给小米 MiMo；Excel/CSV 会先在服务器只读提取并脱敏单元格文本。建议上传前裁掉姓名、学号等无关区域。</text>
+    </view>
+
+    <!-- 口令导入 -->
+    <view class="card">
+      <view class="card-title-row">
+        <icon name="group" size="40" tone="primary" />
+        <view class="grow col">
+          <text class="card-title">口令导入</text>
+          <text class="field-hint">同学分享</text>
+        </view>
+      </view>
+      <text class="field-hint">输入 6 位口令，核对课程后创建一份独立副本。</text>
+
+      <view class="field" style="margin-top:20rpx;">
+        <input class="field-input share-code-input" value="{{code}}" maxlength="6" placeholder="例如 K7M2QP" bindinput="onCodeInput" />
+      </view>
+      <view class="btn btn-tonal btn-block" bindtap="previewShare">
+        <icon name="visibility" size="34" tone="on-secondary-container" />查看课表预览
+      </view>
+    </view>
+
+    <!-- 口令预览 -->
+    <view class="card" wx:if="{{sharePreview}}">
+      <text class="card-title">{{sharePreview.title}}</text>
+      <text class="field-hint">{{sharePreview.meta}}</text>
+      <view class="course-item" wx:for="{{sharePreview.courses}}" wx:key="key">
+        <text class="course-item-name">{{item.name}}</text>
+        <text class="course-item-detail">{{item.detail}}</text>
+      </view>
+      <view class="btn btn-block {{claiming ? 'btn-disabled' : ''}}" style="margin-top:20rpx;" bindtap="claimShare">
+        <icon name="download" size="34" tone="on-primary" />导入我的课表
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{guest}}">
+      <text class="field-hint">游客模式下可以手动创建本机课表；AI 识别与口令导入需要登录后使用。</text>
+      <view class="btn btn-tonal btn-block btn-sm" style="margin-top:16rpx;" bindtap="goLogin">登录后使用完整功能</view>
+    </view>
+  </view>
+
+  <!-- 隐私授权（微信要求：调用相册/聊天文件前必须先取得同意） -->
+  <sheet show="{{showPrivacyAuth}}" title="使用前请阅读隐私政策" mask-closable="{{false}}" has-actions="{{true}}" bind:close="onDenyPrivacy">
+    <text class="privacy-text">选择课表截图或表格时，需要你同意《邗上课表隐私政策》。我们只读取你选中的那一个文件，用于本次识别，不会保存到服务器。</text>
+    <view class="btn-text" style="margin-top:16rpx;" bindtap="openPrivacy">查看完整隐私政策</view>
+    <view slot="actions">
+      <view class="btn-text" bindtap="onDenyPrivacy">不同意</view>
+      <!-- 必须用微信指定的 open-type，回调里才能放行被挂起的隐私接口。
+           小程序 button 自带 ::after 边框，用 btn-plain 去掉，外观与自绘按钮一致。 -->
+      <button class="btn btn-sm btn-plain" id="privacy-agree" open-type="agreePrivacyAuthorization" bindagreeprivacyauthorization="onAgreePrivacy">同意并继续</button>
+    </view>
+  </sheet>
+
+  <privacy-sheet show="{{showPrivacy}}" bind:close="closeSheet" data-key="showPrivacy" />
+</view>

@@ -1,0 +1,99 @@
+<sheet show="{{show}}" title="调休课表" sub="放假 · 补课" has-actions="{{true}}" bind:close="close">
+  <!-- 已有安排 -->
+  <text class="sheet-title" style="font-size:28rpx;">已有安排</text>
+  <view style="margin-top:14rpx;">
+    <text class="holiday-empty" wx:if="{{empty}}">还没有调休安排</text>
+    <view class="holiday-row" wx:for="{{list}}" wx:key="uuid">
+      <view class="holiday-row-main">
+        <text class="holiday-row-date">{{item.date}}</text>
+        <text class="holiday-row-kind {{item.isOff ? 'holiday-row-off' : 'holiday-row-makeup'}}">{{item.label}}</text>
+      </view>
+      <view class="btn-text" style="color:var(--error);" data-uuid="{{item.uuid}}" bindtap="removeOverride">删除</view>
+    </view>
+  </view>
+
+  <view class="divider"></view>
+
+  <!-- 手动添加 -->
+  <text class="sheet-title" style="font-size:28rpx;">手动添加</text>
+  <view class="field-row" style="margin-top:14rpx;">
+    <view class="field">
+      <text class="field-label">日期</text>
+      <picker mode="date" value="{{formDate}}" bindchange="onFormDate">
+        <view class="field-input">{{formDate}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <text class="field-label">类型</text>
+      <picker mode="selector" range="{{kindRange}}" value="{{formKind}}" data-field="formKind" bindchange="onFormPicker">
+        <view class="field-input">{{kindRange[formKind]}}</view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="field" wx:if="{{formKind === 1}}">
+    <text class="field-label">补的是哪天的课</text>
+    <picker mode="selector" range="{{weekdayRange}}" value="{{formWeekday}}" data-field="formWeekday" bindchange="onFormPicker">
+      <view class="field-input">{{weekdayRange[formWeekday]}}</view>
+    </picker>
+  </view>
+
+  <view class="field">
+    <text class="field-label">备注（选填）</text>
+    <input class="field-input" value="{{formNote}}" maxlength="64" placeholder="例如 国庆假期" bindinput="onFormNote" />
+  </view>
+
+  <view class="btn btn-block {{busy ? 'btn-disabled' : ''}}" bindtap="addOverride">
+    <icon name="add" size="32" tone="on-primary" />添加这条安排
+  </view>
+
+  <view class="divider"></view>
+
+  <!-- AI 识别通知 -->
+  <view class="row" style="justify-content:space-between;">
+    <text class="sheet-title" style="font-size:28rpx;">从通知识别</text>
+    <view class="btn-text" bindtap="toggleAi">{{aiOpen ? '收起' : '展开'}}</view>
+  </view>
+
+  <block wx:if="{{aiOpen}}">
+    <text class="field-hint" style="margin-top:10rpx;">把放假通知的截图或文字交给 AI 识别，会列出识别到的安排，勾选后保存。同一天的安排会覆盖已有的。</text>
+
+    <view class="field" style="margin-top:16rpx;">
+      <text class="field-label">粘贴通知文字</text>
+      <textarea class="field-input field-textarea" value="{{aiText}}" maxlength="2000"
+                placeholder="例如：10 月 1 日至 7 日放假，9 月 28 日（周日）、10 月 11 日（周六）上课" bindinput="onAiText"></textarea>
+    </view>
+
+    <view class="file-choice-row">
+      <view class="btn btn-tonal grow {{busy ? 'btn-disabled' : ''}}" bindtap="parseText">
+        <icon name="auto_awesome" size="32" tone="on-secondary-container" />识别文字
+      </view>
+      <view class="btn btn-tonal grow {{busy ? 'btn-disabled' : ''}}" bindtap="pickImage">
+        <icon name="add_photo_alternate" size="32" tone="on-secondary-container" />识别截图
+      </view>
+    </view>
+
+    <text class="progress-stage" style="display:block;margin-top:14rpx;" wx:if="{{aiStatus}}">{{aiStatus}}</text>
+
+    <!-- 识别结果 -->
+    <view wx:if="{{aiParsed.length}}" style="margin-top:18rpx;">
+      <text class="field-hint">识别到 {{aiParsed.length}} 条安排，勾选后保存：</text>
+      <view class="holiday-pick" wx:for="{{aiParsed}}" wx:key="index" data-index="{{index}}" bindtap="togglePick">
+        <view class="holiday-pick-box {{item.picked ? 'holiday-pick-box-on' : ''}}">
+          <icon wx:if="{{item.picked}}" name="check" size="28" tone="on-primary" />
+        </view>
+        <text class="holiday-pick-text">{{item.date}}  {{item.label}}</text>
+      </view>
+      <view class="btn btn-block" style="margin-top:12rpx;" bindtap="savePicked">保存勾选的安排</view>
+    </view>
+
+    <text class="security-note" style="display:block;margin-top:16rpx;">识别只在你主动发起时进行，图片与文字仅用于本次识别。</text>
+  </block>
+
+  <view class="field-error" style="margin-top:14rpx;">{{error}}</view>
+
+  <view slot="actions">
+    <view class="btn-text" wx:if="{{guest}}" bindtap="goLogin">登录后可用 AI 识别</view>
+    <view class="btn btn-sm" bindtap="close">关闭</view>
+  </view>
+</sheet>

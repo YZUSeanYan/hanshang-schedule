@@ -1,0 +1,20 @@
+<!--
+  自定义 tabBar。
+
+  这里刻意把三个类叠在同一个节点上，不额外套外层 view：
+    app-root      —— 提供 M3 颜色令牌（子节点靠继承拿到 --primary 等变量）
+    tabbar-scope  —— 抵消 app-root 附带的页面级样式（min-height:100vh）
+    tabbar        —— 底栏自身的定位与布局
+  之前多套了一层 <view class="app-root"> 做外层，结果它带着 min-height:100vh
+  和不透明底色，等于给页面盖了一层全屏遮罩：页面主体全白、只剩底栏可见，
+  而布局测量一切正常，极难察觉。令牌必须挂在底栏节点本身上。
+-->
+<view class="app-root tabbar-scope tabbar {{themeClass}}">
+  <view class="tabbar-item {{selected === index ? 'tabbar-item-active' : ''}}"
+        wx:for="{{list}}" wx:key="pagePath"
+        data-index="{{index}}" bindtap="switchTab">
+    <icon name="{{selected === index ? item.iconFill : item.icon}}" size="44"
+          tone="{{selected === index ? 'primary' : 'outline'}}" />
+    <text>{{item.text}}</text>
+  </view>
+</view>

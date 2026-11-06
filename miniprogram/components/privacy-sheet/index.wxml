@@ -1,0 +1,50 @@
+<sheet show="{{show}}" title="邗上课表隐私政策" bind:close="close">
+  <view class="privacy-section">
+    <text class="privacy-text">生效日期：2026 年 9 月 16 日（第 6 版）</text>
+  </view>
+
+  <view class="privacy-section">
+    <text class="privacy-heading">我们处理的信息</text>
+    <text class="privacy-text">为提供账号登录、课表导入与同步、课程提醒、账户通知和安全保障，我们处理你主动提供的用户名、邮箱、学期、课程与时间安排，以及登录会话和必要安全日志。密码只以 bcrypt 不可逆哈希存储。</text>
+  </view>
+
+  <view class="privacy-section">
+    <text class="privacy-heading">教务账号与密码</text>
+    <text class="privacy-text">我们不接收、不传输、不存储你的教务系统账号和密码。你登录学校系统时，账号密码只经过你的设备与学校服务器。</text>
+  </view>
+
+  <view class="privacy-section">
+    <text class="privacy-heading">截图与表格 AI 导入</text>
+    <text class="privacy-text">仅在你主动选择并确认后触发。截图经服务器转交小米 MiMo 作一次识别，请先裁掉姓名、学号等无关区域。XLSX、XLS、CSV 只读提取有界文本，常见身份信息脱敏后再识别。原始文件、提取文本和模型响应不写入数据库或业务日志，处理完成后从内存丢弃；日志只保存文件类型、大小、耗时和错误码等运行元数据。</text>
+  </view>
+
+  <view class="privacy-section">
+    <text class="privacy-heading">AI 日程与语音录入</text>
+    <text class="privacy-text">仅在你在 Android App 的「AI 日程」页按住麦克风说话或主动输入文字后触发，每用户每天限 30 次；本小程序不提供语音录入，也不申请麦克风权限。录音在你松手后上传服务器一次，经小米 MiMo 语音识别转写为文字；音频与转写文本不写入数据库、不写入日志，识别完成即从内存丢弃。文本经身份脱敏后由小米 MiMo 大模型提取时间、地点与事项。识别结果在预览页展示，由你确认或修改后才保存为日程。「共同空闲」中日程只以忙碌/空闲状态参与计算，配对对象看不到日程内容。</text>
+  </view>
+
+  <view class="privacy-section">
+    <text class="privacy-heading">共同空闲</text>
+    <text class="privacy-text">你可以用完整用户名发出邀请，或使用 8 位、15 分钟有效的邀请码连接同学或朋友。我们不提供模糊用户搜索，服务器只保存邀请码的不可逆摘要。对方明确接受邀请后才建立连接；双方只看到每节课的忙闲结果和用户名，不会看到课程名、教师、教室或备注。邀请可撤回、拒绝，连接可随时解除。</text>
+  </view>
+
+  <view class="privacy-section">
+    <text class="privacy-heading">通知与第三方服务</text>
+    <text class="privacy-text">通知仅在你授权后启用。Android 使用阿里云 EMAS 移动推送，网页使用 Web Push，本小程序使用微信订阅消息（需你在每次点击后单独授权，微信未授权时不会发送）。不授权通知不影响课表基本功能。</text>
+  </view>
+
+  <view class="privacy-section">
+    <text class="privacy-heading">权限与远程功能</text>
+    <text class="privacy-text">网络、通知、提醒相关能力用于你主动使用的对应功能。选择课表截图或表格时，通过微信提供的相册、相机或聊天文件选择器取得你选中的那一个文件的一次性访问权限，不申请读写全部存储，也不索取通讯录、定位或蓝牙权限。服务器签名功能清单只能启用客户端已允许的入口，所有数据读写都由服务端重新鉴权并按账号隔离。</text>
+  </view>
+
+  <view class="privacy-section">
+    <text class="privacy-heading">保存、共享与权利</text>
+    <text class="privacy-text">账号和课表数据存储于境内阿里云服务器，仅在提供功能和安全审计所需期限内保存。未登录时创建的课表只保存在你本机的微信小程序存储中，不会上传。登录后会在本机保存当前账号的课表，供断网时查看；退出登录时清除这份缓存。我们不出售个人信息；除提供功能所需的阿里云、小米 MiMo、推送和广告服务及依法要求外，不向无关第三方共享。你可以退出登录、关闭通知、解除共同空闲连接，并通过 hanshangdeveloper@163.com 联系管理员查询、更正或删除账号及云端数据。</text>
+  </view>
+
+  <view class="privacy-section">
+    <text class="privacy-heading">政策更新</text>
+    <text class="privacy-text">发生重大变化时，我们会通过 App、网站、小程序或推送告知，并在法律要求或处理目的发生重大变化时请求重新同意。本次第 6 版补充 AI 日程与语音录入说明，不新增强制授权，已同意用户无需再次确认。</text>
+  </view>
+</sheet>

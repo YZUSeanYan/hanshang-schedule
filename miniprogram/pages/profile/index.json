@@ -1,0 +1,12 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "icon": "../../components/icon/index",
+    "sheet": "../../components/sheet/index",
+    "section-time": "../../components/section-time/index",
+    "notification-inbox": "../../components/notification-inbox/index",
+    "about-sheet": "../../components/about-sheet/index",
+    "privacy-sheet": "../../components/privacy-sheet/index",
+    "holiday": "../../components/holiday/index"
+  }
+}
