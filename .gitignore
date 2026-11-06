@@ -1,44 +1,112 @@
-# ---- 私有目录（签名密钥、内部运维文档、备份、营销素材）----
-.private/
-
-# ---- 通用 ----
-.DS_Store
-Thumbs.db
-*.log
-*.iml
-.idea/
-.vscode/
-
-# ---- Python / 后端 ----
-__pycache__/
-*.pyc
-.venv/
-venv/
-server/.env
-*.db
-*.sqlite3
-.pytest_cache/
-
-# ---- Flutter / Dart ----
-app/.dart_tool/
-app/build/
-app/.flutter-plugins
-app/.flutter-plugins-dependencies
-app/android/.gradle/
-app/android/local.properties
-app/android/key.properties
-# 签名密钥绝不入库
+# Secrets and private local data
+.env
+.env.*
+!.env.example
+**/key.properties
+**/keystore.properties
+**/local.properties
+admin-app/assets/admin_tunnel
 *.jks
 *.keystore
 *.p12
 *.pem
-app/ios/Pods/
+*.key
+*.p8
+*.mobileprovision
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.xlsx
+*.xls
+*.csv
+# 仅保留已验证为全合成数据的分小班解析夹具
+!server/tests/fixtures/yzu-split-class-timetable-202610.xlsx
+.private/
+secrets/
+sign/
 
-# ---- Vela 快应用（hanshang-watch）----
-hanshang-watch/node_modules/
-hanshang-watch/build/
-hanshang-watch/dist/
-hanshang-watch/sign/
+# Real timetable samples and private backups
+docs/samples/*
+!docs/samples/班级课表.html
+tools/samples/
+archive/
+backups/
 
-# ---- 本地文档/测试样本（真实教务快照含会话令牌，绝不入库）----
-/docs/
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.hvigor/
+.netlify/
+.mypy_cache/
+.ruff_cache/
+.venv/
+.venv-test/
+.test-venv/
+venv/
+
+# Flutter / Dart / Android
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+build.corrupt-*/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.dill
+.gradle/
+.kotlin/
+*.hprof
+GeneratedPluginRegistrant.java
+
+# JavaScript / Vela
+node_modules/
+dist/
+
+# Apple
+Pods/
+ephemeral/
+Generated.xcconfig
+flutter_export_environment.sh
+.symlinks/
+DerivedData/
+
+# Logs, captures and generated release artifacts
+*.log
+*.har
+*.pcap
+*.pcapng
+*.apk
+*.aab
+*.ipa
+*.hap
+*.rpk
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+*.bak
+*.bak-*
+*.orig
+*.pre-live-sync-*
+*.tmp
+*.dll
+*.so
+*.dylib
+*.exe
+logs/
+shots/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+*.swp
+.DS_Store
+Thumbs.db
+nul

@@ -1,0 +1,12 @@
+{
+  "src": [
+    "pages/Index",
+    "pages/LoginPage",
+    "pages/MainPage",
+    "features/privacy/PrivacyGatePage",
+    "core/notifications/NotificationSettingsPage",
+    "features/notifications/NotificationInboxPage",
+    "features/profile/AboutPage",
+    "features/course_import/ImportWebViewPage"
+  ]
+}

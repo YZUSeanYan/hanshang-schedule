@@ -1,0 +1,251 @@
+<template>
+  <div class="page">
+    <div class="user-row {{isRound ? 'user-row-round' : ''}}">
+      <text class="user-name {{isRound ? 'txt-center' : ''}}">{{userName}}</text>
+      <text class="user-sub {{isRound ? 'txt-center' : ''}}">点击「同步课表」更新数据</text>
+    </div>
+
+    <scroll class="scroll" style="height: {{bodyH}}px" scroll-y="true">
+      <div class="rows">
+        <div class="row {{isRound ? 'row-round' : ''}}">
+          <text class="row-label" @click="cycleSemester">当前学期</text>
+          <text class="row-value" @click="cycleSemester">{{semesterName}}</text>
+        </div>
+        <div class="row {{isRound ? 'row-round' : ''}}">
+          <text class="row-label" @click="doSync">同步课表</text>
+          <text class="row-value" @click="doSync">{{syncText}}</text>
+        </div>
+        <div class="row {{isRound ? 'row-round' : ''}}">
+          <text class="row-label" @click="goBleImport">蓝牙导入课表</text>
+          <text class="row-value" @click="goBleImport">去接收</text>
+        </div>
+        <div class="row {{isRound ? 'row-round' : ''}}">
+          <text class="row-label" @click="toggleReminder">到点提醒</text>
+          <div class="switch {{reminderEnabled ? 'switch-on' : ''}}">
+            <div class="knob {{reminderEnabled ? 'knob-on' : ''}}"></div>
+          </div>
+        </div>
+        <div class="row {{isRound ? 'row-round' : ''}}">
+          <text class="row-label" @click="goDiag">设备诊断</text>
+          <text class="row-value" @click="goDiag">查看</text>
+        </div>
+        <div class="row {{isRound ? 'row-round' : ''}}">
+          <text class="row-label">版本</text>
+          <text class="row-value">v0.2.1</text>
+        </div>
+        <text class="btn-logout" @click="doLogout">退出登录</text>
+        <text class="foot">课表同步自手机 App 账号\n提醒仅在应用打开时生效</text>
+      </div>
+    </scroll>
+  </div>
+</template>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #000000;
+}
+.txt-center {
+  text-align: center;
+}
+.user-row {
+  padding: 20px 24px 14px 24px;
+  border-bottom: 1px solid #1a1a1a;
+}
+.user-row-round {
+  padding: 28px 56px 12px 56px;
+  border-bottom-width: 0;
+}
+.user-name {
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: bold;
+}
+.user-sub {
+  color: #666666;
+  font-size: 18px;
+  margin-top: 4px;
+}
+.scroll {
+  width: 100%;
+}
+.rows {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #141414;
+}
+.row-round {
+  padding: 18px 36px;
+}
+.row-label {
+  color: #ffffff;
+  font-size: 22px;
+}
+.row-value {
+  color: #888888;
+  font-size: 20px;
+  max-width: 230px;
+}
+.switch {
+  width: 72px;
+  height: 40px;
+  border-radius: 20px;
+  background-color: #333333;
+  position: relative;
+}
+.switch-on {
+  background-color: #158a63;
+}
+.knob {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  background-color: #ffffff;
+  position: absolute;
+  left: 4px;
+  top: 4px;
+}
+.knob-on {
+  left: 36px;
+}
+.btn-logout {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 24px;
+  height: 60px;
+  border-radius: 12px;
+  background-color: #3a1212;
+  color: #ff8a8a;
+  font-size: 24px;
+  font-weight: bold;
+}
+.foot {
+  color: #555555;
+  font-size: 18px;
+  text-align: center;
+  padding: 0 24px 24px 24px;
+}
+</style>
+
+<script>
+/**
+ * 设置页：学期切换 / 手动同步 / 蓝牙导入 / 提醒开关 / 退出登录
+ * 圆屏（S5 46mm）行距内缩，几何来自 def.metrics()。
+ * 点击一律绑 text 不绑父 div（无冒泡，真机教训）；行内容包在 div 列容器里。
+ */
+import router from "@system.router";
+import prompt from "@system.prompt";
+import * as api from "../../common/scripts/api";
+
+export default {
+  private: {
+    userName: "",
+    semesterName: "暂无课表",
+    syncText: "点击同步",
+    reminderEnabled: true,
+    busy: false,
+    isRound: false,
+    bodyH: 300,
+  },
+
+  onInit() {
+    const def = this.$app.$def;
+    const m = def.metrics();
+    this.isRound = m.isRound;
+    this.bodyH = m.settingsBodyH;
+  },
+
+  onShow() {
+    const def = this.$app.$def;
+    if (!def.accessToken) {
+      router.replace({ uri: "/pages/login" });
+      return;
+    }
+    this.render();
+  },
+
+  render() {
+    const def = this.$app.$def;
+    this.userName = def.user ? (def.user.username || def.user.email || "") : "";
+    this.semesterName = def.currentSemester ? def.currentSemester.name : "暂无课表";
+    this.reminderEnabled = def.reminderEnabled;
+    this.syncText = def.lastPullAt ? "上次 " + this.fmtTime(def.lastPullAt) : "点击同步";
+  },
+
+  fmtTime(ts) {
+    const d = new Date(ts);
+    const h = d.getHours();
+    const m = d.getMinutes();
+    return (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m);
+  },
+
+  /** 多学期时循环切换当前学期 */
+  cycleSemester() {
+    const def = this.$app.$def;
+    const alive = def.semesters.filter((s) => !s.deleted);
+    if (alive.length <= 1) {
+      prompt.showToast({ message: "只有一个课表，可去「导入」添加", duration: 2000 });
+      return;
+    }
+    const idx = alive.findIndex((s) => s.uuid === (def.currentSemester && def.currentSemester.uuid));
+    def.currentSemester = alive[(idx + 1) % alive.length];
+    def.saveCache();
+    this.render();
+    prompt.showToast({ message: "已切换：" + def.currentSemester.name, duration: 2000 });
+  },
+
+  doSync() {
+    if (this.busy) return;
+    this.busy = true;
+    this.syncText = "同步中…";
+    api.pullSchedule()
+      .then((body) => {
+        const def = this.$app.$def;
+        def.syncFromPull(body.data);
+        const count = (body.data.courses || []).filter((c) => !c.deleted).length;
+        this.busy = false;
+        this.render();
+        prompt.showToast({ message: "已同步 " + count + " 门课程", duration: 2000 });
+      })
+      .catch((e) => {
+        this.busy = false;
+        this.render();
+        prompt.showToast({ message: api.errMsg(e), duration: 2000 });
+      });
+  },
+
+  toggleReminder() {
+    const def = this.$app.$def;
+    def.reminderEnabled = !def.reminderEnabled;
+    this.reminderEnabled = def.reminderEnabled;
+    api.storageSet(api.KEYS.REMINDER, def.reminderEnabled ? "1" : "0");
+    prompt.showToast({ message: def.reminderEnabled ? "提醒已开启" : "提醒已关闭", duration: 1200 });
+  },
+
+  doLogout() {
+    api.logout();
+    prompt.showToast({ message: "已退出登录", duration: 1200 });
+    router.replace({ uri: "/pages/login" });
+  },
+
+  goBleImport() {
+    router.push({ uri: "/pages/bleimport" });
+  },
+
+  goDiag() {
+    router.push({ uri: "/pages/diag" });
+  },
+};
+</script>

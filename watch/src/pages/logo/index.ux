@@ -1,0 +1,66 @@
+<template>
+  <div class="splash">
+    <image class="logo" src="/common/images/logo.png"></image>
+    <text class="name">邗上课表</text>
+    <text class="loading">加载中…</text>
+  </div>
+</template>
+
+<style>
+.splash {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #000000;
+}
+.logo {
+  width: 96px;
+  height: 96px;
+}
+.name {
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: bold;
+  margin-top: 16px;
+}
+.loading {
+  color: #666666;
+  font-size: 18px;
+  margin-top: 12px;
+}
+</style>
+
+<script>
+/**
+ * 启动页：不发起任何网络请求（性能规范），
+ * 等 app.ux 恢复本地会话后按登录态路由。
+ */
+import router from "@system.router";
+
+export default {
+  private: {
+    poll: 0,
+  },
+
+  onReady() {
+    const def = this.$app.$def;
+    const go = () => {
+      if (def.accessToken && def.refreshToken) {
+        router.replace({ uri: "/pages/today" });
+      } else {
+        router.replace({ uri: "/pages/login" });
+      }
+    };
+    const wait = () => {
+      if (def.sessionReady) { go(); return; }
+      this.poll++;
+      if (this.poll > 40) { go(); return; } // 最多等待 2 秒
+      setTimeout(wait, 50);
+    };
+    wait();
+  },
+};
+</script>

@@ -1,0 +1,40 @@
+{
+  "package": "com.hanshang.schedule.watch",
+  "name": "邗上课表",
+  "versionName": "0.2.1",
+  "versionCode": 13,
+  "minPlatformVersion": 1000,
+  "icon": "/common/images/logo.png",
+  "deviceTypeList": ["watch"],
+  "features": [
+    { "name": "system.router" },
+    { "name": "system.device" },
+    { "name": "system.app" },
+    { "name": "system.fetch" },
+    { "name": "system.storage" },
+    { "name": "system.prompt" },
+    { "name": "system.vibrator" },
+    { "name": "system.network" },
+    { "name": "system.bluetooth.ble" }
+  ],
+  "config": {
+    "logLevel": "warn",
+    "designWidth": "device-width"
+  },
+  "display": {
+    "backgroundColor": "#000000"
+  },
+  "router": {
+    "entry": "pages/logo",
+    "pages": {
+      "pages/logo": { "component": "index" },
+      "pages/login": { "component": "index" },
+      "pages/import": { "component": "index" },
+      "pages/bleimport": { "component": "index" },
+      "pages/today": { "component": "index" },
+      "pages/week": { "component": "index" },
+      "pages/settings": { "component": "index" },
+      "pages/diag": { "component": "index" }
+    }
+  }
+}

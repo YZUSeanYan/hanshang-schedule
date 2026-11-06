@@ -1,0 +1,358 @@
+<template>
+  <div class="page">
+    <div class="form">
+      <text class="title {{isRound ? 'txt-center' : ''}}">分享码导入</text>
+      <text class="subtitle {{isRound ? 'txt-center' : ''}}">输入同学分享的6位口令</text>
+
+      <!-- 6 位口令显示（独立变量渲染） -->
+      <div class="digits">
+        <text class="digit {{c1 ? 'digit-on' : ''}}">{{c1 ? c1 : '·'}}</text>
+        <text class="digit {{c2 ? 'digit-on' : ''}}">{{c2 ? c2 : '·'}}</text>
+        <text class="digit {{c3 ? 'digit-on' : ''}}">{{c3 ? c3 : '·'}}</text>
+        <text class="digit {{c4 ? 'digit-on' : ''}}">{{c4 ? c4 : '·'}}</text>
+        <text class="digit {{c5 ? 'digit-on' : ''}}">{{c5 ? c5 : '·'}}</text>
+        <text class="digit {{c6 ? 'digit-on' : ''}}">{{c6 ? c6 : '·'}}</text>
+      </div>
+      <text class="status {{busy ? 'status-busy' : ''}} {{isRound ? 'txt-center' : ''}}">{{statusText}}</text>
+
+      <!-- 预览卡片（查询成功后替换键盘区） -->
+      <div if="{{preview}}" class="card">
+        <text class="pv-sem">{{previewSemName}}</text>
+        <text class="pv-meta">{{previewMeta}}</text>
+        <text class="btn btn-green" @click="doClaim(false)">导入此课表</text>
+        <text if="{{needConfirm}}" class="btn btn-warn" @click="doClaim(true)">覆盖同名课表并导入</text>
+        <text class="btn btn-plain" @click="resetInput">重新输入</text>
+      </div>
+
+      <!-- 分享码键盘（A-Z 除 ILO + 2-9 数字） -->
+      <div else class="keyboard">
+        <div class="kb-row">
+          <div class="key" for="k in row1" tid="id"><text class="key-text" @click="tapKey(k.k)">{{k.k}}</text></div>
+        </div>
+        <div class="kb-row">
+          <div class="key" for="k in row2" tid="id"><text class="key-text" @click="tapKey(k.k)">{{k.k}}</text></div>
+        </div>
+        <div class="kb-row">
+          <div class="key" for="k in row3" tid="id"><text class="key-text" @click="tapKey(k.k)">{{k.k}}</text></div>
+        </div>
+        <div class="kb-row">
+          <div class="key" for="k in row4" tid="id"><text class="key-text" @click="tapKey(k.k)">{{k.k}}</text></div>
+        </div>
+        <div class="kb-row">
+          <div class="key key-wide"><text class="key-text key-fn" @click="backspace">删除</text></div>
+          <div class="key key-wide"><text class="key-text key-ok" @click="doPreview">{{busy ? '…' : '查询'}}</text></div>
+        </div>
+      </div>
+
+      <!-- 离线通道入口（与设置页共用，保证可发现） -->
+      <text class="ble-link" @click="goBleImport">没有网络？蓝牙导入课表</text>
+    </div>
+  </div>
+</template>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #000000;
+}
+/* 内容必须包进 div 列容器：text 直接放容器会横排（v0.2.0 踩过的显示坑） */
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 8px 20px;
+}
+.txt-center {
+  text-align: center;
+}
+.title {
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: bold;
+}
+.subtitle {
+  color: #777777;
+  font-size: 16px;
+  margin-top: 4px;
+}
+/* 6 位显示 */
+.digits {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 0 4px;
+}
+.digit {
+  width: 48px;
+  height: 48px;
+  line-height: 48px;
+  text-align: center;
+  border-radius: 10px;
+  background-color: #161616;
+  color: #555555;
+  font-size: 28px;
+  font-weight: bold;
+}
+.digit-on {
+  background-color: #1d5c46;
+  color: #ffffff;
+}
+.status {
+  color: #666666;
+  font-size: 16px;
+  height: 28px;
+  line-height: 28px;
+  margin-top: 2px;
+}
+.status-busy {
+  color: #f6c453;
+}
+/* 预览卡片 */
+.card {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  border-radius: 12px;
+  background-color: #141414;
+  padding: 16px;
+}
+.pv-sem {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+}
+.pv-meta {
+  color: #888888;
+  font-size: 18px;
+  text-align: center;
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+.btn {
+  height: 48px;
+  line-height: 48px;
+  text-align: center;
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 8px;
+}
+.btn-green {
+  background-color: #158a63;
+  color: #ffffff;
+}
+.btn-warn {
+  background-color: #8a5a15;
+  color: #ffffff;
+}
+.btn-plain {
+  background-color: #2a2a2a;
+  color: #cccccc;
+}
+/* 键盘 */
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+}
+.kb-row {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 4px;
+}
+.key {
+  flex: 1;
+  height: 42px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 2px;
+  border-radius: 8px;
+  background-color: #1e1e1e;
+}
+.key-wide {
+  flex: 2;
+}
+.key-text {
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 42px;
+  text-align: center;
+  font-weight: bold;
+}
+.key-fn {
+  color: #aaaaaa;
+  font-size: 18px;
+}
+.key-ok {
+  color: #2eb886;
+  font-size: 20px;
+}
+.ble-link {
+  color: #2eb886;
+  font-size: 16px;
+  text-align: center;
+  margin-top: 6px;
+}
+</style>
+
+<script>
+/**
+ * 分享码导入页（v0.2.1）：
+ * 手表无系统输入法——专用内嵌键盘输入 6 位口令（A-Z 除 I L O + 2-9）。
+ * 【显示坑已修】内容包进 div 列容器（v0.2.0 的 scroll 内直放 text 会横排溢出）。
+ * 【入口】底部保留「蓝牙导入课表」链接，配合设置页入口保证可发现。
+ */
+import router from "@system.router";
+import prompt from "@system.prompt";
+import * as api from "../../common/scripts/api";
+
+let _seq = 0;
+function K(k) {
+  return { id: "i" + _seq++, k };
+}
+
+export default {
+  private: {
+    c1: "", c2: "", c3: "", c4: "", c5: "", c6: "",
+    busy: false,
+    isRound: false,
+    statusText: "口令共6位，字母+数字",
+    preview: null,
+    needConfirm: false,
+    previewSemName: "",
+    previewMeta: "",
+    row1: [], row2: [], row3: [], row4: [],
+  },
+
+  onInit() {
+    const def = this.$app.$def;
+    if (!def.accessToken) {
+      router.replace({ uri: "/pages/login" });
+    }
+    this.isRound = !!def.isRound;
+    this.row1 = "ABCDEFGH".split("").map(K);
+    this.row2 = "JKMNPQRS".split("").map(K); // 跳过 I、L、O（与服务端字符集一致）
+    this.row3 = "TUVWXYZ".split("").map(K);
+    this.row4 = "23456789".split("").map(K);
+  },
+
+  goBleImport() {
+    router.push({ uri: "/pages/bleimport" });
+  },
+
+  count() {
+    let n = 0;
+    if (this.c1) n++; if (this.c2) n++; if (this.c3) n++;
+    if (this.c4) n++; if (this.c5) n++; if (this.c6) n++;
+    return n;
+  },
+
+  tapKey(ch) {
+    if (this.busy) return;
+    const idx = this.count();
+    if (idx >= 6) return;
+    if (idx === 0) this.c1 = ch;
+    else if (idx === 1) this.c2 = ch;
+    else if (idx === 2) this.c3 = ch;
+    else if (idx === 3) this.c4 = ch;
+    else if (idx === 4) this.c5 = ch;
+    else this.c6 = ch;
+    if (this.count() === 6) {
+      this.doPreview();
+    }
+  },
+
+  backspace() {
+    if (this.busy) return;
+    if (this.c6) this.c6 = "";
+    else if (this.c5) this.c5 = "";
+    else if (this.c4) this.c4 = "";
+    else if (this.c3) this.c3 = "";
+    else if (this.c2) this.c2 = "";
+    else this.c1 = "";
+  },
+
+  code() {
+    return (this.c1 || "") + (this.c2 || "") + (this.c3 || "") +
+           (this.c4 || "") + (this.c5 || "") + (this.c6 || "");
+  },
+
+  resetInput() {
+    this.c1 = this.c2 = this.c3 = this.c4 = this.c5 = this.c6 = "";
+    this.preview = null;
+    this.needConfirm = false;
+    this.statusText = "口令共6位，字母+数字";
+  },
+
+  doPreview() {
+    if (this.busy) return;
+    const code = this.code();
+    if (code.length !== 6) {
+      prompt.showToast({ message: "请输入 6 位口令", duration: 1500 });
+      return;
+    }
+    this.busy = true;
+    this.statusText = "查询中…";
+    this.preview = null;
+    this.needConfirm = false;
+    api.sharePreview(code)
+      .then((body) => {
+        this.busy = false;
+        const p = body.data;
+        this.preview = p;
+        const payload = p.payload || {};
+        const sem = payload.semester || {};
+        const count = (payload.courses || []).length;
+        this.previewSemName = sem.name || "未知学期";
+        this.previewMeta = count + " 门课程";
+        this.statusText = "确认无误后点导入";
+      })
+      .catch((e) => {
+        this.busy = false;
+        this.resetInput();
+        this.statusText = api.errMsg(e);
+        prompt.showToast({ message: api.errMsg(e), duration: 2000 });
+      });
+  },
+
+  doClaim(replace) {
+    if (this.busy) return;
+    this.busy = true;
+    api.shareClaim(this.code(), replace)
+      .then((body) => {
+        const semesterUuid = body.data && body.data.semester_uuid;
+        return api.pullSchedule().then((pull) => {
+          const def = this.$app.$def;
+          def.syncFromPull(pull.data);
+          if (semesterUuid) {
+            const target = def.semesters.find((s) => !s.deleted && s.uuid === semesterUuid);
+            if (target) {
+              def.currentSemester = target;
+              def.saveCache();
+            }
+          }
+          this.busy = false;
+          prompt.showToast({ message: "导入成功", duration: 1500 });
+          router.replace({ uri: "/pages/today" });
+        });
+      })
+      .catch((e) => {
+        this.busy = false;
+        if (e && e.status === 409) {
+          this.needConfirm = true;
+          this.statusText = api.errMsg(e);
+          prompt.showToast({ message: api.errMsg(e), duration: 2000 });
+        } else {
+          this.statusText = api.errMsg(e);
+          prompt.showToast({ message: api.errMsg(e), duration: 2000 });
+        }
+      });
+  },
+};
+</script>

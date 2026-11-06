@@ -117,10 +117,10 @@ void main() {
       const body = '''
       [[
         {"id":{"skxq":2,"skjc":1,"kch":"21092107","kxh":"02"},
-         "kcm":"大学物理Ⅳ","jsm":"熊国欢","zcsm":"1-16周","cxjc":2,
+         "kcm":"大学物理Ⅳ","jsm":"教师A","zcsm":"1-16周","cxjc":2,
          "xqm":"扬子津东校区","jxlm":"文津楼","jasm":"101"},
         {"id":{"skxq":4,"skjc":1,"kch":"21092107","kxh":"02"},
-         "kcm":"大学物理Ⅳ","jsm":"熊国欢","zcsm":"1-16周","cxjc":2,
+         "kcm":"大学物理Ⅳ","jsm":"教师A","zcsm":"1-16周","cxjc":2,
          "xqm":"扬子津东校区","jxlm":"文津楼","jasm":"101"}
       ]]
       ''';
@@ -129,7 +129,7 @@ void main() {
       expect(courses, isNotNull);
       expect(courses, hasLength(1));
       expect(courses!.single.name, '大学物理Ⅳ');
-      expect(courses.single.teacher, '熊国欢');
+      expect(courses.single.teacher, '教师A');
       expect(courses.single.slots, hasLength(2));
       expect(courses.single.slots.first.dayOfWeek, 2);
       expect(courses.single.slots.first.startSection, 1);
@@ -349,8 +349,8 @@ void main() {
     });
   });
 
-  group('真实样本回归（docs/samples/班级课表.html）', () {
-    // 扬大教务真实课表页面（2026-08 用户提供），预期：
+  group('合成样本回归（docs/samples/班级课表.html）', () {
+    // 与扬大教务页面结构等价的全合成页面（无会话信息与真实教师），预期：
     // 13 个课程块 → 聚合为 8 门课（流体热力学因教师顺序不同拆成 2 条）
     late final String sampleHtml;
 
@@ -368,7 +368,7 @@ void main() {
     test('大学物理Ⅳ：课名去课序号、教师取竖线右侧、多时间段聚合', () {
       final courses = YzuParser.parseYzuCourseTable(sampleHtml);
       final phy = courses.firstWhere((c) => c.name == '大学物理Ⅳ');
-      expect(phy.teacher, '熊国欢');
+      expect(phy.teacher, '教师A');
       expect(phy.slots.length, 2);
       expect(phy.slots.map((s) => s.dayOfWeek), containsAll([2, 4]));
       expect(phy.slots.first.startSection, 1);
@@ -387,7 +387,7 @@ void main() {
       expect(course.slots.single.startSection, 9);
     });
 
-    test('parseCapture 走 HTML 通道也能命中真实样本', () {
+    test('parseCapture 走 HTML 通道也能命中合成样本', () {
       final result = YzuParser.parseCapture({
         'url': 'https://webvpn.yzu.edu.cn/.../classCurriculum/index',
         'title': '班级课表',

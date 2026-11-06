@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 日视图小组件（4x2）：App 风格马卡龙色课程块，节次+时间+课程+地点 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_card_bg"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+        <TextView
+            android:id="@+id/day_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="日视图"
+            android:textColor="#158A63"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/day_open_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="→"
+            android:textColor="#158A63"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/day_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="今天没课"
+        android:textColor="@color/widget_sub"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <LinearLayout android:id="@+id/day_row1" style="@style/WidgetCourseBlock"><TextView android:id="@+id/day_row1_text" style="@style/WidgetBlockText"/></LinearLayout>
+    <LinearLayout android:id="@+id/day_row2" style="@style/WidgetCourseBlock"><TextView android:id="@+id/day_row2_text" style="@style/WidgetBlockText"/></LinearLayout>
+    <LinearLayout android:id="@+id/day_row3" style="@style/WidgetCourseBlock"><TextView android:id="@+id/day_row3_text" style="@style/WidgetBlockText"/></LinearLayout>
+    <LinearLayout android:id="@+id/day_row4" style="@style/WidgetCourseBlock"><TextView android:id="@+id/day_row4_text" style="@style/WidgetBlockText"/></LinearLayout>
+    <LinearLayout android:id="@+id/day_row5" style="@style/WidgetCourseBlock"><TextView android:id="@+id/day_row5_text" style="@style/WidgetBlockText"/></LinearLayout>
+    <LinearLayout android:id="@+id/day_row6" style="@style/WidgetCourseBlock"><TextView android:id="@+id/day_row6_text" style="@style/WidgetBlockText"/></LinearLayout>
+    <LinearLayout android:id="@+id/day_row7" style="@style/WidgetCourseBlock"><TextView android:id="@+id/day_row7_text" style="@style/WidgetBlockText"/></LinearLayout>
+    <LinearLayout android:id="@+id/day_row8" style="@style/WidgetCourseBlock"><TextView android:id="@+id/day_row8_text" style="@style/WidgetBlockText"/></LinearLayout>
+</LinearLayout>

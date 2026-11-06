@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 调试构建保留本机/局域网 HTTP，避免影响开发联调。 -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

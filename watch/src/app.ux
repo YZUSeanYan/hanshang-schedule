@@ -1,0 +1,191 @@
+<script>
+import device from "@system.device";
+import network from "@system.network";
+import * as api from "./common/scripts/api";
+import { KEYS } from "./common/scripts/api";
+
+/**
+ * 邗上课表 Watch - 应用入口
+ * 全局状态（页面通过 this.$app.$def 访问）：
+ *   accessToken / refreshToken / user    会话
+ *   semesters / courses / schedules      云端课表数据（缓存）
+ *   courseMap                            课程 uuid -> 课程
+ *   currentSemester                      当前学期
+ *   sessionReady / cacheReady            启动恢复完成标记
+ *   screenWidth/Height/Shape/Density     设备画像（device.getInfo）
+ *   model / product / apiLevel           机型与框架版本（S5 46mm = M2530W1）
+ *   isRound                              圆屏标记（screenShape === "circle"）
+ *   metrics()                            形状感知页面几何（蓝图 watch/docs/S5-46mm-深度适配蓝图.md）
+ *   reminderEnabled                      到点振动提醒开关
+ *   reminderTimer                        提醒定时器句柄
+ *   lastPullAt                           上次拉取时间
+ */
+export default {
+  onCreate() {
+    this.user = null;
+    this.accessToken = "";
+    this.refreshToken = "";
+    this.sessionReady = false;
+    this.semesters = [];
+    this.courses = [];
+    this.schedules = [];
+    this.courseMap = {};
+    this.currentSemester = null;
+    this.reminderEnabled = true;
+    this.screenWidth = 432;
+    this.screenHeight = 514;
+    this.screenShape = "rect";
+    this.screenDensity = 2;
+    this.model = "";
+    this.product = "";
+    this.apiLevel = 0;
+    this.isRound = false;
+    this.networkType = "unknown";
+    this.reminderTimer = null;
+    this.lastPullAt = 0;
+    this.cacheReady = false;
+
+    api.init(this);
+    this.restoreSession();
+
+    // 网络类型诊断（wifi/bluetooth/none…），登录失败提示中展示
+    this.probeNetwork();
+  },
+
+  /** 设备画像：屏幕/机型/框架版本（异步，restoreSession 等它完成后才置 sessionReady） */
+  probeDevice() {
+    return new Promise((resolve) => {
+      device.getInfo({
+        success: (res) => {
+          if (res.screenWidth) this.screenWidth = res.screenWidth;
+          if (res.screenHeight) this.screenHeight = res.screenHeight;
+          if (res.screenShape) this.screenShape = res.screenShape;
+          if (res.screenDensity) this.screenDensity = res.screenDensity;
+          if (res.model) this.model = res.model;
+          if (res.product) this.product = res.product;
+          if (res.apiLevel) this.apiLevel = res.apiLevel;
+          this.isRound = this.screenShape === "circle";
+          resolve();
+        },
+        fail: () => {
+          this.isRound = this.screenShape === "circle";
+          resolve();
+        },
+      });
+    });
+  },
+
+  probeNetwork() {
+    network.getType({
+      success: (res) => { this.networkType = res.type || "unknown"; },
+      fail: () => { this.networkType = "unknown"; },
+    });
+  },
+
+  /**
+   * 形状感知页面几何。圆屏按 480×480 圆弧安全带取值
+   * （y 处可用宽 = 2·√(r²−(y−r)²)，r=240），矩形屏保持原布局。
+   * 未知小屏兜底：所有高度不低于安全下限。
+   */
+  metrics() {
+    const w = this.screenWidth || 432;
+    const h = this.screenHeight || 514;
+    const round = this.isRound;
+    const headerH = round ? 120 : 118;
+    const navWrapH = round ? 132 : 84;
+    const stripH = 64;
+    return {
+      isRound: round,
+      w: w,
+      h: h,
+      pagePadX: round ? 24 : 20,
+      headerH: headerH,
+      navWrapH: navWrapH,
+      navH: round ? 62 : 84,
+      navW: round ? Math.min(336, w - 48) : w,
+      cardMarginX: round ? 36 : 24,
+      stripH: stripH,
+      stripW: round ? Math.min(320, w - 48) : w,
+      todayBodyH: Math.max(180, h - headerH - navWrapH),
+      weekBodyH: Math.max(180, h - stripH - navWrapH),
+      settingsBodyH: Math.max(180, h - (round ? 124 : 100)),
+    };
+  },
+
+  /** 启动恢复：本地会话 + 课表缓存 + 设备画像（logo 页等待 sessionReady） */
+  restoreSession() {
+    const that = this;
+    Promise.all([
+      api.storageGet(KEYS.ACCESS),
+      api.storageGet(KEYS.REFRESH),
+      api.storageGet(KEYS.USER),
+      api.storageGet(KEYS.CACHE),
+      api.storageGet(KEYS.REMINDER),
+      this.probeDevice(),
+    ]).then((res) => {
+      that.accessToken = res[0] || "";
+      that.refreshToken = res[1] || "";
+      if (res[2]) {
+        try { that.user = JSON.parse(res[2]); } catch (e) { that.user = null; }
+      }
+      that.reminderEnabled = res[4] !== "0";
+      if (res[3]) {
+        try {
+          const c = JSON.parse(res[3]);
+          that.semesters = c.semesters || [];
+          that.courses = c.courses || [];
+          that.schedules = c.schedules || [];
+          that.currentSemester = c.currentSemester || null;
+          that.lastPullAt = c.savedAt || 0;
+          that.rebuildCourseMap();
+          that.cacheReady = true;
+        } catch (e) { that.cacheReady = false; }
+      }
+      that.sessionReady = true;
+    });
+  },
+
+  rebuildCourseMap() {
+    const map = {};
+    this.courses.forEach((c) => { if (c && !c.deleted) map[c.uuid] = c; });
+    this.courseMap = map;
+  },
+
+  saveCache() {
+    const data = {
+      semesters: this.semesters,
+      courses: this.courses,
+      schedules: this.schedules,
+      currentSemester: this.currentSemester,
+      savedAt: Date.now(),
+    };
+    api.storageSet(KEYS.CACHE, JSON.stringify(data));
+  },
+
+  /** pull(0) 全量结果合并进全局状态，并持久化缓存 */
+  syncFromPull(pullData) {
+    this.semesters = pullData.semesters || [];
+    this.courses = pullData.courses || [];
+    this.schedules = pullData.schedules || [];
+    this.rebuildCourseMap();
+    const cur = this.currentSemester;
+    const alive = this.semesters.filter((s) => !s.deleted);
+    if (cur) {
+      this.currentSemester = alive.find((s) => s.uuid === cur.uuid) || alive.find((s) => s.is_current) || alive[0] || null;
+    } else {
+      this.currentSemester = alive.find((s) => s.is_current) || alive[0] || null;
+    }
+    this.lastPullAt = Date.now();
+    this.saveCache();
+  },
+
+  /** 静默增量刷新：距上次拉取超过 minutes 分钟才拉 */
+  refreshIfStale(minutes) {
+    if (!this.accessToken) return Promise.resolve(null);
+    if (Date.now() - this.lastPullAt < minutes * 60 * 1000) return Promise.resolve(null);
+    return api.pullSchedule()
+      .then((body) => { this.syncFromPull(body.data); return body; })
+      .catch(() => null);
+  },
+};
+</script>

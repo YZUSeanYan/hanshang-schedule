@@ -1,0 +1,89 @@
+{
+  "forms": [
+    {
+      "name": "TodayCard",
+      "description": "显示今天的课程安排",
+      "isDefault": true,
+      "displayName": "今日课程",
+      "src": "./ets/widget/TodayCard.ets",
+      "uiSyntax": "arkts",
+      "window": {
+        "designWidth": 720,
+        "autoDesignWidth": true
+      },
+      "colorMode": "auto",
+      "isDynamic": true,
+      "supportDimensions": [
+        "2*2",
+        "2*4"
+      ],
+      "defaultDimension": "2*2",
+      "updateEnabled": true,
+      "scheduledUpdateTime": "06:30",
+      "updateDuration": 1
+    },
+    {
+      "name": "NextClassCard",
+      "description": "显示下一节课或明天第一节课",
+      "isDefault": false,
+      "displayName": "下一节课",
+      "src": "./ets/widget/NextClassCard.ets",
+      "uiSyntax": "arkts",
+      "window": {
+        "designWidth": 720,
+        "autoDesignWidth": true
+      },
+      "colorMode": "auto",
+      "isDynamic": true,
+      "supportDimensions": [
+        "2*2"
+      ],
+      "defaultDimension": "2*2",
+      "updateEnabled": true,
+      "scheduledUpdateTime": "06:30",
+      "updateDuration": 1
+    },
+    {
+      "name": "WeekCard",
+      "description": "本周每天课程数一览",
+      "isDefault": false,
+      "displayName": "一周课程",
+      "src": "./ets/widget/WeekCard.ets",
+      "uiSyntax": "arkts",
+      "window": {
+        "designWidth": 720,
+        "autoDesignWidth": true
+      },
+      "colorMode": "auto",
+      "isDynamic": true,
+      "supportDimensions": [
+        "2*4"
+      ],
+      "defaultDimension": "2*4",
+      "updateEnabled": true,
+      "scheduledUpdateTime": "06:30",
+      "updateDuration": 1
+    },
+    {
+      "name": "UpcomingCard",
+      "description": "今明后三天课程安排",
+      "isDefault": false,
+      "displayName": "近日课程",
+      "src": "./ets/widget/UpcomingCard.ets",
+      "uiSyntax": "arkts",
+      "window": {
+        "designWidth": 720,
+        "autoDesignWidth": true
+      },
+      "colorMode": "auto",
+      "isDynamic": true,
+      "supportDimensions": [
+        "2*4"
+      ],
+      "defaultDimension": "2*4",
+      "updateEnabled": true,
+      "scheduledUpdateTime": "06:30",
+      "updateDuration": 1
+    }
+  ]
+}

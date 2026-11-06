@@ -1,0 +1,24 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "邗上课表主模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "扬州大学课程表"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "邗上课表"
+    },
+    {
+      "name": "EntryFormAbility_label",
+      "value": "邗上课表服务卡片"
+    },
+    {
+      "name": "EntryFormAbility_desc",
+      "value": "提供今日课程、下一节课、一周课程、近日课程服务卡片"
+    }
+  ]
+}

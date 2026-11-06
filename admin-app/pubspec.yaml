@@ -1,0 +1,21 @@
+name: hanshang_admin
+description: 邗上课表管理后台（SSH 隧道 WebView）
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.4.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dartssh2: ^2.10.0
+  webview_flutter: ^4.8.0
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

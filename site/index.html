@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>邗上课表 · 简洁、够用、免打扰的课程表</title>
+<meta name="description" content="邗上课表 2.0：会记日程的课程表。文字、语音、拍照都能记日程，支持调休课表、截图/Excel/教务导入、共同空闲、课前提醒与云同步；Android 可安装，iPhone/iPad 可使用网页版。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="邗上课表 · 简洁、够用、免打扰">
+<meta property="og:description" content="2.0 新版：说一句话就能记日程，课表更好读，还支持放假与补课的调休设置。Android 可安装，iPhone/iPad 可使用网页版。">
+<meta property="og:image" content="https://hanshang.seanyan.store/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="邗上课表 · 简洁、够用、免打扰">
+<meta name="twitter:description" content="2.0 新版：说一句话就能记日程，课表更好读，还支持放假与补课的调休设置。Android 可安装，iPhone/iPad 可使用网页版。">
+<meta name="twitter:image" content="https://hanshang.seanyan.store/assets/og.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+:root{
+  --bg:#f3faf5; --bg2:#e8f6ee; --card:#ffffff;
+  --ink:#0f2a1d; --ink2:#4b6b5b; --ink3:#7d998b;
+  --primary:#087b58; --primary-deep:#075d45; --primary-soft:#d9f5e8;
+  --mint:#a7f3d0; --butter:#fde68a; --coral:#fda4af; --lav:#ddd6fe; --teal:#99f6e4;
+  --radius:22px; --shadow:0 20px 60px -20px rgba(6,78,59,.25);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{
+  font-family:"PingFang SC","HarmonyOS Sans SC","MiSans","Microsoft YaHei","Source Han Sans SC",system-ui,-apple-system,sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.7;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+::selection{background:var(--mint)}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+
+/* ---------- 背景装饰 ---------- */
+.blob{position:fixed;border-radius:50%;filter:blur(90px);z-index:-1;opacity:.55;pointer-events:none}
+.blob-1{width:520px;height:520px;background:radial-gradient(circle,#a7f3d0,transparent 70%);top:-160px;left:-120px}
+.blob-2{width:460px;height:460px;background:radial-gradient(circle,#d9f99d88,transparent 70%);top:32%;right:-160px}
+.blob-3{width:420px;height:420px;background:radial-gradient(circle,#99f6e488,transparent 70%);bottom:-140px;left:22%}
+
+/* ---------- 导航 ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:rgba(243,250,245,.72);border-bottom:1px solid rgba(6,78,59,.08);transition:box-shadow .3s ease,background .3s ease}
+nav.scrolled{background:rgba(243,250,245,.9);box-shadow:0 8px 28px -14px rgba(6,78,59,.22)}
+.nav-inner{display:flex;align-items:center;gap:12px;height:64px}
+.nav-logo{width:34px;height:34px;border-radius:9px;box-shadow:0 4px 12px rgba(6,78,59,.18)}
+.nav-name{font-weight:800;font-size:1.08rem;letter-spacing:.02em}
+.nav-links{margin-left:auto;display:flex;gap:26px;font-size:.95rem;color:var(--ink2)}
+.nav-links a:hover{color:var(--primary-deep)}
+.nav-cta{background:var(--primary);color:#fff;padding:9px 18px;border-radius:999px;font-weight:700;font-size:.92rem;
+  box-shadow:0 8px 20px -8px rgba(8,123,88,.6);transition:.25s}
+.nav-cta:hover{background:var(--primary-deep);transform:translateY(-1px)}
+@media(max-width:640px){.nav-links{display:none}}
+
+/* ---------- Hero ---------- */
+.hero{padding:72px 0 30px}
+@keyframes hero-in{from{opacity:0;transform:translateY(20px)}}
+.hero-grid>div:first-child>*{animation:hero-in .7s cubic-bezier(.22,.8,.3,1) backwards}
+.hero-grid>div:first-child>*:nth-child(2){animation-delay:.08s}
+.hero-grid>div:first-child>*:nth-child(3){animation-delay:.16s}
+.hero-grid>div:first-child>*:nth-child(4){animation-delay:.24s}
+.hero-grid>div:first-child>*:nth-child(5){animation-delay:.32s}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center}
+@media(max-width:880px){.hero-grid{grid-template-columns:1fr;gap:36px}.hero-grid>*{min-width:0}}
+@media(max-width:560px){
+  .hero{padding-top:48px}
+  .hero-grid{display:block;width:100%;max-width:100%;padding-left:20px;padding-right:20px}
+  .hero-grid>div{width:100%;max-width:100%;min-width:0;overflow:hidden}
+  .hero .cta-row{display:flex;flex-direction:column;align-items:stretch;width:auto;max-width:100%}
+  .hero .btn,.hero .beta-tag{width:auto;max-width:100%;justify-content:center;text-align:center}
+  .hero h1,.hero p.lead{max-width:100%;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+  .hero-visual{margin-top:36px;min-width:0}
+  .phone{width:min(290px,82vw)}
+}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.badge{background:var(--card);border:1px solid rgba(6,78,59,.1);color:var(--primary-deep);
+  font-size:.8rem;font-weight:700;padding:6px 13px;border-radius:999px;box-shadow:0 2px 8px rgba(6,78,59,.05)}
+.hero h1{font-size:clamp(2.5rem,7.5vw,4.2rem);font-weight:900;line-height:1.15;letter-spacing:.01em}
+.hero h1 .hl{background:linear-gradient(120deg,var(--primary),#34d399 60%,#6ee7b7);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{margin:18px 0 26px;font-size:1.08rem;color:var(--ink2);max-width:30em}
+.cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:9px;font-weight:800;border-radius:16px;padding:15px 26px;font-size:1rem;
+  transition:.25s;cursor:pointer;border:none}
+.btn:active{transform:translateY(0) scale(.97)!important}
+.btn-primary{background:linear-gradient(135deg,var(--primary),#066c4e);color:#fff;
+  box-shadow:0 14px 30px -10px rgba(8,123,88,.55)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 20px 40px -12px rgba(8,123,88,.6)}
+.btn-ghost{background:var(--card);color:var(--primary-deep);border:1.5px solid rgba(6,78,59,.14)}
+.btn-ghost:hover{border-color:var(--primary);transform:translateY(-2px)}
+.pwd-chip{display:inline-flex;align-items:center;gap:9px;background:#fff;border:2px dashed var(--primary);
+  color:var(--primary-deep);font-weight:800;font-size:1rem;border-radius:16px;padding:14px 24px;cursor:pointer;transition:.25s}
+.pwd-chip b{font-size:1.2rem;letter-spacing:.14em}
+.pwd-chip:hover{background:var(--primary-soft);transform:translateY(-2px)}
+.pwd-chip:active{transform:scale(.97)}
+.beta-tag{font-size:.82rem;font-weight:800;color:#92600a;background:var(--butter);padding:8px 15px;border-radius:999px}
+.test-tag{font-size:.68rem;background:var(--butter);color:#92600a;padding:3px 9px;border-radius:999px;
+  vertical-align:middle;margin-left:6px;font-weight:800;white-space:nowrap}
+.hero-note{margin-top:14px;font-size:.85rem;color:var(--ink3)}
+.hero-visual{display:flex;justify-content:center;position:relative}
+.hero-icon-float{position:absolute;top:-38px;left:6%;width:92px;height:92px;border-radius:24px;
+  box-shadow:var(--shadow);animation:float 5s ease-in-out infinite;z-index:2}
+@media(max-width:880px){.hero-icon-float{left:auto;right:8%;top:-52px;width:76px;height:76px}}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-14px) rotate(2deg)}}
+.float-chip{position:absolute;background:#fff;border-radius:14px;box-shadow:0 10px 30px -10px rgba(6,78,59,.25);
+  padding:8px 14px;font-size:.78rem;font-weight:800;color:var(--primary-deep);z-index:2;animation:float 6s ease-in-out infinite}
+.chip-1{top:18%;right:2%;animation-delay:.8s}
+.chip-2{bottom:14%;left:0%;animation-delay:1.6s}
+@media(max-width:880px){.chip-1{right:0}.chip-2{left:-4px}}
+
+/* ---------- 手机样机（纯 CSS 课表） ---------- */
+.phone{width:290px;background:#0b1f16;border-radius:44px;padding:12px;box-shadow:var(--shadow);position:relative;
+  animation:phone-float 7s ease-in-out infinite}
+@keyframes phone-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.phone::after{content:"";position:absolute;top:20px;left:50%;transform:translateX(-50%);width:86px;height:22px;
+  background:#0b1f16;border-radius:12px;z-index:3}
+.screen{background:linear-gradient(180deg,#f7fcf9,#eef8f2);border-radius:34px;overflow:hidden;height:560px;display:flex;flex-direction:column}
+.scr-status{display:flex;justify-content:space-between;padding:12px 22px 4px;font-size:.68rem;font-weight:700;color:#33584a}
+.scr-head{padding:8px 20px 10px;display:flex;justify-content:space-between;align-items:flex-end}
+.scr-title{font-size:1.02rem;font-weight:900}
+.scr-week{font-size:.7rem;color:#fff;background:var(--primary);border-radius:999px;padding:3px 10px;font-weight:800}
+.scr-days{display:grid;grid-template-columns:34px repeat(5,1fr);padding:0 12px;font-size:.66rem;color:#5c7a6c;font-weight:700;text-align:center;gap:4px}
+.scr-days .today{color:var(--primary-deep)}
+.scr-body{flex:1;display:grid;grid-template-columns:34px repeat(5,1fr);gap:4px;padding:6px 12px 14px}
+.scr-times{display:grid;grid-template-rows:repeat(5,1fr);font-size:.58rem;color:#8aa698;text-align:center}
+.scr-times div{padding-top:2px}
+.scr-col{position:relative;background:rgba(6,78,59,.045);border-radius:10px}
+.course{position:absolute;left:3px;right:3px;border-radius:9px;padding:5px 6px;font-size:.6rem;line-height:1.35;
+  font-weight:800;color:#234434;box-shadow:0 3px 8px -2px rgba(6,78,59,.15)}
+.course small{display:block;font-weight:600;opacity:.75;font-size:.56rem}
+.c-mint{background:var(--mint)} .c-butter{background:var(--butter)} .c-coral{background:var(--coral)}
+.c-lav{background:var(--lav)} .c-teal{background:var(--teal)}
+.scr-tab{display:flex;justify-content:space-around;padding:9px 0 13px;background:#fff;border-top:1px solid rgba(6,78,59,.07)}
+.scr-tab span{width:44px;height:5px;border-radius:3px;background:#e2efe8}
+.scr-tab span.on{background:var(--primary)}
+
+/* ---------- 通用区块 ---------- */
+section{padding:74px 0}
+.sec-tag{display:inline-block;background:var(--primary-soft);color:var(--primary-deep);font-weight:800;
+  font-size:.8rem;padding:6px 14px;border-radius:999px;margin-bottom:14px}
+.sec-title{font-size:clamp(1.6rem,4.5vw,2.3rem);font-weight:900;line-height:1.3}
+.sec-sub{color:var(--ink2);margin-top:10px;max-width:34em}
+
+/* 功能卡片 */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
+@media(max-width:880px){.feat-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.feat-grid{grid-template-columns:1fr}}
+.feat{background:var(--card);border-radius:var(--radius);padding:26px 24px;border:1px solid rgba(6,78,59,.07);
+  transition:.3s;position:relative;overflow:hidden}
+.feat.featured{grid-column:1/-1;background:linear-gradient(145deg,#ffffff,#eaf9f1);border-color:rgba(8,123,88,.18)}
+@media(max-width:560px){.feat.featured{grid-column:1/-1}}
+.feat-grid .feat:nth-child(2){transition-delay:.06s}
+.feat-grid .feat:nth-child(3){transition-delay:.12s}
+.feat-grid .feat:nth-child(4){transition-delay:.18s}
+.feat-grid .feat:nth-child(5){transition-delay:.24s}
+.feat-grid .feat:nth-child(6){transition-delay:.3s}
+.feat-grid .feat.in{transition-delay:0s}
+.feat:hover{transform:translateY(-5px);box-shadow:var(--shadow);border-color:transparent}
+.feat .ic{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+  transition:transform .3s cubic-bezier(.2,.9,.3,1.2)}
+.feat:hover .ic{transform:scale(1.12) rotate(-5deg)}
+.feat h3{font-size:1.06rem;font-weight:800;margin-bottom:7px}
+.feat p{font-size:.9rem;color:var(--ink2)}
+.ic svg{width:23px;height:23px}
+
+/* 三步上手 */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.step{background:linear-gradient(160deg,#fff,#f2fbf6);border-radius:var(--radius);padding:28px 24px;border:1px solid rgba(6,78,59,.07)}
+.step .num{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--primary),#34d399);
+  color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:1.05rem}
+.step h3{font-size:1.02rem;font-weight:800;margin-bottom:7px}
+.step p{font-size:.9rem;color:var(--ink2)}
+
+/* 开发者的话 */
+.devnote{background:linear-gradient(150deg,#0e3d2b,#065f46 70%,#047857);border-radius:32px;padding:54px 46px;color:#eafaf2;
+  position:relative;overflow:hidden}
+.devnote::before{content:"“";position:absolute;top:-30px;left:26px;font-size:9rem;font-family:Georgia,serif;color:rgba(255,255,255,.12)}
+.devnote h2{font-size:clamp(1.4rem,4vw,1.9rem);font-weight:900;margin-bottom:20px}
+.devnote p{max-width:44em;font-size:1.02rem;line-height:1.9;color:#c9ecdd}
+.devnote p+p{margin-top:12px}
+.devnote .sign{margin-top:24px;font-weight:800;color:#a7f3d0;font-size:.95rem}
+@media(max-width:560px){.devnote{padding:40px 26px}}
+
+/* 下载区 */
+.dl{text-align:center}
+.dl-card{background:var(--card);border-radius:32px;padding:58px 30px;border:1px solid rgba(6,78,59,.08);
+  box-shadow:var(--shadow)}
+.dl-icon{width:92px;height:92px;border-radius:24px;margin:0 auto 22px;box-shadow:0 16px 40px -14px rgba(6,78,59,.4)}
+.dl h2{font-size:clamp(1.6rem,4.5vw,2.2rem);font-weight:900}
+.dl .ver{margin-top:8px;color:var(--ink3);font-size:.88rem}
+.dl .cta-row{justify-content:center;margin-top:28px}
+.dl-note{margin-top:18px;font-size:.83rem;color:var(--ink3);overflow-wrap:anywhere}
+@media(max-width:560px){
+  .dl-card{padding:44px 20px}
+  .dl .cta-row{flex-direction:column;align-items:stretch}
+  .dl .btn,.dl .pwd-chip{width:100%;justify-content:center;text-align:center}
+}
+
+/* 页脚 */
+footer{padding:40px 0 56px;text-align:center;color:var(--ink3);font-size:.82rem}
+footer .f-name{font-weight:800;color:var(--ink2);margin-bottom:6px}
+footer p+p{margin-top:4px}
+
+/* 提示 toast */
+.toast{position:fixed;left:50%;bottom:36px;transform:translate(-50%,20px);background:#0f2a1d;color:#fff;
+  padding:12px 22px;border-radius:14px;font-size:.9rem;opacity:0;pointer-events:none;transition:.35s;z-index:99;
+  box-shadow:0 12px 30px -8px rgba(0,0,0,.35)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* 滚动浮现 */
+.rv{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){
+  .rv{opacity:1;transform:none;transition:none}
+  .hero-icon-float,.float-chip,.phone{animation:none}
+  .hero-grid>div:first-child>*{animation:none}
+}
+/* fixed-nav-offset */
+body{padding-top:65px}
+html{scroll-padding-top:85px}
+</style>
+<link rel="stylesheet" href="assets/promo-video.css?v=20260914-033344">
+<script defer src="assets/promo-video.js?v=20260914-033344"></script>
+</head>
+<body>
+<div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div>
+
+<nav>
+  <div class="wrap nav-inner">
+    <img class="nav-logo" src="assets/icon.png" alt="邗上课表图标">
+    <span class="nav-name">邗上课表</span>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#steps">上手</a>
+      <a href="#devnote">开发者的话</a>
+      <a href="privacy.html">隐私政策</a>
+    </div>
+    <a class="nav-cta" href="#download">下载</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div class="rv">
+      <div class="badges">
+        <span class="badge">简洁</span>
+        <span class="badge">免打扰</span>
+        <span class="badge">扬大作息适配</span>
+      </div>
+      <h1>邗上课表<br><span class="hl">课表，本该<span style="white-space:nowrap">清清爽爽</span></span></h1>
+      <p class="lead">为扬大同学制作的日常课表工具。截图、Excel/CSV、教务系统都能导入；2.0 起还能用一句话、一张照片记日程，放假补课一键调整——功能够用，操作简单，尽量少打扰。</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#download">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg>
+          Android 下载
+        </a>
+        <a class="btn btn-ghost" href="/web/">iPhone / iPad 网页版</a>
+        <a class="btn btn-ghost" href="#features">看看功能</a>
+        <span class="beta-tag">2.0 全新上线</span>
+      </div>
+      <p class="hero-note">Android v2.0.2 · iPhone / iPad 浏览器直接使用，也可添加到主屏幕</p>
+    </div>
+
+    <div class="hero-visual rv">
+      <img class="hero-icon-float" src="assets/icon.png" alt="邗上课表">
+      <div class="float-chip chip-1">🗣 说一句就记日程</div>
+      <div class="float-chip chip-2">📅 调休课表</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="scr-status"><span>9:41</span><span>5G&nbsp;&nbsp;100%</span></div>
+          <div class="scr-head"><span class="scr-title">邗上课表</span><span class="scr-week">第 8 周</span></div>
+          <div class="scr-days"><span></span><span>一</span><span class="today">二</span><span>三</span><span>四</span><span>五</span></div>
+          <div class="scr-body">
+            <div class="scr-times"><div>8:00</div><div>9:55</div><div>14:00</div><div>15:55</div><div>19:00</div></div>
+            <div class="scr-col"><div class="course c-mint" style="top:2%;height:36%">高等数学<small>文汇楼 203</small></div></div>
+            <div class="scr-col"><div class="course c-butter" style="top:22%;height:36%">大学物理<small>实验楼 B401</small></div><div class="course c-teal" style="top:76%;height:22%">形势与政策<small>线上</small></div></div>
+            <div class="scr-col"><div class="course c-coral" style="top:42%;height:34%">机械设计基础<small>工训中心</small></div></div>
+            <div class="scr-col"><div class="course c-lav" style="top:2%;height:34%">大学英语<small>外语楼 305</small></div><div class="course c-mint" style="top:60%;height:36%">线性代数<small>文汇楼 108</small></div></div>
+            <div class="scr-col"><div class="course c-teal" style="top:22%;height:32%">体育<small>操场</small></div><div class="course c-butter" style="top:78%;height:20%">社团活动<small>—</small></div></div>
+          </div>
+          <div class="scr-tab"><span class="on"></span><span></span><span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="rv">
+      <span class="sec-tag">功能</span>
+      <h2 class="sec-title">2.0：会记日程的课表</h2>
+      <p class="sec-sub">说一句话、拍一张照就能记日程；课表看得更清楚，还支持放假与补课的调休设置。导入依旧从截图、表格或教务系统开始。</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat featured rv">
+        <div class="ic" style="background:var(--mint)"><svg viewBox="0 0 24 24" fill="none" stroke="#065f46" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></svg></div>
+        <h3>AI 日程：说话就能记</h3>
+        <p>文字、语音、拍照都能记日程——说一句「明天下午三点在图书馆讨论」，自动识别成安排。语音边说边出字，说完确认即可加入课表，还支持到点提醒。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--coral)"><svg viewBox="0 0 24 24" fill="none" stroke="#9f1239" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="m9 15 2.2 2.2L15.5 13"/></svg></div>
+        <h3>调休课表</h3>
+        <p>放假与补课一键设置：放假当天不显示课程，补课日期按对应星期上课。学校调休通知的截图或文字直接交给 AI 识别，设置多设备同步。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--lav)"><svg viewBox="0 0 24 24" fill="none" stroke="#5b21b6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 8h10M7 12h6M7 16h8"/></svg></div>
+        <h3>课表更好读</h3>
+        <p>课程卡重新分层：课名醒目、教室号独立成行，空间不够自动缩字，信息永不截断。课程可设简称，同一时段多个活动合并成一张卡，点开按时间顺序查看。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--butter)"><svg viewBox="0 0 24 24" fill="none" stroke="#92600a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></div>
+        <h3>账户更放心</h3>
+        <p>支持修改用户名与头像；登录状态最长保持一年，不再频繁要求重新登录；更换账号自动隔离上一账号的本机数据。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--mint)"><svg viewBox="0 0 24 24" fill="none" stroke="#065f46" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 8h10M7 12h4M7 16h7"/><path d="m16 14 2 2 3-4"/></svg></div>
+        <h3>截图 / Excel 智能导入</h3>
+        <p>上传完整课表截图，或 XLSX、XLS、CSV 表格，智能识别课程、星期、节次、周次和地点。识别后可先预览、修改，再确认保存。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--butter)"><svg viewBox="0 0 24 24" fill="none" stroke="#92600a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><rect x="4" y="17" width="16" height="4" rx="1.5"/></svg></div>
+        <h3>教务系统导入</h3>
+        <p>通过内置页面登录学校系统并读取课表。教务账号和密码只在你的设备与学校系统之间传输，我们不接收、不保存。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--teal)"><svg viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg></div>
+        <h3>分享口令导入</h3>
+        <p>同学发来 6 位口令，输入后先核对课程，再生成一份你自己的课表副本，互不影响。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--teal)"><svg viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <h3>共同空闲</h3>
+        <p>搜索用户名发送邀请，也可以使用临时邀请码。对方接受后，只比较每节课的忙闲状态，不共享课程名、教师或教室；有空时段直接显示「几点到几点」。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--coral)"><svg viewBox="0 0 24 24" fill="none" stroke="#9f1239" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <h3>每节课时间可自定义</h3>
+        <p>已适配扬大 10 月 1 日后的作息：下午第一节从 14:00 开始，其余课次顺延；也可按实际安排逐节修改。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--lav)"><svg viewBox="0 0 24 24" fill="none" stroke="#5b21b6" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.3 21a2 2 0 0 0 3.4 0"/></svg></div>
+        <h3>课前提醒与安静更新</h3>
+        <p>课前提醒按你的设置在本地触发。发现新版本时只发送一条通知，点开后由你决定是否更新，不用全屏弹窗挡住课表。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--butter)"><svg viewBox="0 0 24 24" fill="none" stroke="#92600a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></div>
+        <h3>单双周 · 自动周数</h3>
+        <p>设好开学日期后自动计算周数，非本周课程会淡化显示。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--mint)"><svg viewBox="0 0 24 24" fill="none" stroke="#065f46" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .9-8.9 6 6 0 0 0-11.7 1.5A4 4 0 0 0 7 19z"/></svg></div>
+        <h3>账号云同步</h3>
+        <p>课表、日程、调休与自定义时间按账号隔离并同步，换设备后仍可继续使用。</p>
+      </div>
+      <div class="feat rv">
+        <div class="ic" style="background:var(--teal)"><svg viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="2.5"/><rect x="13" y="3" width="8" height="8" rx="2.5"/><rect x="3" y="13" width="8" height="8" rx="2.5"/><rect x="13" y="13" width="8" height="8" rx="2.5"/></svg></div>
+        <h3>小组件、主题与深色模式</h3>
+        <p>桌面直接看下一节课，主题色可选，深色模式完整适配。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="promo-video" class="promo-section" aria-labelledby="promo-title">
+  <div class="wrap">
+    <div class="promo-heading">
+      <div><span class="sec-tag">15 秒认识邗上课表</span><h2 id="promo-title" class="sec-title">让课表，动起来</h2><p class="sec-sub">从导入课表，到找到共同空闲。看看这些小功能，如何让每一天更清楚。</p></div>
+      <a class="promo-bili" href="https://www.bilibili.com/video/BV15qYq6EEiT/" target="_blank" rel="noopener noreferrer">在 B 站看完整版 <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="promo-stage">
+      <img class="promo-poster" src="assets/promo-bilibili-cover.jpg" alt="邗上课表宣传片封面" width="1920" height="1080" loading="lazy" decoding="async">
+      <button class="promo-play" type="button" hidden aria-label="播放邗上课表宣传片"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 3.5v17L21 12z"/></svg><span>播放宣传片</span></button>
+    </div>
+    <div class="promo-meta"><p data-video-status role="status" aria-live="polite">进入画面后自动播放；默认音量 50%，浏览器限制时先静音播放。</p><p>00:15 · 邗上课表</p></div>
+    <noscript><p>请<a href="https://www.bilibili.com/video/BV15qYq6EEiT/">前往 B 站观看宣传片</a>。</p></noscript>
+  </div>
+</section>
+
+<section id="steps" style="padding-top:0">
+  <div class="wrap">
+    <div class="rv">
+      <span class="sec-tag">上手</span>
+      <h2 class="sec-title">三步，用上你的课表</h2>
+    </div>
+    <div class="steps">
+      <div class="step rv"><div class="num">1</div><h3>选择使用方式</h3><p>Android 下载 APK；iPhone / iPad 用浏览器打开网页版，也可以添加到主屏幕。</p></div>
+      <div class="step rv"><div class="num">2</div><h3>选择导入方式</h3><p>上传课表截图、Excel/CSV 表格，或从教务系统导入，选择手头最方便的一种。</p></div>
+      <div class="step rv"><div class="num">3</div><h3>预览并保存</h3><p>核对识别结果，需要时先修改；确认无误后保存到自己的账号。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="devnote" style="padding-top:0">
+  <div class="wrap">
+    <div class="devnote rv">
+      <h2>开发者的话</h2>
+      <p>邗上课表想做的事情一直很简单：打开就能看课表，需要的功能容易找到，其余时候尽量安静。</p>
+      <p>我们会继续减少不必要的弹窗和打断。新版本通过通知告诉你，是否更新、什么时候更新，由你自己决定。</p>
+      <p>这是个人维护的小软件，作者不是计算机专业，开发过程中使用了 AI 辅助。</p>
+      <div class="sign">—— 邗上课表开发者</div>
+    </div>
+  </div>
+</section>
+
+<section id="download" class="dl" style="padding-top:0">
+  <div class="wrap">
+    <div class="dl-card rv">
+      <img class="dl-icon" src="assets/icon.png" alt="下载邗上课表">
+      <h2>把清爽的课表，装进手机</h2>
+      <p class="ver">Android v2.0.2 · 免费 · 无强制广告 · 无会员</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://gitee.com/seanyan-dev/hanshang-apk/releases/download/v2.0.2/hanshang-schedule-v2.0.2.apk">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg>
+          官方直链下载 2.0.2
+        </a>
+        <a class="btn btn-ghost" href="https://wwbmd.lanzout.com/b01euoxseb" target="_blank" rel="noopener noreferrer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg>
+          蓝奏云分流（2.0.0）
+        </a>
+        <a class="btn btn-ghost" href="/web/">iPhone / iPad 网页版</a>
+        <button class="pwd-chip" id="copyPwd" type="button">蓝奏云提取码：<b>YZU</b>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+      <p class="dl-note">APK SHA-256：6f68435c292128f894dee3027bc27a74a2f6b8eb52d636169e9a853921f293d0</p>
+      <p class="dl-note">推荐直接下载最新版 2.0.2；蓝奏云分流仍为 2.0.0 旧版（更新后会同步）。Android 安装时如提示“未知来源”，请确认文件名为 hanshang-schedule-v2.0.2.apk。</p>
+    </div>
+  </div>
+</section>
+
+<footer style="padding:40px 0 48px;text-align:center;color:var(--ink3);font-size:15px">
+  <div class="wrap">
+    <p class="f-name">邗上课表</p>
+    <p>© <span id="yr"></span> 邗上课表 · 内容由 AI 生成 · <a href="privacy.html">隐私政策</a></p>
+    <p style="margin-top:6px">本 App 与扬州大学官方无任何隶属或授权关系，"扬州大学教务系统"字样仅用于描述功能适配对象。</p>
+    <div style="margin-top:18px;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 20px;font-size:15px;font-weight:700;color:var(--ink3)">
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none">苏ICP备2026057230号</a>
+      <span style="opacity:.35">|</span>
+      <a href="https://beian.mps.gov.cn/" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+        <img src="gongan-logo.png" alt="" style="height:20px;vertical-align:middle">
+        苏公网安备32100302011719号
+      </a>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const toast = document.getElementById("toast");
+let toastTimer = null;
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>toast.classList.remove("show"), 2600);
+}
+
+document.getElementById("yr").textContent = new Date().getFullYear();
+
+const pwdBtn = document.getElementById("copyPwd");
+if(pwdBtn){
+  pwdBtn.addEventListener("click", async e=>{
+    e.preventDefault();
+    try{
+      await navigator.clipboard.writeText("YZU");
+      showToast("已复制蓝奏云提取码：YZU");
+    }catch(_){
+      showToast("蓝奏云提取码：YZU");
+    }
+  });
+}
+
+/* 滚动浮现动画 */
+const io = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{
+    if(en.isIntersecting){ en.target.classList.add("in"); io.unobserve(en.target); }
+  });
+},{threshold:.12});
+document.querySelectorAll(".rv").forEach(el=>io.observe(el));
+
+/* 导航滚动收紧 */
+const siteNav = document.querySelector("nav");
+const onScroll = ()=>siteNav.classList.toggle("scrolled", window.scrollY > 12);
+window.addEventListener("scroll", onScroll, {passive:true});
+onScroll();
+</script>
+
+</body>
+</html>
+
+

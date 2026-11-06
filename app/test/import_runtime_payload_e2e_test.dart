@@ -16,7 +16,8 @@ void main() {
     final runtime = await store.verify(
       envelope!,
       build: 68,
-      now: DateTime.now().add(const Duration(days: 1)),
+      // 固定在签名有效期内，端到端验签测试不随当前日期失效。
+      now: DateTime.utc(2026, 10, 3),
     );
     // build 窗口内的正式包（≥minBuild）都能接受
     expect(runtime.revision, greaterThan(0));

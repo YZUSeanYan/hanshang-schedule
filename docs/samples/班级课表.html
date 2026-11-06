@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE11">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    
+
+    <title>班级课表</title>
+    
+
+
+<link rel="shortcut icon" href="https://webvpn.yzu.edu.cn/http/000000000/img/icon/favicon.ico" type="image/x-icon">
+    <meta name="description" content="overview &amp; stats">
+
+    <link rel="stylesheet" href="./班级课表_files/bootstrap.min.css">
+
+
+
+
+    <link rel="stylesheet" href="./班级课表_files/font-awesome.min.css">
+    <link rel="stylesheet" href="./班级课表_files/iconfont.css">
+    
+    <link rel="stylesheet" href="./班级课表_files/jquery-ui.min.css" type="text/css">
+    <link rel="stylesheet" href="./班级课表_files/chosen.css">
+    <link rel="stylesheet" href="./班级课表_files/phone.css" type="text/css">
+
+    
+    <link rel="stylesheet" href="./班级课表_files/fonts-woff2.css">
+
+    
+    <link rel="stylesheet" href="./班级课表_files/ace.min.css" id="main-ace-style">
+
+    
+
+    
+
+    
+    
+
+    
+    
+
+    
+    
+	
+    
+
+    
+
+    
+
+    <link href="./班级课表_files/WdatePicker.css" rel="stylesheet" type="text/css">
+    
+    
+
+    
+    
+    
+
+    
+
+    
+    <link rel="stylesheet" href="./班级课表_files/commoncss.css" type="text/css">
+    
+
+    
+    
+    
+    
+    
+    <link rel="stylesheet" href="./班级课表_files/layer.css" id="layui_layer_skinlayercss" style="">
+
+    
+    
+
+    
+	
+	
+    
+    
+
+    
+
+    
+	
+	
+	
+	
+
+	
+	
+	
+	
+
+	
+	<link rel="stylesheet" href="./班级课表_files/kcbcolor.css" type="text/css">
+	
+	
+
+	
+
+
+</head>
+<body class="no-skin">
+
+
+<div class="modal fade" id="view-table" tabindex="1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog" style="width:60%;">
+        <div class="modal-content">
+            <div class="center">
+                <span class="view-pre-loading"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="myModal" tabindex="1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                
+                <h4 class="modal-title" id="myModalLabel">
+                    调课后的周次
+                </h4>
+            </div>
+            <div class="modal-body">
+                开始周次:<br>
+                结束周次:<br>
+                选择周次模式: 全周 &nbsp;&nbsp;
+                 单周&nbsp;&nbsp;
+                 双周
+            </div>
+            <div class="modal-footer">
+                
+                
+            </div>
+        </div>
+        
+    </div>
+    
+</div>
+
+				
+<div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    
+
+    <div class="navbar-container" id="navbar-container">
+        
+        <div class="navbar-header pull-left">
+            <a href="https://webvpn.yzu.edu.cn/http/000000000/" class="navbar-brand" id="0">
+                <small class="span_bbzx" style="font-weight:700;font-family:微软雅黑">
+                    
+                    URP高校教学管理与服务平台
+
+                </small>
+            </a>
+        </div>
+
+        <div class="navbar-buttons navbar-header pull-right" role="navigation">
+            
+            <ul class="nav ace-nav">
+                <li class="green" style="text-align: center; vertical-align: top;">
+                    <div class="intellegenceUDiv" style="z-index:1" id="intellegenceUDiv">
+                        <div style="height:100%; width:32px; display:inline-block;
+									 position:absolute;line-height:100%;left:-32px;
+									 background-color:#777;cursor:pointer; " id="clickdiv">
+                            <i class="fa fa-search white" style="margin-top: 50%;" id="clicki"></i>
+                        </div>
+                    </div>
+                    <div id="form-search" class="nav-search" style="width: 0px; right: -20px; margin-top: 8px; margin-right: 20px; background-color: rgba(0, 0, 0, 0); z-index: -1;">
+                        <form class="form-search">
+							<span class="input-icon">
+								
+								<i class="ace-icon fa fa-search blue"></i>
+							</span>
+                        </form>
+                    </div>
+                </li>
+                
+
+                
+				
+                
+                
+                <li class="light-red" style="text-align: center">
+                    <a data-toggle="dropdown" class="dropdown-toggle" href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index">
+                        <i class="ace-icon fa fa-calendar"></i><span class="span_bbzx">
+
+
+当前处于假期时间</span>
+                    </a>
+                </li>
+                
+
+
+                
+                <li class="light-blue" style="text-align: center">
+                    <a data-toggle="dropdown" href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                        <img class="nav-user-photo" src="./班级课表_files/img" alt="User&#39;s Photo">
+								<span class="user-info">
+									<small>欢迎您，</small>
+									
+
+
+测试用户
+								</span>
+                        <i class="ace-icon fa fa-caret-down"></i>
+                    </a>
+                    
+                    <ul class="user-menu dropdown-menu-right dropdown-menu dropdown-yellow dropdown-caret dropdown-close">
+                        <li>
+                            <a href="https://webvpn.yzu.edu.cn/http/000000000/" title="主页">
+                                <i class="ace-icon fa fa-home"></i>首页
+                            </a>
+                        </li>
+                        <li>
+							<a href="javascript:this.top.vpn_inject_scripts_window(this);vpn_eval((function () { void(0); }).toString().slice(14, -2))" title="在线反馈">
+							<i class="ace-icon fa fa-question-circle"></i> 在线反馈 </a>
+						</li>
+			        
+                        <li class="divider"></li>
+
+                        <li>
+                            <a id="logout" href="https://webvpn.yzu.edu.cn/http/000000000/logout" title="退出系统">
+                                <i class="ace-icon fa fa-power-off"></i>
+                                注销
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+</div>
+
+<div class="main-container" id="main-container">
+    
+
+    
+    <div id="sidebar" class="sidebar responsive sidebar-fixed">
+        
+
+        <div style="position: relative;"><div class="nav-wrap"><div style="position: relative; top: 0px; transition-property: top; transition-duration: 0.2s;"><ul class="nav nav-list" id="menus">
+        	
+			
+            
+            <li class="hsub" id="000000000">
+                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                    <i class="menu-icon fa fa-tachometer"></i>
+                    <span class="menu-text"> 线上服务 </span>
+                    <b class="arrow fa fa-angle-down"></b>
+                </a>
+
+                <b class="arrow"></b>
+                
+                <ul class="submenu">
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            可申请业务
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/application/index">&nbsp;&nbsp;
+                                    我要申请
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                </ul>
+                
+            </li>
+            
+            <li class="hsub" id="000000000">
+                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                    <i class="menu-icon fa fa-desktop"></i>
+                    <span class="menu-text"> 个人管理 </span>
+                    <b class="arrow fa fa-angle-down"></b>
+                </a>
+
+                <b class="arrow"></b>
+                
+                <ul class="submenu">
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            学籍管理
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/rollManagement/rollInfo/index">&nbsp;&nbsp;
+                                    学生学籍信息
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/rollManagement/rollChanges/index">&nbsp;&nbsp;
+                                    学籍异动信息
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                </ul>
+                
+            </li>
+            
+            <li class="hsub" id="000000000">
+                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                    <i class="menu-icon fa fa-pencil-square-o"></i>
+                    <span class="menu-text"> 选课管理 </span>
+                    <b class="arrow fa fa-angle-down"></b>
+                </a>
+
+                <b class="arrow"></b>
+                
+                <ul class="submenu">
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            选课管理
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/courseSelect/courseSelectNotice/index">&nbsp;&nbsp;
+                                    选课公告
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/courseSelect/courseSelect/index">&nbsp;&nbsp;
+                                    选课
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/courseSelect/cfxkcjf/index">&nbsp;&nbsp;
+                                    重修选课
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/courseSelect/bxxkjf/index">&nbsp;&nbsp;
+                                    补修选课
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/courseSelect/courseSelectResult/index">&nbsp;&nbsp;
+                                    选课结果
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/courseSelect/quitCourse/index">&nbsp;&nbsp;
+                                    退课
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/courseSelect/courseSelectFailed/index">&nbsp;&nbsp;
+                                    选课失败信息
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            本学期课表
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/courseSelect/thisSemesterCurriculum/index">&nbsp;&nbsp;
+                                    本学期课表
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/courseSelect/calendarSemesterCurriculum/index">&nbsp;&nbsp;
+                                    历年学期课表
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/personalSenate/giveLessonInfo/thisSemesterSchedule/weekLySchedule">&nbsp;&nbsp;
+                                    本学期周课表
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            教材
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/courseSelect/books/dealBooks/index">&nbsp;&nbsp;
+                                    选定教材
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                </ul>
+                
+            </li>
+            
+            <li class="hsub" id="000000000">
+                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                    <i class="menu-icon fa fa-list-alt"></i>
+                    <span class="menu-text"> 教学评估 </span>
+                    <b class="arrow fa fa-angle-down"></b>
+                </a>
+
+                <b class="arrow"></b>
+                
+                <ul class="submenu">
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            评估
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingEvaluation/mostPopularTeacher/index">&nbsp;&nbsp;
+                                    最受学生欢迎教师评选
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingEvaluation/newEvaluation/index">&nbsp;&nbsp;
+                                    教学评估
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                </ul>
+                
+            </li>
+            
+            <li class="hsub open" id="000000000">
+                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                    <i class="menu-icon fa fa-calendar"></i>
+                    <span class="menu-text"> 教学资源 </span>
+                    <b class="arrow fa fa-angle-down"></b>
+                </a>
+
+                <b class="arrow"></b>
+                
+                <ul class="submenu nav-show" style="display: block;">
+                    
+                    <li class="hsub open" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            教学资源
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu nav-show" style="display: block;">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classroomCurriculum/index">&nbsp;&nbsp;
+                                    教室课表
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/teacherCurriculum/index">&nbsp;&nbsp;
+                                    教师课表
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="active" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index"><i class="menu-icon fa fa-caret-right"></i>&nbsp;&nbsp;
+                                    班级课表
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/courseCurriculum/index">&nbsp;&nbsp;
+                                    课程课表
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            自习查询
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/freeClassroom/index">&nbsp;&nbsp;
+                                    空闲教室查询
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                </ul>
+                
+            </li>
+            
+            <li class="hsub" id="000000000">
+                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                    <i class="menu-icon fa fa-picture-o"></i>
+                    <span class="menu-text"> 综合查询 </span>
+                    <b class="arrow fa fa-angle-down"></b>
+                </a>
+
+                <b class="arrow"></b>
+                
+                <ul class="submenu">
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            成绩查询
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/integratedQuery/scoreQuery/allTermScores/index">&nbsp;&nbsp;
+                                    成绩查询
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/integratedQuery/scoreQuery/allPassingScores/index">&nbsp;&nbsp;
+                                    全部及格成绩
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/integratedQuery/scoreQuery/coursePropertyScores/index">&nbsp;&nbsp;
+                                    课程属性成绩
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/integratedQuery/scoreQuery/schemeScores/index">&nbsp;&nbsp;
+                                    方案成绩
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/integratedQuery/scoreQuery/unpassedScores/index">&nbsp;&nbsp;
+                                    不及格成绩
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/integratedQuery/scoreQuery/thisTermScores/index">&nbsp;&nbsp;
+                                    本学期成绩
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            方案修读情况
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/integratedQuery/planCompletion/index">&nbsp;&nbsp;
+                                    方案完成情况
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                </ul>
+                
+            </li>
+            
+            <li class="hsub" id="000000000">
+                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                    <i class="menu-icon fa fa-tag"></i>
+                    <span class="menu-text"> 考务管理 </span>
+                    <b class="arrow fa fa-angle-down"></b>
+                </a>
+
+                <b class="arrow"></b>
+                
+                <ul class="submenu">
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            考务管理
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/examinationManagement/examPlan/index">&nbsp;&nbsp;
+                                    考试安排
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/examinationManagement/examSignUp/index">&nbsp;&nbsp;
+                                    考试报名
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                </ul>
+                
+            </li>
+            
+            <li class="hsub" id="000000000">
+                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                    <i class="menu-icon fa fa-file-o"></i>
+                    <span class="menu-text"> 实习管理 </span>
+                    <b class="arrow fa fa-angle-down"></b>
+                </a>
+
+                <b class="arrow"></b>
+                
+                <ul class="submenu">
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            实习过程管理
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/internship/clinicalClerkship/formFilling/index">&nbsp;&nbsp;
+                                    实习材料填报
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                </ul>
+                
+            </li>
+            
+            <li class="hsub" id="000000000">
+                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                    <i class="menu-icon fa fa-file"></i>
+                    <span class="menu-text"> 大学生创新创业 </span>
+                    <b class="arrow fa fa-angle-down"></b>
+                </a>
+
+                <b class="arrow"></b>
+                
+                <ul class="submenu">
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            申请管理
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/students/studentsInnovation/apply/countindex">&nbsp;&nbsp;
+                                    大创项目申请
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/studentsInnovation/applicationManagement/projectTitleChange/index">&nbsp;&nbsp;
+                                    大创项目题目变更
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/students/studentsInnovation/terminationInnovationApplication/index">&nbsp;&nbsp;
+                                    大创终止项目申请
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/students/studentsInnovation/extensionInnovation/index">&nbsp;&nbsp;
+                                    大创延期项目申请
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                </ul>
+                
+            </li>
+            
+            <li class="hsub" id="000000000">
+                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                    <i class="menu-icon fa fa-qrcode"></i>
+                    <span class="menu-text"> 师范生职业能力测试 </span>
+                    <b class="arrow fa fa-angle-down"></b>
+                </a>
+
+                <b class="arrow"></b>
+                
+                <ul class="submenu">
+                    
+                    <li class="hsub" id="000000000">
+                        <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" class="dropdown-toggle">
+                            <i class="menu-icon fa fa-caret-right"></i>
+                            网上报名
+                            <b class="arrow fa fa-angle-down"></b>
+                        </a>
+
+                        <b class="arrow"></b>
+
+                        
+                        <ul class="submenu">
+                            
+                            <li class="" id="000000000">
+                                <a href="https://webvpn.yzu.edu.cn/http/000000000/student/certification/exam/online/registration/index">&nbsp;&nbsp;
+                                    网上报名
+                                </a>
+
+                                <b class="arrow"></b>
+                            </li>
+                            
+                        </ul>
+
+                        
+                    </li>
+                    
+                </ul>
+                
+            </li>
+            
+
+        </ul></div></div><div class="ace-scroll nav-scroll"><div class="scroll-track" style="display: none;"><div class="scroll-bar" style="top: 0px; transition-property: top; transition-duration: 0.13s;"></div></div><div class="scroll-content" style=""><div></div></div></div></div>
+        
+
+        <div class="sidebar-toggle sidebar-collapse" id="sidebar-collapse" style="z-index: 1;">
+            <i class="ace-icon fa fa-angle-double-left" data-icon1="ace-icon fa fa-angle-double-left" data-icon2="ace-icon fa fa-angle-double-right"></i>
+        </div>
+
+        
+    </div>
+
+    <div class="main-content">
+        <div class="breadcrumbs" id="breadcrumbs">
+            
+
+            <ul class="breadcrumb">
+                <li style="cursor:pointer;">
+                    <i class="ace-icon fa fa-home home-icon"></i>
+                    首页
+                </li>
+                <li class="active" id="firmenu" menuid="000000000">教学资源</li>
+                <li class="active" id="secmenu" menuid="000000000">教学资源</li>
+                <li class="active" id="lastmenu" menuid="000000000">班级课表</li>
+            </ul>
+            
+        </div>
+
+        
+        <div class="page-content" id="page-content-template">
+            
+<div class="row">
+
+	
+	
+		<div class="col-xs-12 self-margin" id="close">
+			<form name="bjkbform" method="post">
+				
+				<h4 class="header smaller lighter grey">
+					<i class="ace-icon fa fa-search"></i>查询条件
+					<span class="right_top_oper">
+						
+					</span>
+				</h4>
+
+				<div class="profile-user-info profile-user-info-striped self">
+					<div class="profile-info-row">
+						<div class="profile-info-name"> 学年学期</div>
+						<div class="profile-info-value">
+							<div class="chosen-container chosen-container-single" style="width: 200px;" title=""><a class="chosen-single" tabindex="-1"><span>2026-2027学年秋</span><div><b></b></div></a><div class="chosen-drop"><div class="chosen-search"></div><ul class="chosen-results"></ul></div></div>
+						</div>
+						<div class="profile-info-name"> 年级</div>
+						<div class="profile-info-value">
+							<div class="chosen-container chosen-container-single" style="width: 200px;" title="" id="yearNum_chosen"><a class="chosen-single" tabindex="-1"><span>全部</span><div><b></b></div></a><div class="chosen-drop"><div class="chosen-search"></div><ul class="chosen-results"></ul></div></div>
+						</div>
+						<div class="profile-info-name"> 院系</div>
+						<div class="profile-info-value">
+							<div class="chosen-container chosen-container-single" style="width: 200px;" title="" id="departmentNum_chosen"><a class="chosen-single" tabindex="-1"><span>全部</span><div><b></b></div></a><div class="chosen-drop"><div class="chosen-search"></div><ul class="chosen-results"></ul></div></div>
+						</div>
+						<div class="profile-info-name"> 专业</div>
+						<div class="profile-info-value">
+							
+						</div>
+					</div>
+
+					<div class="profile-info-row">
+						<div class="profile-info-name"> 班级</div>
+						<div class="profile-info-value">
+							
+						</div>
+						<div class="profile-info-name" style="background-color:white;"></div>
+						<div class="profile-info-value"></div>
+						<div class="profile-info-name" style="background-color:white;"></div>
+						<div class="profile-info-value"></div>
+						<div class="profile-info-name" style="background-color:white;"></div>
+						<div class="profile-info-value"></div>
+					</div>
+				</div>
+			</form>
+			<form action="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/searchCurriculumInfo" method="post" name="info" id="info">
+				
+				
+				
+				
+				<h4 class="header smaller lighter grey">
+					<i class="glyphicon glyphicon-list" style="margin-left: 0px;"></i>
+					列表
+				</h4>
+
+				<div class="row">
+					<div class="col-xs-12">
+						<div id="page_div" style="overflow: auto;max-height: calc(100vh - 302px);">
+							<table class="table table-striped table-bordered">
+								<thead>
+								<tr class="center">
+									<th>序号</th>
+									<th>查看</th>
+									<th>班级号</th>
+									<th>班级名</th>
+									<th>院系</th>
+									<th>专业</th>
+
+								</tr>
+								</thead>
+								<tbody id="Bjkbtbody"><tr class="highlight"><td>1</td><td></td><td>2501机械</td><td>机械2501（先进制造）</td><td>布拉德福德先进制造学院</td><td>机械设计制造及其自动化（中外合作办学）</td></tr><tr><td>2</td><td></td><td>2501计科</td><td>计科2501（先进制造）</td><td>布拉德福德先进制造学院</td><td>计算机科学与技术(中外合作办学)</td></tr><tr><td>3</td><td></td><td>2502机械</td><td>机械2502（先进制造）</td><td>布拉德福德先进制造学院</td><td>机械设计制造及其自动化（中外合作办学）</td></tr><tr><td>4</td><td></td><td>2502计科</td><td>计科2502（先进制造）</td><td>布拉德福德先进制造学院</td><td>计算机科学与技术(中外合作办学)</td></tr><tr><td>5</td><td></td><td>2601机械</td><td>机械2601（先进制造）</td><td>布拉德福德先进制造学院</td><td>机械设计制造及其自动化（中外合作办学）</td></tr><tr><td>6</td><td></td><td>2601计科</td><td>计科2601（先进制造）</td><td>布拉德福德先进制造学院</td><td>计算机科学与技术(中外合作办学)</td></tr><tr><td>7</td><td></td><td>2602机械</td><td>机械2602（先进制造）</td><td>布拉德福德先进制造学院</td><td>机械设计制造及其自动化（中外合作办学）</td></tr><tr><td>8</td><td></td><td>2602计科</td><td>计科2602（先进制造）</td><td>布拉德福德先进制造学院</td><td>计算机科学与技术(中外合作办学)</td></tr><tr><td>9</td><td></td><td>2603机械</td><td>机械2603（先进制造）</td><td>布拉德福德先进制造学院</td><td>机械设计制造及其自动化（中外合作办学）</td></tr><tr><td>10</td><td></td><td>2603计科</td><td>计科2603（先进制造）</td><td>布拉德福德先进制造学院</td><td>计算机科学与技术(中外合作办学)</td></tr><tr><td>11</td><td></td><td>2604机械</td><td>机械2604（先进制造）</td><td>布拉德福德先进制造学院</td><td>机械设计制造及其自动化（中外合作办学）</td></tr><tr><td>12</td><td></td><td>2604计科</td><td>计科2604（先进制造）</td><td>布拉德福德先进制造学院</td><td>计算机科学与技术(中外合作办学)</td></tr><tr><td>13</td><td></td><td>阿语2301</td><td>阿语2301</td><td>外国语学院</td><td>阿拉伯语</td></tr><tr><td>14</td><td></td><td>阿语2401</td><td>阿语2401</td><td>外国语学院</td><td>阿拉伯语</td></tr><tr><td>15</td><td></td><td>阿语2501</td><td>阿语2501</td><td>外国语学院</td><td>阿拉伯语</td></tr><tr><td>16</td><td></td><td>阿语2601</td><td>阿语2601</td><td>外国语学院</td><td>阿拉伯语</td></tr><tr><td>17</td><td></td><td>材料2301</td><td>材料2301</td><td>机械工程学院</td><td>材料成型及控制工程</td></tr><tr><td>18</td><td></td><td>材料2401</td><td>材料2401</td><td>机械工程学院</td><td>材料成型及控制工程</td></tr><tr><td>19</td><td></td><td>材料2402</td><td>材料2402</td><td>机械工程学院</td><td>材料成型及控制工程</td></tr><tr><td>20</td><td></td><td>材料2501</td><td>材料2501</td><td>机械工程学院</td><td>材料成型及控制工程</td></tr><tr><td>21</td><td></td><td>材料2502</td><td>材料2502（机电所）</td><td>机械工程学院</td><td>材料成型及控制工程（与中国机械总院北京机电研究所联合培养)</td></tr><tr><td>22</td><td></td><td>材料2601</td><td>材料2601</td><td>机械工程学院</td><td>材料成型及控制工程</td></tr><tr><td>23</td><td></td><td>材料2602</td><td>材料2602（机电所）</td><td>机械工程学院</td><td>材料成型及控制工程（与中国机械总院北京机电研究所联合培养)</td></tr><tr><td>24</td><td></td><td>财务2301</td><td>财务2301</td><td>商学院</td><td>财务管理</td></tr><tr><td>25</td><td></td><td>财务2302</td><td>财务2302</td><td>商学院</td><td>财务管理</td></tr><tr><td>26</td><td></td><td>草科2601</td><td>草业菁英2601</td><td>动物科学与技术学院</td><td>草业科学(联合培养）</td></tr><tr><td>27</td><td></td><td>草业2301</td><td>草业2301</td><td>动物科学与技术学院</td><td>草业科学</td></tr><tr><td>28</td><td></td><td>草业2401</td><td>草业2401</td><td>动物科学与技术学院</td><td>草业科学</td></tr><tr><td>29</td><td></td><td>草业2501</td><td>草业2501</td><td>动物科学与技术学院</td><td>草业科学</td></tr><tr><td>30</td><td></td><td>草业2601</td><td>草业2601</td><td>动物科学与技术学院</td><td>草业科学</td></tr></tbody>
+							</table>
+						</div>
+						
+						<div id="urppagebar" style="margin: 5px 0 0 0"><div class="dataTables_paginate paging_simple_numbers" id="sample-table-2_paginate_urppagebar" style="position:relative;"><div id="div_page_loading_urppagebar" style="z-index:19900516;position:absolute;left:0;top:-2px;width:100%;text-align:center;border-radius:5px;display:none;"><img src="./班级课表_files/pageloading.gif" style="width:28px;height:28px;"></div><div id="currNum_urppagebar" style="display:inline-block;color: #428bca;float: left;">当前行:1</div><div id="selectNum_urppagebar" style="display:inline-block;color: green;float: left;"></div><div style="display:inline-block;"><ul id="pagination_ul_urppagebar" class="pagination" style="position: relative; display: none;"><li id="li_page_0" class="paginate_button previous disabled" aria-controls="sample-table-2" tabindex="0" name="sample-table-2_previous"><span style="padding:3px 7px;">&lt;上一页</span></li><li id="li_page_1" class="paginate_button pagebarhand active" aria-controls="sample-table-2" tabindex="0"><span style="padding:3px 7px;">1</span></li><li id="li_page_2" class="paginate_button pagebarhand" aria-controls="sample-table-2" tabindex="0"><span style="padding:3px 7px;">2</span></li><li id="li_page_3" class="paginate_button pagebarhand" aria-controls="sample-table-2" tabindex="0"><span style="padding:3px 7px;">3</span></li><li id="li_page_4" class="paginate_button pagebarhand" aria-controls="sample-table-2" tabindex="0"><span style="padding:3px 7px;">4</span></li><li id="li_page_5" class="paginate_button pagebarhand" aria-controls="sample-table-2" tabindex="0"><span style="padding:3px 7px;">5</span></li><li class="paginate_button disabled" aria-controls="sample-table-2" tabindex="0"><span style="padding:3px 7px;">...</span></li><li id="li_page_31" class="paginate_button pagebarhand" aria-controls="sample-table-2" tabindex="0"><span style="padding:3px 7px;">31</span></li><li id="li_page_32" class="paginate_button pagebarhand" aria-controls="sample-table-2" tabindex="0"><span style="padding:3px 7px;">32</span></li><li id="li_page_2" class="paginate_button next pagebarhand" aria-controls="sample-table-2" tabindex="0" name="sample-table-2_next"><span style="padding:3px 7px;">下一页&gt;</span></li></ul>&nbsp;</div><div style="display:inline-block;vertical-align: top;position:relative;font-size:14px;color:#999999;"><span id="span_page_txt_urppagebar">第</span><span style="position:relative;width:42px;height:26px;"></span>页 | 共<span id="totalPage_show_urppagebar">32</span>页 | 每页显示条| 当前显示第1~30条，共945条</div></div></div>
+						
+					</div>
+				</div>
+			</form>
+
+
+		</div>
+		
+		<div id="curriculumInfo-divcon" style="width: 70%; right: 0%;">
+			<div class="div-title">
+				<h3 id="title">机械2501（先进制造）  2026-2027学年秋  课表信息</h3>
+				<span class="right_top_oper" style="width:200px;">
+					
+					
+					
+				</span>
+			</div>
+			<div class="row" style="margin-right: 0px; margin-left: 0px;">
+				<div class="col-xs-12">
+					
+					
+
+					<div class="row">
+						<div class="col-xs-12" id="print_div">
+							<div class="widget-content">
+								<div id="mycoursetable"><table class="table table-bordered" id="courseTable"><thead><tr id="courseTableHead"><th colspan="2">节次/时间</th><th>星期一</th><th>星期二</th><th>星期三</th><th>星期四</th><th>星期五</th><th>星期六</th><th>星期日</th></tr></thead><tbody id="courseTableBody"><tr style="height: 117.469px;"><th rowspan="5" style="vertical-align:middle;width:5px;background-color:rgba(207,255,228,0.7);">上<br>午</th><th style="vertical-align:middle;width:150px;background-color:rgba(207,255,228,0.7);" id="0_1">第1小节(08:00-08:45)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="1_1"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="2_1"><div class="class_div box_font div-kcb-6" classnum="2" style="position: absolute; width: 140.74px; height: 234.938px; top: 36.2292px; left: 330.552px;"><p class="p-kcm-1">大学物理Ⅳ_02</p><p class="kcb_p_gray">21092107 | 教师A</p><p class="kcb_p_gray">1-16周</p><p class="kcb_p_gray">1-2节</p><p class="p-jxl-1">扬子津东校区文津楼101</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="3_1"><div class="class_div box_font div-kcb-3" classnum="2" style="position: absolute; width: 140.74px; height: 234.938px; top: 36.2292px; left: 469.104px;"><p class="p-kcm-3">流体热力学1（引进）_01</p><p class="kcb_p_gray">25393205 | 外教1,教师B</p><p class="kcb_p_gray">1-4周</p><p class="kcb_p_gray">1-2节</p><p class="p-jxl-3">扬子津东校区文津楼N204</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="4_1"><div class="class_div box_font div-kcb-6" classnum="2" style="position: absolute; width: 140.74px; height: 234.938px; top: 36.2292px; left: 607.656px;"><p class="p-kcm-1">大学物理Ⅳ_02</p><p class="kcb_p_gray">21092107 | 教师A</p><p class="kcb_p_gray">1-16周</p><p class="kcb_p_gray">1-2节</p><p class="p-jxl-1">扬子津东校区文津楼101</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="5_1"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="6_1"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="7_1"></td></tr><tr style="height: 117.469px;"><th style="vertical-align:middle;width:150px;background-color:rgba(207,255,228,0.7);" id="0_2">第2小节(08:55-09:40)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="1_2"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="2_2"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="3_2"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="4_2"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="5_2"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="6_2"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="7_2"></td></tr><tr style="height: 117.469px;"><th style="vertical-align:middle;width:150px;background-color:rgba(207,255,228,0.7);" id="0_3">第3小节(09:55-10:40)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="1_3"><div class="class_div box_font div-kcb-3" classnum="2" style="position: absolute; width: 140.74px; height: 234.938px; top: 271.167px; left: 192px;"><p class="p-kcm-3">流体热力学1（引进）_01</p><p class="kcb_p_gray">25393205 | 教师B,外教1</p><p class="kcb_p_gray">1-4周</p><p class="kcb_p_gray">3-4节</p><p class="p-jxl-3">扬子津东校区文津楼N202</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="2_3"><div class="class_div box_font div-kcb-3" classnum="2" style="position: absolute; width: 140.74px; height: 234.938px; top: 271.167px; left: 330.552px;"><p class="p-kcm-3">流体热力学1（引进）_01</p><p class="kcb_p_gray">25393205 | 教师B,外教1</p><p class="kcb_p_gray">1-4周</p><p class="kcb_p_gray">3-4节</p><p class="p-jxl-3">扬子津东校区文津楼N204</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="3_3"><div class="class_div box_font div-kcb-1" classnum="2" style="position: absolute; width: 140.74px; height: 234.938px; top: 271.167px; left: 469.104px;"><p class="p-kcm-1">公共体育3_104</p><p class="kcb_p_gray">21111003 | 外聘16</p><p class="kcb_p_gray">1-16周</p><p class="kcb_p_gray">3-4节</p><p class="p-jxl-1">扬子津东校区扬子津东操场（虚拟）080206</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="4_3"><div class="class_div box_font div-kcb-3" classnum="2" style="position: absolute; width: 140.74px; height: 234.938px; top: 271.167px; left: 607.656px;"><p class="p-kcm-3">流体热力学1（引进）_01</p><p class="kcb_p_gray">25393205 | 教师B,外教1</p><p class="kcb_p_gray">1-4周</p><p class="kcb_p_gray">3-4节</p><p class="p-jxl-3">扬子津东校区文津楼N202</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="5_3"><div class="class_div box_font div-kcb-3" classnum="2" style="position: absolute; width: 140.74px; height: 234.938px; top: 271.167px; left: 746.208px;"><p class="p-kcm-3">流体热力学1（引进）_01</p><p class="kcb_p_gray">25393205 | 外教1,教师B</p><p class="kcb_p_gray">1-4周</p><p class="kcb_p_gray">3-4节</p><p class="p-jxl-3">扬子津东校区文津楼N202</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="6_3"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="7_3"></td></tr><tr style="height: 117.469px;"><th style="vertical-align:middle;width:150px;background-color:rgba(207,255,228,0.7);" id="0_4">第4小节(10:50-11:35)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="1_4"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="2_4"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="3_4"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="4_4"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="5_4"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="6_4"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="7_4"></td></tr><tr style="height: 117.469px;"><th style="vertical-align:middle;width:150px;background-color:rgba(207,255,228,0.7);" id="0_5">第5小节(11:45-12:30)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="1_5"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="2_5"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="3_5"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="4_5"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="5_5"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="6_5"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,255,228,0.7);" id="7_5"></td></tr><tr style="height: 117.469px;"><th rowspan="5" style="vertical-align:middle;width:5px;background-color:rgba(255,230,207,0.7);">下<br>午</th><th style="vertical-align:middle;width:150px;background-color:rgba(255,230,207,0.7);" id="0_6">第6小节(14:30-15:15)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="1_6"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="2_6"><div class="class_div box_font div-kcb-7" classnum="3" style="position: absolute; width: 140.74px; height: 352.407px; top: 623.573px; left: 330.552px;"><p class="p-kcm-2">概率论与数理统计Ⅱ_12</p><p class="kcb_p_gray">17082011 | 教师C</p><p class="kcb_p_gray">1-16周</p><p class="kcb_p_gray">6-8节</p><p class="p-jxl-2">扬子津东校区文津楼N107</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="3_6"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="4_6"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="5_6"><div class="class_div box_font div-kcb-3" classnum="2" style="position: absolute; width: 140.74px; height: 234.938px; top: 623.573px; left: 746.208px;"><p class="p-kcm-3">流体热力学1（引进）_01</p><p class="kcb_p_gray">25393205 | 外教1,教师B</p><p class="kcb_p_gray">1-4周</p><p class="kcb_p_gray">6-7节</p><p class="p-jxl-3">扬子津东校区文津楼N204</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="6_6"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="7_6"></td></tr><tr style="height: 117.469px;"><th style="vertical-align:middle;width:150px;background-color:rgba(255,230,207,0.7);" id="0_7">第7小节(15:25-16:10)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="1_7"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="2_7"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="3_7"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="4_7"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="5_7"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="6_7"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="7_7"></td></tr><tr style="height: 117.469px;"><th style="vertical-align:middle;width:150px;background-color:rgba(255,230,207,0.7);" id="0_8">第8小节(16:20-17:05)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="1_8"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="2_8"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="3_8"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="4_8"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="5_8"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="6_8"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="7_8"></td></tr><tr style="height: 117.469px;"><th style="vertical-align:middle;width:150px;background-color:rgba(255,230,207,0.7);" id="0_9">第9小节(17:15-18:00)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="1_9"><div class="class_div box_font div-kcb-4" classnum="2" style="position: absolute; width: 70.37px; height: 234.938px; top: 975.979px; left: 192px;"><p class="p-kcm-4">形势与政策-3_02</p><p class="kcb_p_gray">25031006T03 | 教师D</p><p class="kcb_p_gray">7-8周</p><p class="kcb_p_gray">9-10节</p><p class="p-jxl-4">扬子津东校区文津楼101</p></div><div class="class_div box_font div-kcb-5" classnum="2" style="position: absolute; width: 70.37px; height: 234.938px; top: 975.979px; left: 261.276px;"><p class="p-kcm-5">大学生生涯规划与就业创业指导（1）-2_33</p><p class="kcb_p_gray">25001002T02 | 教师E</p><p class="kcb_p_gray">9-12周</p><p class="kcb_p_gray">9-10节</p><p class="p-jxl-5">扬子津东校区文津楼504</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="2_9"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="3_9"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="4_9"><div class="class_div box_font div-kcb-2" classnum="2" style="position: absolute; width: 140.74px; height: 234.938px; top: 975.979px; left: 607.656px;"><p class="p-kcm-2">毛泽东思想和中国特色社会主义理论体系概论_01</p><p class="kcb_p_gray">21031003 | 教师F</p><p class="kcb_p_gray">1-18周</p><p class="kcb_p_gray">9-10节</p><p class="p-jxl-2">扬子津东校区文津楼E206</p></div></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="5_9"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="6_9"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="7_9"></td></tr><tr style="height: 117.469px;"><th style="vertical-align:middle;width:150px;background-color:rgba(255,230,207,0.7);" id="0_10">第10小节(18:10-18:55)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="1_10"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="2_10"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="3_10"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="4_10"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="5_10"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="6_10"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(255,230,207,0.7);" id="7_10"></td></tr><tr style="height: 117.469px;"><th rowspan="2" style="vertical-align:middle;width:5px;background-color:rgba(207,228,255,0.7);">晚<br>上</th><th style="vertical-align:middle;width:150px;background-color:rgba(207,228,255,0.7);" id="0_11">第11小节(19:30-20:15)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="1_11"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="2_11"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="3_11"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="4_11"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="5_11"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="6_11"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="7_11"></td></tr><tr style="height: 117.469px;"><th style="vertical-align:middle;width:150px;background-color:rgba(207,228,255,0.7);" id="0_12">第12小节(20:25-21:10)</th><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="1_12"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="2_12"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="3_12"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="4_12"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="5_12"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="6_12"></td><td style="vertical-align:middle;padding:0;height:45px !important;background-color:rgba(207,228,255,0.7);" id="7_12"></td></tr></tbody></table></div>
+							</div>
+							<div id="other-course" style="display: none;">
+								<h4 class="header smaller lighter grey" id="table-title">
+									<i class="fa fa-info-circle"></i> 课程信息
+								</h4>
+
+								<div class="tab-pane active" id="tab2155">
+									<table class="table table-striped table-bordered">
+										<thead>
+										<tr>
+											<td style="font-weight: bold;">课程号</td>
+											<td style="font-weight: bold;">课程名</td>
+											<td style="font-weight: bold;">课序号</td>
+											<td style="font-weight: bold;">教师</td>
+											<td style="font-weight: bold;">周次</td>
+											<td style="font-weight: bold;">星期</td>
+											<td style="font-weight: bold;">开始</td>
+											<td style="font-weight: bold;">校区</td>
+											<td style="font-weight: bold;">教学楼</td>
+											<td style="font-weight: bold;">教室</td>
+										</tr>
+										</thead>
+										<tbody id="course-tbody"></tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	
+</div>
+
+        </div>
+        
+        
+    </div>
+    
+
+
+    <a href="https://webvpn.yzu.edu.cn/http/000000000/student/teachingResources/classCurriculum/index" id="btn-scroll-up" class="btn-scroll-up btn btn-sm btn-inverse">
+        <i class="ace-icon fa fa-angle-double-up icon-only bigger-110"></i>
+    </a>
+</div>
+
+
+
+
+
+
+
+
+<div style="position: fixed; right: 50px; bottom: 50px; background: white; padding: 16px 18px 12px; border-radius: 16px; box-shadow: rgba(0, 0, 0, 0.15) 0px 4px 20px; display: flex; flex-direction: column; gap: 10px; z-index: 99999; user-select: none; cursor: move; transition: opacity 0.2s, transform 0.2s; touch-action: none; -webkit-tap-highlight-color: transparent;"><div style="position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; background: rgb(255, 77, 79); color: white; border-radius: 50%; text-align: center; line-height: 18px; font-size: 13px; cursor: pointer; box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 6px; z-index: 100000; transition: background 0.2s, transform 0.2s;">×</div><div style="display: flex; gap: 12px; transition: 0.2s;"><div style="padding: 6px 14px; background: rgb(240, 242, 245); border-radius: 12px; font-size: 13px; color: rgb(51, 51, 51); cursor: pointer; transition: 0.2s;">收藏</div></div><div style="gap: 12px; transition: 0.2s; display: none;"><div style="padding: 6px 14px; background: rgb(240, 242, 245); border-radius: 12px; font-size: 13px; color: rgb(51, 51, 51); cursor: pointer; transition: 0.2s; white-space: nowrap;">当前窗口不显示</div><div style="padding: 6px 14px; background: rgb(240, 242, 245); border-radius: 12px; font-size: 13px; color: rgb(51, 51, 51); cursor: pointer; transition: 0.2s; white-space: nowrap;">本次登录不显示</div></div><div style="font-size: 11px; color: rgb(140, 140, 140); border-top: 1px dashed rgb(232, 232, 232); padding-top: 8px; margin-top: 2px; text-align: center; cursor: default;">您正在使用VPN</div></div><doubao-ai-csui id="000000000" data-host-id="617b4fc4-bdba-4707-9ed5-4eaf9df71fe1"><template shadowrootmode="open"><div id="host-style-container"></div><div id="ciciai-shadow-container" class="cici-ext-container" style="z-index: 000000000; position: absolute; top: 0px; left: 0px; visibility: visible;"><div class="assistant-LTWCBk 
+                  cici-ext-always-dark
+                 
+                  semi-always-dark
+                "><div class="cici-popup-container"></div></div></div></template></doubao-ai-csui><div id="doubao-ai-translate-image-assistant617b4fc4-bdba-4707-9ed5-4eaf9df71fe1" data-collection-img-host-id="617b4fc4-bdba-4707-9ed5-4eaf9df71fe1"><template shadowrootmode="open"><div id="host-style-container"></div></template></div><div style="width: 0px; height: 0px; position: absolute; z-index: 200000;"><template shadowrootmode="open"><div id="host-style-container"></div><body id="cici-inline-container"><div class="cici-ext-container semi-always-dark cici-ext-always-dark"></div></body></template></div><div id="doubao-ai-assistant" aria-label="flow-ai-assistant" class="flow-ai-select-bar-enabled flow-ai-select-bar-support-iframe" aria-description="flow-ai-select-bar-enabled flow-ai-select-bar-support-iframe" style="width: 0px; height: 0px; position: absolute; top: 0px; left: 0px; overflow: hidden;"></div></body></html>

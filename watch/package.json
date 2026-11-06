@@ -1,0 +1,17 @@
+{
+  "name": "hanshang-watch",
+  "version": "0.1.0",
+  "description": "邗上课表 - 小米 Vela 穿戴版（Redmi Watch / 小米手表 / 手环）",
+  "engines": {
+    "node": ">=12"
+  },
+  "scripts": {
+    "build": "aiot build",
+    "release": "aiot release",
+    "server": "aiot server --watch"
+  },
+  "devDependencies": {
+    "@aiot-toolkit/velasim": "^0.1.26",
+    "aiot-toolkit": "^2.0.5"
+  }
+}

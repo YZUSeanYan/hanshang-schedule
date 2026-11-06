@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>邗上课表 · 管理中心</title>
+    <link rel="stylesheet" href="assets/admin.css" />
+    <link rel="stylesheet" href="assets/visibility.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+    <section id="loginView" class="login-shell" hidden>
+      <form id="loginForm" class="login-card">
+        <div class="brand-mark">邗</div>
+        <p class="eyebrow">HANSHANG SCHEDULE</p>
+        <h1>管理中心</h1>
+        <p class="muted">受保护的用户与同步数据控制台</p>
+        <label
+          >管理员账号<input
+            name="username"
+            autocomplete="username"
+            required
+            maxlength="64"
+        /></label>
+        <label
+          >密码<input
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            minlength="8"
+            maxlength="128"
+        /></label>
+        <button class="primary wide" type="submit">安全登录</button>
+        <p id="loginError" class="error" role="alert"></p>
+        <p class="security-note">会话限时有效 · 所有敏感操作均写入审计日志</p>
+      </form>
+    </section>
+    <div id="appView" class="app-shell" hidden>
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark small">邗</span>
+          <div><b>邗上课表</b><small>管理中心</small></div>
+        </div>
+        <nav>
+          <button class="nav-item active" data-target="dashboard">概览</button
+          ><button class="nav-item" data-target="stats">数据看板</button
+          ><button class="nav-item" data-target="users">用户管理</button
+          ><button class="nav-item" data-target="notifications">通知管理</button
+          ><button class="nav-item" data-target="about">关于页编辑</button
+          ><button class="nav-item" data-target="audit">审计日志</button>
+        </nav>
+        <div class="sidebar-foot">
+          <span class="status-dot"></span>私有安全入口<button
+            id="logoutButton"
+            class="text-button"
+          >
+            退出
+          </button>
+        </div>
+      </aside>
+      <main>
+        <header>
+          <div>
+            <p class="eyebrow">CONTROL ROOM</p>
+            <h1 id="pageTitle">运行概览</h1>
+          </div>
+          <div id="clock" class="clock"></div>
+        </header>
+        
+        <section id="stats" class="page">
+          <div class="panel">
+            <div class="panel-head">
+              <div><p class="eyebrow">ACTIVITY</p><h3>用户活跃度</h3></div>
+              <button id="refreshStats" class="secondary" type="button">刷新</button>
+            </div>
+            <div id="statsCards" class="stats"></div>
+            <p class="muted">活跃人数按刷新登录或同步课表的账户去重统计；统计日期使用 UTC，每日北京时间 08:00 切换。近 7 天、近 30 天均包含今天。</p>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><p class="eyebrow">TREND</p><h3>近 30 天 DAU 曲线</h3></div></div>
+            <div id="dauChart"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><p class="eyebrow">SYSTEM</p><h3>服务运行状态</h3></div></div>
+            <div id="systemCards" class="stats"></div>
+          </div>
+        </section>
+
+        <section id="dashboard" class="page active">
+          <div class="hero">
+            <div>
+              <span class="pill">系统运行中</span>
+              <h2>数据清晰，权限克制。</h2>
+              <p>集中管理账户、设备与消息，每项高风险操作都需要明确确认。</p>
+            </div>
+            <div class="hero-orbit">安</div>
+          </div>
+          <div id="dashboardStats" class="stats"></div>
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">RECENT USERS</p>
+                <h3>最近注册</h3>
+              </div>
+              <button class="secondary" data-go="users">查看全部</button>
+            </div>
+            <div id="recentUsers"></div>
+          </div>
+        </section>
+        <section id="users" class="page">
+          <div class="toolbar">
+            <label class="search"
+              ><span>⌕</span
+              ><input
+                id="userSearch"
+                placeholder="搜索用户名或邮箱"
+                maxlength="100" /></label
+            ><button id="refreshUsers" class="secondary">刷新</button>
+          </div>
+          <div class="panel table-panel">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>用户</th>
+                    <th>邮箱</th>
+                    <th>注册时间</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="userRows"></tbody>
+              </table>
+            </div>
+            <div id="userPagination" class="pagination"></div>
+          </div>
+        </section>
+        <section id="notifications" class="page">
+          <div class="notification-layout">
+            <div class="panel notification-compose">
+              <div class="panel-head"><div><p class="eyebrow">TARGETED DELIVERY</p><h3>发送账户通知</h3></div></div>
+              <p class="muted">消息始终保留在账户收件箱；可发给单个账户（含指定设备）、多个账户或全部账户。系统通知同时推送 Android 与网页端已登记设备。</p>
+              <form id="notificationForm" class="detail-form">
+                <fieldset id="notificationRecipients" class="recipient-picker">
+                  <legend>收件人</legend>
+                  <input id="notificationMode" type="hidden" value="all">
+                  <div class="notification-modes" role="group" aria-label="发送对象">
+                    <button type="button" data-notification-mode="all" aria-pressed="true"><strong>全部用户</strong><span>一键全员推送 · 不限人数</span></button>
+                    <button type="button" data-notification-mode="selected" aria-pressed="false"><strong>指定用户</strong><span>搜索选择 · 最多 50 人</span></button>
+                  </div>
+                  <div id="recipientSelection" hidden>
+                    <label for="notificationSearch">搜索用户</label>
+                    <input id="notificationSearch" type="search" maxlength="100" placeholder="搜索用户名或邮箱" autocomplete="off" />
+                    <div class="recipient-selection-head"><span id="selectedRecipientCount" role="status">已选 0 / 50 人</span><button id="clearRecipients" class="text-button" type="button">清空选择</button></div>
+                    <div id="selectedRecipients" class="selected-recipients"></div>
+                    <div id="recipientResults" class="recipient-results" aria-label="用户搜索结果"></div>
+                    <div class="recipient-pagination"><button id="recipientPrev" class="secondary" type="button">上一页</button><span id="recipientPageInfo" role="status"></span><button id="recipientNext" class="secondary" type="button">下一页</button></div>
+                    <p class="muted">勾选即可多选，最多 50 人；搜索和翻页不会清除已选用户。</p>
+                  </div>
+                  <p id="broadcastNotice" class="delivery-note">发送范围：全部注册用户，不受搜索、分页或 50 人限制。无需逐个勾选；默认推送到全部已绑定设备。</p>
+                </fieldset>
+                <label>发送范围<select id="notificationDevice" disabled><option value="">全部已绑定设备</option></select></label>
+                <label>标题<input name="title" required maxlength="64" placeholder="例如：服务维护通知"></label>
+                <label>内容<textarea name="body" required maxlength="500" rows="6" placeholder="请输入通知内容"></textarea></label>
+                <div class="delivery-note">服务商“已受理”不等于设备一定展示。被系统彻底杀死或限制后台时可能无法实时送达。</div>
+                <button id="sendNotificationButton" class="primary" type="submit" disabled>向全部用户发送</button>
+              </form>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><div><p class="eyebrow">DELIVERY HISTORY</p><h3>发送记录</h3></div><button id="refreshNotifications" class="secondary">刷新</button></div>
+              <div id="notificationHistory" class="audit-list"><div class="empty">选择账户后查看记录</div></div>
+            </div>
+          </div>
+        </section>
+        <section id="audit" class="page">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">IMMUTABLE TRAIL</p>
+                <h3>最近管理操作</h3>
+              </div>
+              <button id="refreshAudit" class="secondary">刷新</button>
+            </div>
+            <div id="auditList" class="audit-list"></div>
+          </div>
+        </section>
+        <section id="about" class="page">
+          <div class="panel about-editor">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">ABOUT PAGE</p>
+                <h3>“关于邗上课表”内容</h3>
+              </div>
+              <button id="refreshAbout" class="secondary" type="button">刷新</button>
+            </div>
+            <form id="aboutForm" class="detail-form">
+              <label>显示名称<input id="aboutName" name="display_name" required maxlength="80" /></label>
+              <label>个人介绍<textarea id="aboutIntro" name="intro" maxlength="5000" rows="8" placeholder="介绍你自己、项目故事或联系方式"></textarea></label>
+              <label>官网链接<input id="aboutWebsite" name="website_url" type="url" maxlength="500" placeholder="https://（尚未做好可以先留空）" /></label>
+              <label>工信部备案号<input id="aboutIcp" name="icp_beian" maxlength="64" placeholder="如 苏ICP备2026057230号-2A（留空则 App 内不展示）" /></label>
+              <button class="primary" type="submit">保存文字内容</button>
+            </form>
+            <div class="media-editors">
+              <div class="media-editor">
+                <h4>头像</h4>
+                <img id="aboutAvatarPreview" class="media-preview avatar-preview" alt="头像预览" hidden />
+                <input id="aboutAvatarFile" type="file" accept="image/png,image/jpeg,image/webp" />
+                <button class="secondary" id="uploadAboutAvatar" type="button">上传头像</button>
+              </div>
+              <div class="media-editor">
+                <h4>收款码</h4>
+                <img id="aboutQrPreview" class="media-preview" alt="收款码预览" hidden />
+                <input id="aboutQrFile" type="file" accept="image/png,image/jpeg,image/webp" />
+                <button class="secondary" id="uploadAboutQr" type="button">上传收款码</button>
+              </div>
+            </div>
+            <p class="security-note">图片仅支持 PNG、JPEG、WebP，单张不超过 5MB；文件名会随机生成，不使用原文件名。</p>
+          </div>
+        </section>
+      </main>
+    </div>
+    <dialog id="userDialog">
+      <div class="dialog-card">
+        <button
+          id="dialogClose"
+          class="dialog-close"
+          type="button"
+          aria-label="关闭"
+        >
+          ×
+        </button>
+        <p class="eyebrow">USER DETAIL</p>
+        <h2 id="dialogTitle">用户详情</h2>
+        <div id="dialogBody"></div>
+      </div>
+    </dialog>
+    <div id="toast" class="toast" role="status"></div>
+    <script src="assets/mock.js"></script><script src="assets/admin.js" defer></script>
+  </body>
+</html>

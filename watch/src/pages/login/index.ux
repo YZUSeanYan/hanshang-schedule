@@ -1,0 +1,276 @@
+<template>
+  <div class="page">
+    <div class="form">
+      <text class="title {{isRound ? 'txt-center' : ''}}">配对登录</text>
+      <text class="subtitle {{isRound ? 'txt-center' : ''}}">手机App→我的→手表配对 生成6位码</text>
+
+      <!-- 6 位数字显示区（独立变量，最可靠的渲染方式） -->
+      <div class="digits">
+        <text class="digit {{digit1 ? 'digit-on' : ''}}">{{digit1 ? digit1 : '·'}}</text>
+        <text class="digit {{digit2 ? 'digit-on' : ''}}">{{digit2 ? digit2 : '·'}}</text>
+        <text class="digit {{digit3 ? 'digit-on' : ''}}">{{digit3 ? digit3 : '·'}}</text>
+        <text class="digit {{digit4 ? 'digit-on' : ''}}">{{digit4 ? digit4 : '·'}}</text>
+        <text class="digit {{digit5 ? 'digit-on' : ''}}">{{digit5 ? digit5 : '·'}}</text>
+        <text class="digit {{digit6 ? 'digit-on' : ''}}">{{digit6 ? digit6 : '·'}}</text>
+      </div>
+      <text class="status {{busy ? 'status-busy' : ''}} {{isRound ? 'txt-center' : ''}}">{{statusText}}</text>
+
+      <!-- 离线通道入口（放在键盘上方，首屏必见；点击绑 text） -->
+      <text class="ble-btn" @click="goBleImport">蓝牙导入课表（无需网络）</text>
+
+      <!-- 静态数字键盘（不用 for 循环，事件绑定最可靠） -->
+      <div class="pad">
+        <div class="key"><text class="key-text" @click="tap(1)">1</text></div>
+        <div class="key"><text class="key-text" @click="tap(2)">2</text></div>
+        <div class="key"><text class="key-text" @click="tap(3)">3</text></div>
+        <div class="key"><text class="key-text" @click="tap(4)">4</text></div>
+        <div class="key"><text class="key-text" @click="tap(5)">5</text></div>
+        <div class="key"><text class="key-text" @click="tap(6)">6</text></div>
+        <div class="key"><text class="key-text" @click="tap(7)">7</text></div>
+        <div class="key"><text class="key-text" @click="tap(8)">8</text></div>
+        <div class="key"><text class="key-text" @click="tap(9)">9</text></div>
+        <div class="key"><text class="key-text key-fn" @click="backspace">删除</text></div>
+        <div class="key"><text class="key-text" @click="tap(0)">0</text></div>
+        <div class="key"><text class="key-text key-ok" @click="confirmPair">{{busy ? '…' : '确认'}}</text></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #000000;
+}
+/* 内容必须包进 div 列容器：text 直接放滚动容器会横排（官方样例同款写法） */
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px 10px 20px;
+}
+.txt-center {
+  text-align: center;
+}
+.title {
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: bold;
+}
+.subtitle {
+  color: #777777;
+  font-size: 16px;
+  margin-top: 4px;
+}
+/* 6 位数字显示 */
+.digits {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 0 4px;
+}
+.digit {
+  width: 48px;
+  height: 50px;
+  line-height: 50px;
+  text-align: center;
+  border-radius: 10px;
+  background-color: #161616;
+  color: #555555;
+  font-size: 28px;
+  font-weight: bold;
+}
+.digit-on {
+  background-color: #1d5c46;
+  color: #ffffff;
+}
+.status {
+  color: #666666;
+  font-size: 16px;
+  height: 28px;
+  line-height: 28px;
+  margin-top: 4px;
+}
+.status-busy {
+  color: #f6c453;
+}
+/* 蓝牙导入入口（首屏必见） */
+.ble-btn {
+  height: 46px;
+  line-height: 46px;
+  text-align: center;
+  border-radius: 10px;
+  background-color: #12312a;
+  color: #2eb886;
+  font-size: 18px;
+  margin-top: 6px;
+}
+/* 数字键盘 */
+.pad {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.key {
+  width: 33.33%;
+  height: 52px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.key-text {
+  width: 96px;
+  height: 46px;
+  line-height: 46px;
+  text-align: center;
+  border-radius: 12px;
+  background-color: #1e1e1e;
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: bold;
+}
+.key-fn {
+  background-color: #2a2a2a;
+  color: #aaaaaa;
+  font-size: 18px;
+}
+.key-ok {
+  background-color: #158a63;
+  color: #ffffff;
+  font-size: 20px;
+}
+</style>
+
+<script>
+/**
+ * 配对登录页（v0.2.1）：
+ * - 手表端唯一登录方式 = 手机端生成的 6 位配对码
+ * - 6 位数字用独立变量显示（digit1..digit6），键盘静态写死、点击绑 text
+ * - 【显示坑已修】内容包进 div 列容器——text 直接放容器会横排溢出（v0.2.0 踩过）
+ * - 【入口已修】「蓝牙导入课表」放键盘上方首屏必见；纯中文文案（特殊符号缺字形）
+ */
+import router from "@system.router";
+import prompt from "@system.prompt";
+import * as api from "../../common/scripts/api";
+
+export default {
+  private: {
+    digit1: "",
+    digit2: "",
+    digit3: "",
+    digit4: "",
+    digit5: "",
+    digit6: "",
+    busy: false,
+    isRound: false,
+    statusText: "配对码10分钟内有效，仅可领一次",
+  },
+
+  onInit() {
+    this.isRound = !!this.$app.$def.isRound;
+    if (this.$app.$def.accessToken) {
+      router.replace({ uri: "/pages/today" });
+    }
+  },
+
+  goBleImport() {
+    router.push({ uri: "/pages/bleimport" });
+  },
+
+  /** 当前已输位数 */
+  count() {
+    let n = 0;
+    if (this.digit1) n++;
+    if (this.digit2) n++;
+    if (this.digit3) n++;
+    if (this.digit4) n++;
+    if (this.digit5) n++;
+    if (this.digit6) n++;
+    return n;
+  },
+
+  tap(d) {
+    if (this.busy) return;
+    if (this.count() >= 6) return;
+    const idx = this.count();
+    if (idx === 0) this.digit1 = String(d);
+    else if (idx === 1) this.digit2 = String(d);
+    else if (idx === 2) this.digit3 = String(d);
+    else if (idx === 3) this.digit4 = String(d);
+    else if (idx === 4) this.digit5 = String(d);
+    else this.digit6 = String(d);
+    if (this.count() === 6) {
+      this.confirmPair(); // 输满 6 位自动提交
+    }
+  },
+
+  backspace() {
+    if (this.busy) return;
+    if (this.digit6) this.digit6 = "";
+    else if (this.digit5) this.digit5 = "";
+    else if (this.digit4) this.digit4 = "";
+    else if (this.digit3) this.digit3 = "";
+    else if (this.digit2) this.digit2 = "";
+    else this.digit1 = "";
+  },
+
+  code() {
+    return (this.digit1 || "") + (this.digit2 || "") + (this.digit3 || "") +
+           (this.digit4 || "") + (this.digit5 || "") + (this.digit6 || "");
+  },
+
+  confirmPair() {
+    if (this.busy) return;
+    const code = this.code();
+    if (code.length !== 6) {
+      prompt.showToast({ message: "请输入 6 位配对码", duration: 1500 });
+      return;
+    }
+    // 蓝牙网络下三方快应用无外网路由，直接引导离线通道，避免无效重试。
+    const net = this.$app.$def.networkType;
+    if (net === "bluetooth" || net === "none") {
+      prompt.showToast({ message: "当前无外网，请用蓝牙导入", duration: 2500 });
+      this.statusText = "无外网 · 请点上方「蓝牙导入课表」";
+      return;
+    }
+    this.busy = true;
+    this.statusText = "正在配对…";
+    api.pairClaim(code)
+      .then(() => {
+        this.busy = false;
+        prompt.showToast({ message: "配对成功", duration: 1200 });
+        router.replace({ uri: "/pages/today" });
+      })
+      .catch((e) => {
+        this.busy = false;
+        this.clearDigits();
+        const netType = this.$app.$def.networkType || "unknown";
+        if (e && e.status === 404) {
+          this.statusText = "配对服务不可用，请确认服务器已升级";
+          prompt.showToast({ message: "配对服务不可用", duration: 2000 });
+        } else if (e && (e.status === 0 || e.status == null)) {
+          this.statusText = "网络失败 · 可改用蓝牙导入";
+          prompt.showToast({ message: "网络失败，可改用蓝牙导入", duration: 2500 });
+        } else {
+          this.statusText = api.errMsg(e) + " · " + netType;
+          prompt.showToast({ message: api.errMsg(e), duration: 2000 });
+        }
+      });
+  },
+
+  clearDigits() {
+    this.digit1 = "";
+    this.digit2 = "";
+    this.digit3 = "";
+    this.digit4 = "";
+    this.digit5 = "";
+    this.digit6 = "";
+    this.statusText = "配对码10分钟内有效，仅可领一次";
+  },
+};
+</script>

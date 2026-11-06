@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- home_widget 与 WidgetKit 扩展共享的非敏感课表摘要。 -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.cn.yzu.schedule.yzuSchedule</string>
+	</array>
+	<!-- flutter_secure_storage 的 iOS Keychain 能力；不与 Widget 扩展共享凭据。 -->
+	<key>keychain-access-groups</key>
+	<array/>
+</dict>
+</plist>

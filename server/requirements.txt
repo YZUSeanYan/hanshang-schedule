@@ -1,0 +1,23 @@
+fastapi>=0.110
+# 单 worker API 不需要 uvloop/httptools/watchfiles 等可选扩展，减少原生依赖面。
+uvicorn>=0.29
+sqlalchemy>=2.0
+# 3.2.4 同时提供 Docker Python 3.12/Linux 与本地 Python 3.14 的 wheel。
+greenlet==3.2.4
+pydantic>=2.6
+pydantic-settings>=2.2
+pydantic[email]>=2.6
+PyJWT>=2.8
+bcrypt>=4.1
+python-multipart>=0.0.9
+# 服务器代抓仅使用短时 Chromium 上下文；版本与 Docker 内置浏览器严格一致。
+playwright==1.61.0
+pywebpush==2.3.0
+aliyun-python-sdk-core==2.16.0
+aliyun-python-sdk-push==3.13.21
+# LLM 课表解析的异步 HTTP 客户端（镜像经 requirements.lock 中 pywebpush 的传递依赖安装）。
+aiohttp>=3.10
+# File timetable import: read workbook cells locally before sending bounded,
+# identity-scrubbed text to MiMo. XLSX and legacy XLS are both supported.
+openpyxl>=3.1,<4
+xlrd>=2.0,<3

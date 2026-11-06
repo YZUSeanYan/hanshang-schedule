@@ -1,0 +1,317 @@
+<template>
+  <div class="page">
+    <!-- 头部：周次 / 日期 / 下一节课（圆屏居中列，矩形屏左右行） -->
+    <div class="header {{isRound ? 'header-round' : ''}}" style="height: {{headerH}}px">
+      <div class="header-row {{isRound ? 'header-row-round' : ''}}">
+        <text class="week {{isRound ? 'txt-center' : ''}}">{{weekText}}</text>
+        <text class="date {{isRound ? 'txt-center' : ''}}">{{dateText}}</text>
+      </div>
+      <text class="semester {{isRound ? 'txt-center' : ''}}">{{semesterName}}</text>
+      <text class="next {{nextClass}} {{isRound ? 'txt-center' : ''}}">{{nextLabel}}</text>
+    </div>
+
+    <!-- 课程列表 -->
+    <scroll class="course-scroll" style="height: {{bodyH}}px" scroll-y="true">
+      <div if="{{courses.length === 0 && loaded}}" class="empty">
+        <text class="empty-text">今天没有课</text>
+        <text class="empty-sub">好好休息</text>
+      </div>
+      <div if="{{courses.length === 0 && !loaded}}" class="empty">
+        <text class="empty-text">加载中…</text>
+      </div>
+      <div for="c in courses" tid="course_uuid" class="course-item {{isRound ? 'course-item-round' : ''}}" style="border-left-color: {{c.color}}">
+        <text class="c-name">{{c.name}}</text>
+        <text class="c-time">{{c.timeText}} · {{c.start_section}}-{{c.end_section}}节</text>
+        <text class="c-loc" if="{{c.location}}">{{c.location}}</text>
+        <text class="c-teacher" if="{{c.teacher}}">{{c.teacher}}</text>
+      </div>
+    </scroll>
+
+    <!-- 底部导航：矩形通栏；圆屏悬浮胶囊（圆弧安全带内） -->
+    <div class="nav-wrap" style="height: {{navWrapH}}px">
+      <div class="nav {{isRound ? 'nav-round' : ''}}" style="width: {{navW}}px; height: {{navH}}px">
+        <text class="nav-item {{isRound ? 'nav-item-round' : ''}} nav-active" @click="go('today')">今日</text>
+        <text class="nav-item {{isRound ? 'nav-item-round' : ''}}" @click="go('week')">本周</text>
+        <text class="nav-item {{isRound ? 'nav-item-round' : ''}}" @click="go('import')">导入</text>
+        <text class="nav-item {{isRound ? 'nav-item-round' : ''}}" @click="go('settings')">设置</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #000000;
+}
+.header {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 24px 8px 24px;
+  border-bottom: 1px solid #1a1a1a;
+}
+.header-round {
+  padding: 34px 56px 8px 56px;
+}
+.header-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+.header-row-round {
+  flex-direction: column;
+  align-items: center;
+}
+.txt-center {
+  text-align: center;
+}
+.week {
+  color: #ffffff;
+  font-size: 30px;
+  font-weight: bold;
+}
+.date {
+  color: #888888;
+  font-size: 20px;
+}
+.semester {
+  color: #666666;
+  font-size: 18px;
+  margin-top: 4px;
+}
+.next {
+  font-size: 18px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.next-ok {
+  color: #2eb886;
+}
+.next-soon {
+  color: #f6c453;
+}
+.next-none {
+  color: #555555;
+}
+.course-scroll {
+  width: 100%;
+}
+.empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding-top: 80px;
+}
+.empty-text {
+  color: #cccccc;
+  font-size: 26px;
+}
+.empty-sub {
+  color: #666666;
+  font-size: 18px;
+  margin-top: 10px;
+}
+.course-item {
+  margin: 10px 24px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background-color: #141414;
+  border-left-width: 6px;
+  border-left-style: solid;
+}
+.course-item-round {
+  margin: 10px 36px;
+  border-radius: 16px;
+}
+.c-name {
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: bold;
+  text-overflow: ellipsis;
+  lines: 1;
+}
+.c-time {
+  color: #2eb886;
+  font-size: 20px;
+  margin-top: 6px;
+}
+.c-loc {
+  color: #bbbbbb;
+  font-size: 20px;
+  margin-top: 4px;
+}
+.c-teacher {
+  color: #888888;
+  font-size: 18px;
+  margin-top: 2px;
+}
+.nav-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.nav {
+  display: flex;
+  flex-direction: row;
+  border-top: 1px solid #1a1a1a;
+}
+.nav-round {
+  border-top-width: 0;
+  border-radius: 31px;
+  background-color: #141414;
+}
+.nav-item {
+  flex: 1;
+  height: 100%;
+  line-height: 84px;
+  text-align: center;
+  color: #666666;
+  font-size: 22px;
+}
+.nav-item-round {
+  line-height: 62px;
+}
+.nav-active {
+  color: #ffffff;
+  font-weight: bold;
+}
+</style>
+
+<script>
+/**
+ * 今日课表（主屏）：
+ * - 缓存秒开：onShow 直接用全局状态渲染，>10 分钟静默后台刷新
+ * - 下一节课：头部提示（上课中/距上课 X 分钟）
+ * - 到点提醒：应用存活时，内置定时器到上课时间 振动 + Toast
+ *   （Vela 三方应用无系统通知通道，此为当前能力上限，详见 README）
+ * - 圆屏（Xiaomi Watch S5 46mm 480×480）：头部居中列 + 卡片内缩 + 底部悬浮胶囊，
+ *   几何全部来自 def.metrics()（蓝图 watch/docs/S5-46mm-深度适配蓝图.md）
+ */
+import router from "@system.router";
+import prompt from "@system.prompt";
+import vibrator from "@system.vibrator";
+import * as sched from "../../common/scripts/schedule";
+
+export default {
+  private: {
+    weekText: "",
+    dateText: "",
+    semesterName: "",
+    courses: [],
+    nextLabel: "",
+    nextClass: "next-none",
+    loaded: false,
+    isRound: false,
+    headerH: 118,
+    bodyH: 300,
+    navWrapH: 84,
+    navH: 84,
+    navW: 432,
+  },
+
+  onInit() {
+    const def = this.$app.$def;
+    const m = def.metrics();
+    this.isRound = m.isRound;
+    this.headerH = m.headerH;
+    this.navWrapH = m.navWrapH;
+    this.navH = m.navH;
+    this.navW = m.navW;
+    this.bodyH = m.todayBodyH;
+  },
+
+  onShow() {
+    const def = this.$app.$def;
+    if (!def.accessToken || !def.refreshToken) {
+      router.replace({ uri: "/pages/login" });
+      return;
+    }
+    this.render();
+    // 静默后台刷新（>10 分钟）
+    def.refreshIfStale(10).then(() => { this.render(); });
+  },
+
+  onHide() {
+    this.clearReminder();
+  },
+
+  onDestroy() {
+    this.clearReminder();
+  },
+
+  render() {
+    const def = this.$app.$def;
+    const now = new Date();
+    const sem = def.currentSemester;
+    if (!sem) {
+      this.weekText = "暂无课表";
+      this.dateText = (now.getMonth() + 1) + "月" + now.getDate() + "日";
+      this.semesterName = "去「导入」用分享码领取";
+      this.courses = [];
+      this.nextLabel = "";
+      this.loaded = true;
+      return;
+    }
+    const week = sched.weekNumberOf(sem.start_date, now);
+    this.weekText = week >= 1 ? "第 " + week + " 周" : "未开学";
+    this.dateText = (now.getMonth() + 1) + "月" + now.getDate() + "日 · " + sched.WEEK_LABELS[now.getDay() === 0 ? 6 : now.getDay() - 1];
+    this.semesterName = sem.name || "";
+    this.courses = sched.dayCourses(def, now);
+    this.loaded = true;
+
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const info = sched.nextCourseInfo(def, now, nowMin);
+    if (info.kind === "ongoing") {
+      this.nextLabel = "上课中：" + info.item.name + "（" + info.item.endMin + " 下课）";
+      this.nextClass = "next-ok";
+    } else if (info.kind === "next") {
+      const mins = info.startsInMin;
+      this.nextLabel = "下一节 " + info.item.name + " · " + info.item.timeText.split("-")[0]
+        + (mins > 0 && mins <= 180 ? "（" + mins + " 分钟后）" : "");
+      this.nextClass = mins <= 15 ? "next-soon" : "next-ok";
+    } else {
+      this.nextLabel = "今天课程已结束";
+      this.nextClass = "next-none";
+    }
+    this.scheduleReminder();
+  },
+
+  /** 到上课时间点振动 + Toast（应用存活时有效） */
+  scheduleReminder() {
+    this.clearReminder();
+    const def = this.$app.$def;
+    if (!def.reminderEnabled) return;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const info = sched.nextCourseInfo(def, now, nowMin);
+    if (info.kind !== "next") return;
+    const delayMs = info.startsInMin * 60000;
+    const name = info.item.name;
+    def.reminderTimer = setTimeout(() => {
+      def.reminderTimer = null;
+      vibrator.vibrate({ mode: "long" });
+      prompt.showToast({ message: "上课了：" + name, duration: 2500 });
+      this.render(); // 重新调度下一节
+    }, delayMs);
+  },
+
+  clearReminder() {
+    const def = this.$app.$def;
+    if (def.reminderTimer) {
+      clearTimeout(def.reminderTimer);
+      def.reminderTimer = null;
+    }
+  },
+
+  go(page) {
+    const uri = page === "today" ? "/pages/today" : "/pages/" + page;
+    router.replace({ uri });
+  },
+};
+</script>

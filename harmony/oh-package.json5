@@ -1,0 +1,10 @@
+{
+  "modelVersion": "5.0.0",
+  "name": "hanshang-schedule",
+  "version": "1.0.0",
+  "description": "邗上课表 HarmonyOS 原生版（ArkTS）",
+  "main": "",
+  "author": "seanyan",
+  "license": "Proprietary",
+  "dependencies": {}
+}

@@ -1,0 +1,191 @@
+<template>
+  <div class="page">
+    <scroll class="scroll" scroll-y="true">
+      <text class="title {{isRound ? 'txt-center' : ''}}">设备诊断</text>
+
+      <!-- 设备画像（S5 46mm 适配核对用） -->
+      <div class="rows">
+        <div class="row" for="d in devRows" tid="id">
+          <text class="row-url">{{d.label}}</text>
+          <text class="row-res">{{d.text}}</text>
+        </div>
+      </div>
+
+      <text class="sub {{isRound ? 'txt-center' : ''}}">网络类型：{{netType}}</text>
+      <text class="btn {{busy ? 'btn-disabled' : ''}}" @click="runAll">{{busy ? '测试中…' : '测试网络'}}</text>
+
+      <!-- 连通性测试（并行，约 8 秒全部出结果；整体赋值数组保证渲染） -->
+      <div class="rows">
+        <div class="row" for="r in results" tid="id">
+          <text class="row-url">{{r.label}}</text>
+          <text class="row-res {{r.ok ? 'res-ok' : 'res-bad'}}">{{r.text}}</text>
+        </div>
+      </div>
+    </scroll>
+  </div>
+</template>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #000000;
+}
+.scroll {
+  width: 100%;
+  height: 100%;
+  padding: 16px 18px;
+}
+.txt-center {
+  text-align: center;
+}
+.title {
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: bold;
+}
+.sub {
+  color: #888888;
+  font-size: 18px;
+  margin-top: 10px;
+}
+.btn {
+  width: 100%;
+  height: 50px;
+  line-height: 50px;
+  text-align: center;
+  border-radius: 12px;
+  background-color: #158a63;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: bold;
+  margin-top: 10px;
+}
+.btn-disabled {
+  opacity: 0.5;
+}
+.rows {
+  margin-top: 10px;
+}
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background-color: #141414;
+}
+.row-url {
+  width: 132px;
+  color: #aaaaaa;
+  font-size: 16px;
+  overflow: hidden;
+}
+.row-res {
+  flex: 1;
+  color: #ffffff;
+  font-size: 16px;
+  margin-left: 8px;
+  overflow: hidden;
+}
+.res-ok {
+  color: #2eb886;
+}
+.res-bad {
+  color: #ff8a8a;
+}
+</style>
+
+<script>
+/**
+ * 设备诊断页（v0.2.0）：
+ * - 设备画像：model/product/分辨率/形状/密度/apiLevel（与 S5 适配蓝图核对）
+ * - 连通性：业务域名 + 备用 API + 控制组并行测试（fetch.fetch 无 timeout 参数，外部 8s 兜底）
+ * - 每次更新整体赋值 results 数组（Vela 对数组元素原地修改可能不触发渲染）
+ */
+import network from "@system.network";
+import fetch from "@system.fetch";
+
+const URLS = [
+  { id: "u1", label: "① 业务域名", url: "https://hanshang.seanyan.store/yzu/api/health" },
+  { id: "u2", label: "② 备用 API", url: "https://api.seanyan.store/yzu/api/health" },
+  { id: "u3", label: "③ https 对照", url: "https://www.baidu.com" },
+  { id: "u4", label: "④ https 小米", url: "https://www.mi.com" },
+];
+
+export default {
+  private: {
+    netType: "unknown",
+    busy: false,
+    isRound: false,
+    devRows: [],
+    results: [],
+  },
+
+  onInit() {
+    const def = this.$app.$def;
+    this.isRound = !!def.isRound;
+    this.devRows = [
+      { id: "d1", label: "机型 model", text: def.model || "未知" },
+      { id: "d2", label: "代号 product", text: def.product || "未知" },
+      { id: "d3", label: "屏幕", text: (def.screenWidth || "?") + "x" + (def.screenHeight || "?") + " · " + (def.screenShape || "?") },
+      { id: "d4", label: "密度 DPR", text: String(def.screenDensity || "?") },
+      { id: "d5", label: "框架 apiLevel", text: String(def.apiLevel || "?") },
+    ];
+    this.results = URLS.map((u) => ({ id: u.id, label: u.label, text: "等待测试", ok: false }));
+    network.getType({
+      success: (res) => { this.netType = res.type || "unknown"; },
+      fail: () => { this.netType = "unknown"; },
+    });
+    // 自动开跑（无截图环境，结果经 console.log 由 adb logcat 读取）
+    this.runAll();
+  },
+
+  testOne(url) {
+    return new Promise((resolve) => {
+      let done = false;
+      const timer = setTimeout(() => {
+        if (!done) { done = true; resolve({ ok: false, text: "超时" }); }
+      }, 8000);
+      fetch.fetch({
+        url,
+        method: "GET",
+        responseType: "text",
+        success: (res) => {
+          if (!done) {
+            done = true;
+            clearTimeout(timer);
+            const s = String(res.data || "").replace(/\s+/g, " ").slice(0, 40);
+            resolve({ ok: true, text: "OK " + res.code + " " + s });
+          }
+        },
+        fail: (errData, code) => {
+          if (!done) {
+            done = true;
+            clearTimeout(timer);
+            resolve({ ok: false, text: "失败 code=" + code + " " + String(errData || "").slice(0, 40) });
+          }
+        },
+      });
+    });
+  },
+
+  runAll() {
+    if (this.busy) return;
+    this.busy = true;
+    this.results = this.results.map((r) => ({ ...r, text: "测试中…" }));
+    console.log("DIAG netType=" + this.netType);
+    URLS.forEach((u, i) => {
+      this.testOne(u.url).then((r) => {
+        console.log("DIAG " + u.id + " " + u.url + " => " + r.text + (r.ok ? "" : " FAIL"));
+        this.results = this.results.map((row, j) =>
+          j === i ? { ...row, text: r.text, ok: r.ok } : row
+        );
+      });
+    });
+  },
+};
+</script>

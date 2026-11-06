@@ -1,0 +1,9 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "邗上课表 HarmonyOS 入口模块",
+  "main": "",
+  "author": "seanyan",
+  "license": "Proprietary",
+  "dependencies": {}
+}

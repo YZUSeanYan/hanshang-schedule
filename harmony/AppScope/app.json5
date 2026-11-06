@@ -1,0 +1,10 @@
+{
+  "app": {
+    "bundleName": "cn.yzu.schedule.yzu_schedule",
+    "vendor": "seanyan",
+    "versionCode": 8,
+    "versionName": "0.8.0",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name"
+  }
+}

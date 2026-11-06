@@ -1,0 +1,93 @@
+# 扬大课表后端一键部署：docker compose up -d --build
+# 阶段 0 仅含 API 服务；阶段 1 将加入 Nginx（反代 + HTTPS + APK 静态托管）
+services:
+  data-permissions:
+    image: yzu-schedule-server:m7-inbox-20260817
+    user: root
+    restart: "no"
+    command: ["sh", "-c", "chown -R pwuser:pwuser /data"]
+    volumes:
+      - api-data:/data
+
+  api:
+    build: .
+    image: yzu-schedule-server:m7-inbox-20260817
+    container_name: yzu-schedule-api
+    restart: always          # 崩溃/服务器重启后自动拉起
+    init: true               # 正确回收 Chromium 子进程，避免僵尸进程累积
+    command: ["xvfb-run", "-a", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    shm_size: "256mb"
+    security_opt:
+      - seccomp=./seccomp_profile.json
+    depends_on:
+      data-permissions:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8000:8000"  # 只绑回环：公网访问走 Nginx 反代，8000 不直接暴露
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    environment:
+      - APP_ENV=production
+      - DOCS_ENABLED=false
+      # 生产环境务必在 .env 中覆盖 JWT_SECRET_KEY
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in server/.env}
+      # SQLite 文件放在 /data 卷中持久化；切 MySQL 时改这里即可
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////data/yzu_schedule.db}
+      # 管理接口令牌（发布新版本）；.env 中配置，留空则管理接口不可用
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+      - ADMIN_CONSOLE_ENABLED=${ADMIN_CONSOLE_ENABLED:-false}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD_HASH_B64=${ADMIN_PASSWORD_HASH_B64:-}
+      - ADMIN_SESSION_HOURS=${ADMIN_SESSION_HOURS:-8}
+      - ADMIN_COOKIE_SECURE=${ADMIN_COOKIE_SECURE:-true}
+      # 仅在镜像、限流与线上验收全部就绪后，通过 .env 显式设为 true。
+      - EDUCATION_IMPORT_ENABLED=${EDUCATION_IMPORT_ENABLED:-false}
+      - EDUCATION_IMPORT_PORTAL_URL=${EDUCATION_IMPORT_PORTAL_URL:-https://i.yzu.edu.cn/Login/CasLogin}
+      - EDUCATION_IMPORT_TIMEOUT_SECONDS=${EDUCATION_IMPORT_TIMEOUT_SECONDS:-45}
+      # 整个导入请求的硬时限，必须小于 Nginx 默认 60 秒代理超时
+      - EDUCATION_IMPORT_DEADLINE_SECONDS=${EDUCATION_IMPORT_DEADLINE_SECONDS:-50}
+      - EDUCATION_IMPORT_MAX_CONCURRENCY=${EDUCATION_IMPORT_MAX_CONCURRENCY:-1}
+      # 扬大 CAS 在无头 Chromium 下可能停留在登录页；Xvfb 只提供虚拟显示，
+      # 验证码和短信验证仍由代码明确拒绝，不做任何绕过。
+      - EDUCATION_IMPORT_PORTAL_BROWSER_HEADLESS=${EDUCATION_IMPORT_PORTAL_BROWSER_HEADLESS:-true}
+      # LLM 课表解析兜底：API key 只存在于服务器 .env，绝不入库、不进镜像。
+      - LLM_IMPORT_ENABLED=${LLM_IMPORT_ENABLED:-false}
+      - LLM_IMPORT_BASE_URL=${LLM_IMPORT_BASE_URL:-https://token-plan-cn.xiaomimimo.com/v1}
+      - LLM_IMPORT_API_KEY=${LLM_IMPORT_API_KEY:-}
+      - LLM_IMPORT_MODEL=${LLM_IMPORT_MODEL:-mimo-v2.5}
+      - LLM_IMPORT_TIMEOUT_SECONDS=${LLM_IMPORT_TIMEOUT_SECONDS:-45}
+      - LLM_IMPORT_DEADLINE_SECONDS=${LLM_IMPORT_DEADLINE_SECONDS:-50}
+      - WEB_PUSH_PUBLIC_KEY=${WEB_PUSH_PUBLIC_KEY:-}
+      - WEB_PUSH_PRIVATE_KEY=${WEB_PUSH_PRIVATE_KEY:-}
+      - WEB_PUSH_SUBJECT=${WEB_PUSH_SUBJECT:-mailto:admin@hanshang.seanyan.store}
+      # Android 定向通知使用 ECS RAM 角色获取临时凭证，不在服务器保存 AccessKey。
+      - ALIYUN_PUSH_ENABLED=${ALIYUN_PUSH_ENABLED:-false}
+      - ALIYUN_PUSH_APP_KEY=${ALIYUN_PUSH_APP_KEY:-}
+      - ALIYUN_PUSH_REGION=${ALIYUN_PUSH_REGION:-cn-hangzhou}
+      - ALIYUN_PUSH_ECS_ROLE_NAME=${ALIYUN_PUSH_ECS_ROLE_NAME:-}
+      # HarmonyOS Push Kit 服务端凭据仅由 server/.env 注入。
+      - HMS_PUSH_ENABLED=${HMS_PUSH_ENABLED:-false}
+      - HMS_PUSH_APP_ID=${HMS_PUSH_APP_ID:-}
+      - HMS_PUSH_CLIENT_ID=${HMS_PUSH_CLIENT_ID:-}
+      - HMS_PUSH_CLIENT_SECRET=${HMS_PUSH_CLIENT_SECRET:-}
+      - PUSH_DEVICE_EXPIRE_DAYS=${PUSH_DEVICE_EXPIRE_DAYS:-90}
+    volumes:
+      - api-data:/data
+
+  notifier:
+    image: yzu-schedule-server:m7-inbox-20260817
+    container_name: yzu-schedule-notifier
+    restart: always
+    init: true
+    command: ["python", "-m", "app.workers.push_scheduler"]
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      - ADMIN_TOKEN=${ADMIN_TOKEN:?ADMIN_TOKEN must be set for notification dispatch}
+
+volumes:
+  api-data:

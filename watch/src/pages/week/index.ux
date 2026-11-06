@@ -1,0 +1,262 @@
+<template>
+  <div class="page" onswipe="onSwipe">
+    <!-- 星期条：滑动或点选切换日期（圆屏限宽居中，防圆弧裁切） -->
+    <div class="strip {{isRound ? 'strip-round' : ''}}" style="height: {{stripH}}px; width: {{stripW}}px">
+      <text
+        for="d in days"
+        tid="offset"
+        class="day {{d.selected ? 'day-selected' : ''}} {{d.today ? 'day-today' : ''}}"
+        @click="pickDay(d.offset)">
+        {{d.label}}
+      </text>
+    </div>
+
+    <!-- 所选日期的课程（内容包 div 列容器，text 直放会横排） -->
+    <scroll class="course-scroll" style="height: {{bodyH}}px" scroll-y="true">
+      <div class="day-wrap">
+        <text class="date-line {{isRound ? 'date-line-round' : ''}}">{{dayTitle}}</text>
+        <div if="{{courses.length === 0}}" class="empty">
+          <text class="empty-text">这天没有课</text>
+        </div>
+        <div for="c in courses" tid="course_uuid" class="course-item {{isRound ? 'course-item-round' : ''}}" style="border-left-color: {{c.color}}">
+          <text class="c-name">{{c.name}}</text>
+          <text class="c-time">{{c.timeText}} · {{c.start_section}}-{{c.end_section}}节</text>
+          <text class="c-loc" if="{{c.location}}">{{c.location}}</text>
+          <text class="c-teacher" if="{{c.teacher}}">{{c.teacher}}</text>
+        </div>
+      </div>
+    </scroll>
+
+    <!-- 底部导航：矩形通栏；圆屏悬浮胶囊 -->
+    <div class="nav-wrap" style="height: {{navWrapH}}px">
+      <div class="nav {{isRound ? 'nav-round' : ''}}" style="width: {{navW}}px; height: {{navH}}px">
+        <text class="nav-item {{isRound ? 'nav-item-round' : ''}}" @click="go('today')">今日</text>
+        <text class="nav-item {{isRound ? 'nav-item-round' : ''}} nav-active" @click="go('week')">本周</text>
+        <text class="nav-item {{isRound ? 'nav-item-round' : ''}}" @click="go('import')">导入</text>
+        <text class="nav-item {{isRound ? 'nav-item-round' : ''}}" @click="go('settings')">设置</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #000000;
+}
+.strip {
+  display: flex;
+  flex-direction: row;
+  align-self: center;
+  border-bottom: 1px solid #1a1a1a;
+}
+.strip-round {
+  border-bottom-width: 0;
+}
+.day {
+  flex: 1;
+  height: 100%;
+  line-height: 64px;
+  text-align: center;
+  color: #666666;
+  font-size: 22px;
+}
+.day-selected {
+  color: #ffffff;
+  font-weight: bold;
+}
+.day-today {
+  color: #2eb886;
+}
+.day-selected.day-today {
+  color: #ffffff;
+  background-color: #1d5c46;
+  border-radius: 10px;
+}
+.course-scroll {
+  width: 100%;
+}
+.day-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.date-line {
+  color: #888888;
+  font-size: 18px;
+  padding: 14px 24px 2px 24px;
+}
+.date-line-round {
+  text-align: center;
+  padding: 10px 36px 2px 36px;
+}
+.empty {
+  display: flex;
+  justify-content: center;
+  padding-top: 60px;
+}
+.empty-text {
+  color: #cccccc;
+  font-size: 24px;
+}
+.course-item {
+  margin: 10px 24px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background-color: #141414;
+  border-left-width: 6px;
+  border-left-style: solid;
+}
+.course-item-round {
+  margin: 10px 36px;
+  border-radius: 16px;
+}
+.c-name {
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: bold;
+  text-overflow: ellipsis;
+  lines: 1;
+}
+.c-time {
+  color: #2eb886;
+  font-size: 20px;
+  margin-top: 6px;
+}
+.c-loc {
+  color: #bbbbbb;
+  font-size: 20px;
+  margin-top: 4px;
+}
+.c-teacher {
+  color: #888888;
+  font-size: 18px;
+  margin-top: 2px;
+}
+.nav-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.nav {
+  display: flex;
+  flex-direction: row;
+  border-top: 1px solid #1a1a1a;
+}
+.nav-round {
+  border-top-width: 0;
+  border-radius: 31px;
+  background-color: #141414;
+}
+.nav-item {
+  flex: 1;
+  height: 100%;
+  line-height: 84px;
+  text-align: center;
+  color: #666666;
+  font-size: 22px;
+}
+.nav-item-round {
+  line-height: 62px;
+}
+.nav-active {
+  color: #ffffff;
+  font-weight: bold;
+}
+</style>
+
+<script>
+/**
+ * 本周课表：顶部星期条（以所选日期所在周为基准），
+ * 左右滑动切换日期，点选直接跳转。
+ * 圆屏（S5 46mm）星期条限宽居中，导航悬浮胶囊，几何来自 def.metrics()。
+ */
+import router from "@system.router";
+import * as sched from "../../common/scripts/schedule";
+
+export default {
+  private: {
+    offset: 0,
+    days: [],
+    courses: [],
+    dayTitle: "",
+    isRound: false,
+    stripH: 64,
+    stripW: 432,
+    bodyH: 300,
+    navWrapH: 84,
+    navH: 84,
+    navW: 432,
+  },
+
+  onInit() {
+    const def = this.$app.$def;
+    const m = def.metrics();
+    this.isRound = m.isRound;
+    this.stripH = m.stripH;
+    this.stripW = m.stripW;
+    this.navWrapH = m.navWrapH;
+    this.navH = m.navH;
+    this.navW = m.navW;
+    this.bodyH = m.weekBodyH;
+  },
+
+  onShow() {
+    const def = this.$app.$def;
+    if (!def.accessToken) {
+      router.replace({ uri: "/pages/login" });
+      return;
+    }
+    this.render();
+  },
+
+  selectedDate() {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + this.offset);
+  },
+
+  render() {
+    const def = this.$app.$def;
+    const sel = this.selectedDate();
+    const monday = sched.mondayOf(sel);
+    const today = new Date();
+    const todayNum = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      const off = Math.round((d.getTime() - todayNum) / 86400000);
+      days.push({
+        label: sched.WEEK_SHORT[i],
+        offset: off,
+        selected: off === this.offset,
+        today: off === 0,
+      });
+    }
+    this.days = days;
+    this.courses = sched.dayCourses(def, sel);
+    this.dayTitle = (sel.getMonth() + 1) + "月" + sel.getDate() + "日 · "
+      + sched.WEEK_LABELS[sel.getDay() === 0 ? 6 : sel.getDay() - 1]
+      + (this.offset === 0 ? "（今天）" : "");
+  },
+
+  pickDay(offset) {
+    this.offset = offset;
+    this.render();
+  },
+
+  onSwipe(e) {
+    const dir = e.direction;
+    if (dir === "left") { this.offset += 1; this.render(); }
+    if (dir === "right") { this.offset -= 1; this.render(); }
+  },
+
+  go(page) {
+    const uri = page === "today" ? "/pages/today" : "/pages/" + page;
+    router.replace({ uri });
+  },
+};
+</script>

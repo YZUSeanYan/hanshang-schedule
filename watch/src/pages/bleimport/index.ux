@@ -1,0 +1,172 @@
+<template>
+  <div class="page {{isRound ? 'page-round' : ''}}">
+    <text class="title">蓝牙导入课表</text>
+    <text class="status {{statusCls}}">{{statusText}}</text>
+    <text class="hint">{{hintText}}</text>
+    <text class="btn {{busy ? 'btn-disabled' : ''}}" @click="start">{{busy ? '接收中…' : '开始接收'}}</text>
+    <text class="back" @click="goBack">返回</text>
+  </div>
+</template>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 22px;
+  background-color: #000000;
+}
+.page-round {
+  padding: 40px 56px 24px 56px;
+}
+.title {
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+}
+.status {
+  color: #2eb886;
+  font-size: 20px;
+  text-align: center;
+  margin-top: 20px;
+  height: 30px;
+  line-height: 30px;
+}
+.status-bad {
+  color: #ff8a8a;
+}
+.hint {
+  color: #888888;
+  font-size: 18px;
+  text-align: center;
+  margin-top: 10px;
+}
+.btn {
+  width: 100%;
+  height: 58px;
+  line-height: 58px;
+  text-align: center;
+  border-radius: 12px;
+  background-color: #158a63;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: bold;
+  margin-top: 26px;
+}
+.btn-disabled {
+  opacity: 0.5;
+}
+.back {
+  color: #888888;
+  font-size: 20px;
+  text-align: center;
+  margin-top: 16px;
+}
+</style>
+
+<script>
+/**
+ * 蓝牙导入课表页：手机 App「发送课表到手表」开启 BLE 广播后，
+ * 本页扫描→连接→接收快照→存本地→进入课表（完全离线，无需网络）。
+ */
+import router from "@system.router";
+import prompt from "@system.prompt";
+import * as ble from "../../common/scripts/ble";
+
+function uuid() {
+  const s = () => Math.random().toString(16).slice(2, 6);
+  return s() + s() + "-" + s() + "-" + s() + "-" + s() + "-" + s() + s() + s();
+}
+
+export default {
+  private: {
+    busy: false,
+    isRound: false,
+    statusText: "等待开始",
+    statusCls: "",
+    hintText: "在手机「手表助手」App 点「发送到手表」后，再点下方按钮",
+  },
+
+  onInit() {
+    this.isRound = !!this.$app.$def.isRound;
+  },
+
+  start() {
+    if (this.busy) return;
+    this.busy = true;
+    this.statusText = "正在扫描手机…";
+    this.statusCls = "";
+    this.hintText = "请保持手表与手机靠近（10 米内）";
+    ble.receiveSnapshot(60000)
+      .then((snap) => {
+        this.busy = false;
+        if (!snap || !snap.semester || !snap.courses) {
+          this.statusText = "数据格式不正确";
+          this.statusCls = "status-bad";
+          return;
+        }
+        this.applySnapshot(snap);
+        prompt.showToast({ message: "课表已导入", duration: 1500 });
+        router.replace({ uri: "/pages/today" });
+      })
+      .catch((e) => {
+        this.busy = false;
+        this.statusText = e && e.message ? e.message : "接收失败";
+        this.statusCls = "status-bad";
+        this.hintText = "可重试：手机「手表助手」重新点「发送到手表」，手表再点开始";
+      });
+  },
+
+  /** 快照 → 全局课表结构（与云端同步数据同构，离线可用） */
+  applySnapshot(snap) {
+    const def = this.$app.$def;
+    const semester = snap.semester;
+    const semUuid = uuid();
+    def.semesters = [{
+      uuid: semUuid,
+      name: semester.name,
+      start_date: semester.start_date,
+      total_weeks: semester.total_weeks,
+      is_current: true,
+      deleted: false,
+    }];
+    def.courses = [];
+    def.schedules = [];
+    (snap.courses || []).forEach((c) => {
+      const cUuid = uuid();
+      def.courses.push({
+        uuid: cUuid,
+        semester_uuid: semUuid,
+        name: c.name,
+        teacher: c.teacher || "",
+        color: c.color || 0,
+        note: "",
+        deleted: false,
+      });
+      (c.slots || []).forEach((sl) => {
+        def.schedules.push({
+          uuid: uuid(),
+          course_uuid: cUuid,
+          day_of_week: sl.day_of_week,
+          start_section: sl.start_section,
+          end_section: sl.end_section,
+          weeks_type: sl.weeks_type,
+          custom_weeks: sl.custom_weeks || "",
+          location: sl.location || "",
+          deleted: false,
+        });
+      });
+    });
+    def.currentSemester = def.semesters[0];
+    def.lastPullAt = Date.now();
+    def.rebuildCourseMap();
+    def.saveCache();
+  },
+
+  goBack() {
+    router.back();
+  },
+};
+</script>

@@ -1,0 +1,22 @@
+# 统一文本为 LF，避免跨平台副本把 CRLF 误报为逐行空白差异。
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.jar binary
+*.xlsx binary
+*.xls binary
+*.mp4 binary
+*.webm binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.apk binary
+*.aab binary
+*.ipa binary
+*.hap binary
+*.rpk binary

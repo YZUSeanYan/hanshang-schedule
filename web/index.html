@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5fbf5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="邗上课表" />
+    <meta name="description" content="邗上课表网页版：在 iPhone 上导入、管理和查看扬大课表。" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png" />
+    <link rel="preconnect" href="https://api.seanyan.store" />
+    <style>
+/* ============================================================
+   邗上课表网页版设计系统 v45
+   与安卓 App 统一的 Material 3 令牌（种子色 #158A63 邗上绿，
+   色板由 SchemeTonalSpot 算法生成，与 Flutter fromSeed 一致）
+   ============================================================ */
+:root {
+  color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  /* M3 色板（浅色） */
+  --primary:#206A4E; --on-primary:#FFFFFF; --primary-container:#A8F2CE; --on-primary-container:#005138;
+  --secondary-container:#CFE9D9; --on-secondary-container:#354B40;
+  --tertiary-container:#C1E9FB;
+  --error:#BA1A1A; --on-error:#FFFFFF; --error-container:#FFDAD6; --on-error-container:#93000A;
+  --surface:#F5FBF5; --surface-lowest:#FFFFFF; --surface-low:#EFF5EF; --surface-c:#EAEFE9; --surface-high:#E4EAE4; --surface-highest:#DEE4DE;
+  --on-surface:#171D1A; --on-surface-variant:#404943; --outline:#707973; --outline-variant:#BFC9C2;
+  --inverse-surface:#2C322E; --inverse-on-surface:#EDF2EC;
+  /* 形状（与安卓一致） */
+  --r-card:16px; --r-control:14px; --r-dialog:22px; --r-sheet:24px; --r-snackbar:12px; --r-course:10px;
+  --ease-spring:cubic-bezier(.2,.9,.25,1.12); --ease-out:cubic-bezier(.22,.8,.3,1);
+  /* 状态层 */
+  --hover:color-mix(in srgb, var(--on-surface) 8%, transparent);
+  /* 毛玻璃（顶栏 70%/55% 与安卓一致；底栏按用户偏好更通透） */
+  --glass-bg:color-mix(in srgb, var(--surface) 70%, transparent);
+  --nav-glass-bg:color-mix(in srgb, var(--surface) 62%, transparent);
+  --glass-border:rgba(255,255,255,.6);
+  background: var(--surface); color: var(--on-surface);
+  -webkit-text-size-adjust:100%; text-size-adjust:100%;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --primary:#8DD5B2; --on-primary:#003826; --primary-container:#005138; --on-primary-container:#A8F2CE;
+    --secondary-container:#354B40; --on-secondary-container:#CFE9D9;
+    --tertiary-container:#244C5B;
+    --error:#FFB4AB; --on-error:#690005; --error-container:#93000A; --on-error-container:#FFDAD6;
+    --surface:#121417; --surface-lowest:#0A0F0C; --surface-low:#171D1A; --surface-c:#1B211D; --surface-high:#252B28; --surface-highest:#303632;
+    --on-surface:#DEE4DE; --on-surface-variant:#BFC9C2; --outline:#8A938C; --outline-variant:#404943;
+    --inverse-surface:#DEE4DE; --inverse-on-surface:#2C322E;
+    --nav-glass-bg:color-mix(in srgb, var(--surface) 50%, transparent);
+    --glass-border:rgba(255,255,255,.10);
+  }
+}
+/* 手动选择深色（与安卓「我的 → 外观」一致） */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --primary:#8DD5B2; --on-primary:#003826; --primary-container:#005138; --on-primary-container:#A8F2CE;
+  --secondary-container:#354B40; --on-secondary-container:#CFE9D9;
+  --tertiary-container:#244C5B;
+  --error:#FFB4AB; --on-error:#690005; --error-container:#93000A; --on-error-container:#FFDAD6;
+  --surface:#121417; --surface-lowest:#0A0F0C; --surface-low:#171D1A; --surface-c:#1B211D; --surface-high:#252B28; --surface-highest:#303632;
+  --on-surface:#DEE4DE; --on-surface-variant:#BFC9C2; --outline:#8A938C; --outline-variant:#404943;
+  --inverse-surface:#DEE4DE; --inverse-on-surface:#2C322E;
+  --nav-glass-bg:color-mix(in srgb, var(--surface) 50%, transparent);
+  --glass-border:rgba(255,255,255,.10);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .week-course { background:var(--course-bg-d); color:var(--course-text-d); }
+}
+:root[data-theme="dark"] .week-course { background:var(--course-bg-d); color:var(--course-text-d); }
+* { box-sizing: border-box; }
+html,body { width:100%; min-height:100%; }
+body { margin: 0; min-height: 100vh; min-height:100dvh; overflow-x:hidden; background: var(--surface); color: var(--on-surface); }
+html.schedule-active,body.schedule-active { height:100%; overflow:hidden; overscroll-behavior:none; }
+button,input,select,textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; padding: 0; border-radius: 0; }
+.hidden { display: none !important; }
+.icon { width:24px; height:24px; flex:none; fill:currentColor; display:inline-block; vertical-align:middle; }
+.icon-sm { width:20px; height:20px; }
+.icon-lg { width:28px; height:28px; }
+:focus-visible { outline:2px solid var(--primary); outline-offset:2px; border-radius:4px; }
+.login-shell { width:min(100% - 32px,440px); margin:auto; padding:48px 0 calc(40px + env(safe-area-inset-bottom)); }
+.boot-shell { display:flex; align-items:center; justify-content:center; width:100%; min-height:100vh; min-height:100dvh; padding:24px; }
+.boot-card { text-align:center; color:var(--on-surface-variant); }
+.boot-spinner { width:34px; height:34px; margin:0 auto 14px; border:3px solid var(--surface-highest); border-top-color:var(--primary); border-radius:50%; animation:boot-spin .9s linear infinite; }
+@keyframes boot-spin { to { transform:rotate(360deg); } }
+.welcome { text-align:center; margin-bottom:24px; }
+.brand-mark,.avatar { display:grid; place-items:center; width:64px; height:64px; margin:0 auto 14px; border-radius:20px; color:var(--on-primary); background:var(--primary); font-size:30px; font-weight:800; }
+.brand-icon { display:block; width:72px; height:72px; margin:0 auto 14px; border-radius:19px; object-fit:cover; }
+.eyebrow { margin:0 0 2px; color:var(--primary); font-weight:700; font-size:.78rem; letter-spacing:.02em; }
+h1 { margin:0; font-size:clamp(1.6rem,6vw,2.2rem); line-height:1.22; font-weight:700; }
+h2 { margin:0; font-size:1.1rem; font-weight:600; }
+p { line-height:1.55; }
+.subtle,.security-note,.card p,.profile-card p { color:var(--on-surface-variant); }
+/* ---- 卡片（安卓 Card：r16、surfaceContainerLow、无边框） ---- */
+.card,.settings-group,.profile-card { background:var(--surface-low); border:0; border-radius:var(--r-card); }
+.card { margin:14px 0; padding:16px; }
+.auth-card h2 { margin-bottom:18px; }
+form,label { display:grid; gap:7px; }
+form { gap:14px; }
+label { color:var(--on-surface); font-size:.9rem; font-weight:600; }
+/* ---- 输入框（安卓 InputDecorationTheme：填充 + r14） ---- */
+input,select,textarea { width:100%; min-width:0; border:1px solid var(--outline-variant); border-radius:var(--r-control); background:var(--surface-low); padding:12px 14px; color:var(--on-surface); transition:border-color .18s ease, box-shadow .18s ease; }
+textarea { min-height:76px; resize:vertical; }
+input:focus,select:focus,textarea:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 1px var(--primary); }
+input::placeholder,textarea::placeholder { color:var(--outline); }
+input[type=checkbox],input[type=radio] { accent-color:var(--primary); }
+.input-wrap { position:relative; display:block; }
+.input-wrap > .icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--on-surface-variant); width:22px; height:22px; pointer-events:none; }
+.input-wrap > input { padding-left:42px; }
+.input-wrap:focus-within > .icon { color:var(--primary); }
+/* ---- 按钮（安卓 FilledButton/Tonal/Outlined/Text，r14，min 46） ---- */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:11px 20px; border-radius:var(--r-control); background:var(--primary); color:var(--on-primary); font-weight:600; font-size:.95rem; text-align:center; transition:filter .15s ease, transform .12s var(--ease-out); }
+.btn:hover:not(:disabled) { filter:brightness(1.08); }
+.btn:active:not(:disabled) { transform:scale(.97); }
+.btn .icon { width:20px; height:20px; }
+.btn-tonal { background:var(--secondary-container); color:var(--on-secondary-container); }
+.btn-tonal:hover:not(:disabled) { filter:none; box-shadow:inset 0 0 0 99px color-mix(in srgb, var(--on-secondary-container) 8%, transparent); }
+.btn-outline { background:transparent; color:var(--primary); border:1px solid var(--outline); }
+.btn-outline:hover:not(:disabled) { box-shadow:none; background:color-mix(in srgb, var(--primary) 8%, transparent); filter:none; }
+.btn-text { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:40px; padding:8px 12px; border-radius:var(--r-control); background:transparent; color:var(--primary); font-weight:600; font-size:.92rem; }
+.btn-text:hover:not(:disabled) { background:color-mix(in srgb, var(--primary) 8%, transparent); }
+.btn-text .icon { width:19px; height:19px; }
+.btn-danger, .text-button.danger-text { color:var(--error); }
+.btn-sm { min-height:36px; padding:6px 12px; font-size:.85rem; }
+button:disabled { opacity:.55; cursor:not-allowed; }
+/* 旧钩子兼容：app.js 里创建的元素仍用 text-button 类名 */
+.text-button { border:0; background:transparent; padding:5px; color:var(--primary); text-align:left; font-weight:600; }
+.text-button span,.text-button small { display:block; }
+details { margin-top:18px; border-top:1px solid var(--outline-variant); padding-top:14px; }
+summary { font-weight:600; cursor:pointer; margin-bottom:14px; color:var(--on-surface); }
+.message { min-height:22px; color:var(--primary); text-align:center; }
+.message.error,.warning,.danger-text { color:var(--error) !important; }
+.security-note { font-size:.8rem; line-height:1.55; text-align:center; }
+.import-note { font-size:.8rem; line-height:1.55; color:var(--on-error-container); background:var(--error-container); border-radius:10px; padding:10px 12px; margin:10px 0 0; }
+.semester-hint { margin:2px 0 0; color:var(--on-surface-variant); font-size:.8rem; line-height:1.55; }
+.hint-fill { padding:1px 4px; color:var(--primary); font-weight:700; text-decoration:underline; text-underline-offset:2px; }
+#education-semester-form { margin-top:12px; border-top:1px solid var(--outline-variant); padding-top:14px; }
+
+
+
+
+.semester-list { display:grid; gap:6px; margin:10px 0 14px; }
+.semester-list .setting-row { text-align:left; grid-template-columns:minmax(0,1fr) auto auto; }
+.semester-current { background:var(--secondary-container); border-radius:var(--r-control); }
+.semester-current small { color:var(--on-secondary-container); }
+#semester-form { border-top:1px solid var(--outline-variant); padding-top:14px; margin-top:4px; }
+#delete-semester-button { margin-top:10px; }
+.import-choice-heading { margin:4px 2px 14px; }
+.import-choice-heading h2 { margin:0; font-size:1.2rem; }
+.import-choice-heading p { margin:5px 0 0; color:var(--on-surface-variant); font-size:.86rem; }
+
+
+.import-method-card .title-row { align-items:center; }
+.import-method-card .title-row h2 { margin-bottom:0; }
+.file-import-actions { display:grid; gap:10px; margin:14px 0 10px; }
+.file-choice { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:11px 20px; border-radius:var(--r-control); font-weight:600; font-size:.95rem; cursor:pointer; text-align:center; transition:filter .15s ease, transform .12s var(--ease-out); }
+.file-choice .icon { width:20px; height:20px; }
+.file-choice:active { transform:scale(.97); }
+.file-choice.filled { background:var(--primary); color:var(--on-primary); }
+.file-choice.filled:hover { filter:brightness(1.08); }
+.file-choice.tonal { background:var(--secondary-container); color:var(--on-secondary-container); }
+.file-choice.tonal:hover { box-shadow:inset 0 0 0 99px color-mix(in srgb, var(--on-secondary-container) 8%, transparent); }
+.file-selection { min-height:22px; margin:2px 0 12px; color:var(--on-surface-variant); font-size:.86rem; overflow-wrap:anywhere; }
+.file-import-meta { display:grid; gap:12px; }
+.file-consent { display:grid; grid-template-columns:auto 1fr; align-items:start; gap:9px; color:var(--on-surface-variant); font-size:.82rem; font-weight:500; line-height:1.5; }
+.file-consent input { width:18px; height:18px; margin:2px 0 0; }
+.file-privacy { margin:10px 0 0; color:var(--on-surface-variant); font-size:.78rem; line-height:1.55; }
+/* ---- AI 识别进度卡（安卓：primaryContainer 42% + r18 + 进度条） ---- */
+.file-import-progress { margin-top:14px; padding:16px; border-radius:18px; border:1px solid color-mix(in srgb, var(--primary) 22%, transparent); background:color-mix(in srgb, var(--primary-container) 42%, var(--surface-low)); text-align:center; }
+.ai-motion { position:relative; width:54px; height:54px; margin:0 auto 10px; display:grid; place-items:center; }
+.ai-motion-core { width:54px; height:54px; border-radius:50%; border:3px solid var(--primary); display:grid; place-items:center; color:var(--primary); animation:ai-pulse 1.4s ease-in-out infinite; }
+.ai-motion-core .icon { width:26px; height:26px; }
+.ai-motion-ring { display:none; }
+.file-import-progress strong,.file-import-progress span { display:block; }
+.file-import-progress strong { color:var(--on-surface); }
+.file-import-progress span { margin-top:3px; color:var(--primary); font-size:.9rem; font-weight:700; }
+.progress-meter { height:7px; overflow:hidden; margin:13px 0 8px; border-radius:99px; background:var(--surface-highest); }
+.progress-meter i { display:block; height:100%; width:8%; border-radius:inherit; background:var(--primary); transition:width .5s ease; }
+.progress-stage { margin:0; color:var(--on-surface-variant); font-size:.8rem; }
+.progress-privacy { display:inline-flex; margin-top:9px; }
+@keyframes ai-pulse { 50% { transform:scale(.9); opacity:.8; } }
+.file-import-error { margin-top:14px; padding:15px; border-radius:16px; background:color-mix(in srgb, var(--error-container) 50%, var(--surface-low)); }
+.file-import-error h3 { margin:0 0 5px; color:var(--on-error-container); font-size:1rem; }
+.file-import-error p { margin:0 0 12px; color:var(--on-error-container); font-size:.84rem; }
+.file-error-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.file-error-actions > * { flex:1 1 120px; }
+@media (prefers-reduced-motion:reduce) { .ai-motion-core { animation:none; } .progress-meter i { transition:none; } }
+
+/* ---- 应用外壳与玻璃顶栏 ---- */
+.app-shell { width:min(100%,760px); min-height:100vh; min-height:100dvh; margin:auto; padding:0 16px calc(112px + env(safe-area-inset-bottom)); overflow-x:hidden; }
+.schedule-active .app-shell { height:100dvh; min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr); overflow:hidden; padding-top:0; padding-bottom:0; }
+.app-header { position:sticky; top:0; z-index:15; display:flex; justify-content:space-between; align-items:center; gap:12px; margin:0 -16px; padding:max(8px,env(safe-area-inset-top)) 20px 8px; background:var(--glass-bg); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); }
+.schedule-active .app-header { padding-top:max(5px,env(safe-area-inset-top)); padding-bottom:2px; }
+.app-header h1 { font-size:1.28rem; font-weight:600; }
+.schedule-active .app-header h1 { font-size:1.18rem; }
+/* 课表页顶栏压缩：只留品牌眉标，页面大标题隐藏 */
+.schedule-active #page-title { display:none; }
+.schedule-active .app-header .eyebrow { margin:0; }
+/* 同步/离线轻量指示：顶栏中部小字+状态点，不用大 toast 打扰 */
+.sync-hint { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; min-width:0; font-size:.72rem; color:var(--on-surface-variant); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sync-hint::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--outline); flex:none; }
+.sync-hint.syncing::before { background:var(--primary); animation:hint-pulse 1.2s ease-in-out infinite; }
+@keyframes hint-pulse { 50% { opacity:.35; } }
+.icon-button { display:inline-grid; place-items:center; width:44px; height:44px; border-radius:50%; color:var(--on-surface-variant); background:transparent; transition:background-color .15s ease, transform .12s var(--ease-out); }
+.icon-button:hover { background:var(--hover); }
+.icon-button:active { transform:scale(.9); }
+.icon-button.small { width:34px; height:34px; }
+.page { display:none; min-width:0; animation:fade .18s ease; }
+.page.active { display:block; }
+.schedule-active #schedule-page.active { display:flex; flex-direction:column; min-height:0; }
+@keyframes fade { from { opacity:.35; transform:translateY(4px); } }
+.semester-bar,.schedule-toolbar,.title-row,.form-row,.dialog-heading,.dialog-actions,.profile-card { display:flex; align-items:center; gap:12px; }
+/* ---- 课表工具栏 ---- */
+.schedule-toolbar { flex:0 0 auto; margin:0 0 4px; justify-content:center; gap:6px; }
+.week-heading { min-width:82px; display:grid; justify-items:center; line-height:1.12; }
+#week-label { text-align:center; font-weight:600; }
+.week-range { margin-top:1px; color:var(--on-surface-variant); font-size:.64rem; font-weight:600; }
+/* 分段按钮（安卓 SegmentedButton） */
+.segmented { display:flex; margin-left:auto; border:1px solid var(--outline-variant); border-radius:20px; overflow:hidden; }
+.segmented button { border:0; min-width:44px; padding:7px 14px; background:transparent; color:var(--on-surface); font-size:.85rem; transition:background-color .18s ease, color .18s ease; }
+.segmented button + button { border-left:1px solid var(--outline-variant); }
+.segmented button.active { background:var(--secondary-container); color:var(--on-secondary-container); font-weight:700; }
+.day-selector { display:flex; gap:6px; padding:0 1px 11px; }
+.day-selector button { flex:1 1 0; min-width:0; border:1px solid var(--outline-variant); border-radius:10px; padding:8px 4px; background:transparent; color:var(--on-surface-variant); font-weight:600; transition:background-color .18s ease,color .18s ease,border-color .18s ease,transform .12s var(--ease-out); }
+.day-selector button:active { transform:scale(.94); }
+.day-selector button.active { background:var(--secondary-container); color:var(--on-secondary-container); border-color:transparent; }
+.schedule-list { display:grid; gap:11px; min-height:0; overflow-y:auto; flex:1 1 auto; }
+.schedule-list.week-grid-host { display:block; flex:1 1 auto; min-height:0; margin:0 -16px; overflow-x:hidden; overflow-y:auto; touch-action:pan-y; }
+/* ---- 周视图网格（对齐安卓 WeekView）：行高至少 54px，放不下就上下滑；网格延伸到底栏玻璃后方，尾部留白让最后一节能完全滚出 ---- */
+.week-grid { position:relative; display:grid; width:100%; min-height:100%; max-height:840px; margin:0 auto; grid-template-columns:60px repeat(7,minmax(0,1fr)); grid-template-rows:40px repeat(var(--section-count),minmax(54px,1fr)); background:var(--surface); isolation:isolate; }
+.week-grid::after { content:""; display:block; height:96px; grid-column:1 / -1; }
+.schedule-list:not(.week-grid-host) { padding-bottom:100px; }
+.week-grid-corner,.week-grid-day,.week-grid-section,.week-grid-cell { min-width:0; }
+/* 星期/日期表头吸顶：滚动时钉在课表区顶部（与上方工具栏保持一体） */
+.week-grid-corner,.week-grid-day { position:sticky; top:0; z-index:4; background:var(--surface); }
+.week-grid-day,.week-grid-section { border-bottom:1px solid var(--outline-variant); }
+.week-grid-cell { border-bottom:1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent); }
+.week-grid-cell.alt { background:color-mix(in srgb, var(--surface-lowest) 45%, transparent); }
+.week-grid-corner { display:grid; place-items:center; color:var(--outline); font-size:.66rem; font-weight:700; }
+.week-grid-day { display:grid; place-items:center; align-content:center; gap:2px; padding:2px 0; }
+.week-grid-day b { font-size:.7rem; font-weight:600; color:var(--outline); }
+.week-grid-day span { display:grid; place-items:center; width:24px; height:24px; border-radius:50%; font-size:.82rem; font-weight:500; color:var(--on-surface); }
+.week-grid-day.today b { color:var(--primary); }
+.week-grid-day.today span { background:var(--primary); color:var(--on-primary); font-weight:700; }
+.week-grid-section { display:grid; place-items:center; align-content:center; gap:2px; }
+.week-grid-section b { color:var(--on-surface); font-size:.92rem; font-weight:600; }
+.week-grid-section span { font-size:.52rem; color:var(--outline); white-space:nowrap; letter-spacing:-.01em; }
+/* ---- 课程块（安卓 _CourseBlock 同款配方）：名称在上、元信息靠底，行数随高度放开，避免中间空洞 ---- */
+.week-course { z-index:2; display:flex; min-width:0; min-height:0; flex-direction:column; justify-content:flex-start; margin:2px 1px; padding:4px 4px 4px 5px; overflow:hidden; border:1px solid var(--course-border); border-left:3px solid var(--course-base); border-radius:var(--r-course); background:var(--course-bg); color:var(--course-text); text-align:left; transition:transform .12s var(--ease-out); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .week-course { background:var(--course-bg-d); color:var(--course-text-d); }
+}
+:root[data-theme="dark"] .week-course { background:var(--course-bg-d); color:var(--course-text-d); }
+.week-course:active { transform:scale(.95); }
+.week-course strong,.week-course span { display:-webkit-box; overflow:hidden; overflow-wrap:break-word; word-break:normal; line-break:strict; -webkit-box-orient:vertical; }
+.week-course strong { flex:0 1 auto; white-space:pre-line; -webkit-line-clamp:var(--course-title-lines,3); color:inherit; font-size:var(--course-title-size,.62rem); line-height:1.12; font-weight:600; }
+.week-course span { flex:0 1 auto; margin-top:3px; -webkit-line-clamp:var(--course-detail-lines,2); font-size:clamp(.5rem,2vw,.66rem); line-height:1.14; font-weight:600; opacity:.82; }
+/* 信息层级：教室醒目独占行 > 楼名次要 > 教师/校区（默认收起）；首个元信息行靠底 */
+.week-course > span:first-of-type { margin-top:auto; }
+.week-course .course-room { -webkit-line-clamp:2; font-size:clamp(.6rem,2.3vw,.72rem); font-weight:700; opacity:.96; letter-spacing:0; word-break:break-all; line-height:1.15; }
+.week-course .course-building { -webkit-line-clamp:2; font-size:.54rem; font-weight:500; opacity:.8; margin-top:2px; word-break:break-all; }
+.week-course .course-teacher { -webkit-line-clamp:1; font-size:.5rem; opacity:.72; margin-top:2px; }
+/* 单节课程卡也显示教师/地点（小字号单行），不再整行隐藏 */
+.week-course.single-section span { -webkit-line-clamp:1; font-size:.5rem; margin-top:2px; }
+.week-course:focus-visible { outline:2px solid var(--primary); outline-offset:-1px; }
+/* 冲突合并块：与其他卡片明确区分的中性高对比配色 */
+.week-course.conflict-block { background:var(--surface-container-high, #eef2ef); border:1.2px solid var(--outline-variant, #d7ddd9); color:var(--on-surface); }
+.week-course.conflict-block .conflict-head { display:flex; align-items:center; gap:3px; -webkit-line-clamp:1; color:var(--primary); font-size:.66rem; font-weight:700; }
+.week-course.conflict-block .conflict-head .icon { width:11px; height:11px; }
+.week-course.conflict-block .conflict-mini { flex:1 1 0; min-height:0; display:flex; align-items:center; gap:3px; margin-top:3px; padding:1px 4px; border-radius:6px; background:color-mix(in srgb, var(--mini-base) 18%, transparent); border:1px solid color-mix(in srgb, var(--mini-base) 45%, transparent); color:color-mix(in srgb, var(--mini-base) 50%, #000); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; line-height:1.1; }
+:root[data-theme="dark"] .week-course.conflict-block .conflict-mini, @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .week-course.conflict-block .conflict-mini { color:color-mix(in srgb, var(--mini-base) 30%, #fff); background:color-mix(in srgb, var(--mini-base) 30%, transparent); } }
+.week-course.conflict-block .conflict-more { flex:none; margin-top:2px; font-size:.52rem; font-weight:500; color:var(--on-surface-variant); }
+/* 添加页（与 App 同构）：入口卡列表 + 分区标题 + AI 输入卡 */
+.entry-list { display:flex; flex-direction:column; gap:10px; margin:0 0 14px; }
+.entry-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.entry-card { display:flex; align-items:center; gap:10px; padding:14px; border-radius:16px; border:1px solid var(--outline-variant, #d7ddd9); background:var(--surface); color:var(--on-surface); text-align:left; cursor:pointer; transition:transform .12s var(--ease-out), background .15s ease; }
+.entry-card:active { transform:scale(.98); }
+.entry-card > .icon { flex:none; width:24px; height:24px; color:var(--primary); }
+.entry-card strong { display:block; font-size:.95rem; font-weight:700; }
+.entry-card small { display:block; margin-top:2px; font-size:.72rem; line-height:1.25; color:var(--on-surface-variant); }
+.entry-card .chev { margin-left:auto; width:18px; height:18px; color:var(--outline); }
+.import-subtitle { margin:-4px 0 12px; color:var(--on-surface-variant); font-size:.86rem; }
+.import-choice-heading.with-action { display:flex; align-items:center; justify-content:space-between; }
+.ai-textarea { min-height:auto; height:46px; padding:12px 14px; border-radius:14px; resize:none; }
+.ai-schedule-actions { display:flex; align-items:center; gap:8px; margin-top:8px; }
+.ai-schedule-actions .file-choice { min-height:38px; padding:8px 12px; font-size:.8rem; border-radius:12px; }
+.ai-schedule-actions .ai-submit { margin-left:auto; min-height:38px; padding:8px 18px; border-radius:19px; font-size:.85rem; }
+.my-events-head { display:flex; justify-content:flex-end; margin-bottom:4px; }
+.week-grid-day .header-off { margin-left:2px; padding:0 3px; border-radius:6px; background:var(--surface-container-high, #eef2ef); color:var(--on-surface-variant); font-size:.5rem; font-style:normal; }
+.holiday-list { display:flex; flex-direction:column; gap:6px; margin:4px 0 10px; }
+.holiday-row { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px; background:var(--surface-container-low, #f4f7f5); }
+.holiday-row strong { font-size:.86rem; }
+.holiday-row small { margin-left:auto; color:var(--on-surface-variant); font-size:.7rem; }
+.holiday-row button { border:0; background:none; color:var(--error, #b3261e); font-size:.78rem; cursor:pointer; padding:2px 6px; }
+.holiday-ai-actions { display:flex; gap:8px; margin:6px 0 10px; }
+.holiday-ai-actions .file-choice { flex:1 1 0; justify-content:center; min-height:40px; padding:8px 10px; font-size:.82rem; border-radius:12px; }
+.holiday-ai-status { margin:8px 0; padding:10px 12px; border-radius:12px; background:var(--primary-container, #d8e8de); color:var(--on-primary-container, #0d3b25); font-size:.82rem; font-weight:600; }
+.holiday-ai-result { margin:8px 0; padding:10px 12px; border-radius:12px; background:var(--surface-container-low, #f4f7f5); }
+.holiday-ai-result label { display:flex; align-items:center; gap:8px; padding:4px 0; font-size:.84rem; }
+
+.conflict-detail-body { display:flex; flex-direction:column; gap:10px; max-height:60vh; overflow-y:auto; }
+.conflict-row { display:flex; gap:8px; align-items:flex-start; }
+.conflict-row.parallel .conflict-cell { flex:1 1 0; min-width:0; }
+.conflict-cell { display:flex; flex-direction:column; min-width:0; }
+.conflict-caption { display:block; margin:0 0 3px 4px; font-size:.56rem; font-weight:600; color:var(--on-surface-variant); }
+.conflict-item { height:84px; }
+.conflict-item > button { width:100%; height:100%; margin:0; }
+
+.week-slide-next { animation:week-slide-next .2s ease-out; }
+.week-slide-prev { animation:week-slide-prev .2s ease-out; }
+.week-slide-out-next { animation:week-slide-out-next .14s ease-in forwards; }
+.week-slide-out-prev { animation:week-slide-out-prev .14s ease-in forwards; }
+@keyframes week-slide-next { from { opacity:.25; transform:translateX(22px); } }
+@keyframes week-slide-prev { from { opacity:.25; transform:translateX(-22px); } }
+@keyframes week-slide-out-next { to { opacity:0; transform:translateX(-26px); } }
+@keyframes week-slide-out-prev { to { opacity:0; transform:translateX(26px); } }
+
+/* 设置行开关状态 */
+.toggle-state { margin-left:auto; font-size:.78rem; color:var(--outline); }
+#card-detail-toggle.toggle-on .toggle-state { color:var(--primary); font-weight:600; }
+/* ---- 日视图（对齐安卓 DayView 时间轴卡片，统一固定高度） ---- */
+.day-group { display:grid; gap:10px; background:transparent; }
+.day-group h3 { margin:2px 2px 0; color:var(--on-surface-variant); font-size:.85rem; font-weight:600; }
+.slot-card { display:grid; grid-template-columns:4px auto 1px minmax(0,1fr); gap:12px; align-items:stretch; max-width:100%; height:72px; padding:12px 14px; overflow:hidden; border-radius:var(--r-card); background:var(--surface-low); text-align:left; width:100%; color:inherit; transition:background-color .15s ease; }
+.slot-card:active { background:var(--surface-c); }
+.slot-color { border-radius:2px; background:var(--primary); }
+.slot-time { display:grid; align-content:center; gap:1px; justify-items:start; white-space:nowrap; }
+.slot-time b { font-size:.92rem; font-weight:600; color:var(--on-surface); }
+.slot-time i { font-style:normal; font-size:.76rem; color:var(--outline); }
+.slot-divider { width:1px; background:var(--outline-variant); }
+.slot-main { display:grid; min-width:0; gap:3px; align-content:center; }
+.slot-main strong,.slot-main span { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.slot-main .slot-room { font-weight:700; color:var(--on-surface); }
+.slot-main strong { color:var(--on-surface); font-weight:600; }
+.slot-main span { color:var(--on-surface-variant); font-size:.82rem; }
+.empty-day { padding:6px 2px; color:var(--outline); font-size:.85rem; }
+/* ---- 空状态（安卓空页规范：大图标 + 标题 + 说明 + 主按钮） ---- */
+/* 账号卡：头像更换与改名 */
+.avatar-button { position:relative; border:0; padding:0; background:none; border-radius:50%; cursor:pointer; }
+.avatar-button .avatar-edit { position:absolute; right:-2px; bottom:-2px; display:grid; place-items:center; width:18px; height:18px; border-radius:50%; background:var(--primary); color:var(--on-primary); }
+.avatar-button .avatar-edit .icon { width:11px; height:11px; }
+#profile-avatar.has-image { background-size:cover; background-position:center; color:transparent; }
+#profile-name-row { display:flex; align-items:center; gap:4px; margin:0; }
+.icon-button.small { width:26px; height:26px; }
+.icon-button.small .icon { width:14px; height:14px; }
+.empty-state { text-align:center; padding:58px 22px; color:var(--on-surface-variant); }
+.empty-state .empty-icon { display:inline-grid; place-items:center; color:var(--outline); }
+.empty-state .empty-icon .icon { width:72px; height:72px; }
+.empty-state h2 { color:var(--on-surface); margin-top:12px; font-size:1.05rem; }
+.empty-state p { margin:8px 0 20px; }
+/* 空课表时整个区域居中，不再被空网格撑到底部 */
+.schedule-empty-active { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.schedule-empty-active .empty-state { padding:0 22px; }
+.title-row { align-items:flex-start; }
+.title-row div { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.title-row .icon { color:var(--primary); }
+.badge { border-radius:8px; padding:3px 8px; background:var(--secondary-container); color:var(--on-secondary-container); font-size:.72rem; font-weight:600; }
+/* 外观分段开关（安卓 SegmentedButton：跟随系统/浅色/深色） */
+.theme-row { padding:6px 16px 14px; }
+.theme-seg { display:flex; border:1px solid var(--outline-variant); border-radius:20px; overflow:hidden; }
+.theme-seg button { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:40px; border:0; background:transparent; color:var(--on-surface); font-size:.84rem; font-weight:600; transition:background-color .18s ease, color .18s ease; }
+.theme-seg button + button { border-left:1px solid var(--outline-variant); }
+.theme-seg button.active { background:var(--secondary-container); color:var(--on-secondary-container); }
+.theme-seg .icon { width:18px; height:18px; }
+.form-row { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr); }
+.form-row > * { min-width:0; }
+#share-code { text-align:center; font-size:1.45rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase; }
+/* ---- 预览课程列表（安卓导入预览：menu_book 图标行） ---- */
+.course { display:grid; grid-template-columns:24px minmax(0,1fr); gap:4px 10px; padding:10px 0; border-top:1px solid var(--outline-variant); align-items:start; }
+.course .course-icon { color:var(--primary); display:block; }
+.course .course-icon .icon { width:20px; height:20px; margin-top:1px; }
+.course strong { color:var(--on-surface); }
+.course > span:not(.course-icon) { grid-column:2; color:var(--on-surface-variant); font-size:.86rem; }
+.course:first-of-type { border-top:0; }
+/* ---- 我的 ---- */
+.profile-card { padding:16px 20px; margin-bottom:8px; background:transparent; }
+.profile-card .avatar { width:48px; height:48px; margin:0; border-radius:50%; font-size:21px; background:var(--primary-container); color:var(--on-primary-container); }
+.profile-card h2 { font-size:1.05rem; }
+.profile-card p { margin:3px 0 0; font-size:.85rem; }
+.settings-group { margin:6px 0; overflow:hidden; background:transparent; }
+.setting-row { width:100%; display:grid; grid-template-columns:32px minmax(0,1fr) auto; align-items:center; gap:12px; padding:13px 16px; border:0; background:transparent; color:var(--on-surface); text-align:left; border-radius:var(--r-control); transition:background-color .15s ease; }
+.setting-row:hover { background:var(--hover); }
+.setting-row:active { background:color-mix(in srgb, var(--on-surface) 12%, transparent); }
+.setting-row > .icon { color:var(--primary); }
+.setting-row div { display:grid; gap:2px; }
+.setting-row strong { font-weight:600; }
+.setting-row small { color:var(--on-surface-variant); }
+.setting-row > .chev { color:var(--on-surface-variant); width:22px; height:22px; }
+/* 我的页层次：账号卡 + 功能分组卡（M3 容器色），行间细分隔线 */
+#profile-page .profile-card { background:var(--surface-low); border-radius:var(--r-card); margin:8px 0 14px; }
+#profile-page .settings-group { background:var(--surface-low); border-radius:var(--r-card); margin:0 0 14px; padding:4px 0; }
+#profile-page .setting-row { border-radius:0; }
+#profile-page .setting-row + .setting-row { border-top:1px solid color-mix(in srgb, var(--outline-variant) 50%, transparent); }
+#profile-page > .settings-divider { display:none; }
+.settings-divider { height:1px; background:var(--outline-variant); margin:8px 16px; }
+.section-label { padding:10px 18px 4px; color:var(--on-surface-variant); font-size:.82rem; font-weight:600; }
+/* 备案页脚（与官网一致） */
+.beian-footer { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px 14px; margin:26px 0 4px; font-size:.78rem; font-weight:600; color:var(--outline); }
+.beian-footer a { color:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
+.beian-footer a:active { color:var(--primary); }
+.beian-footer img { height:16px; }
+/* ---- 通知收件箱 ---- */
+.notification-inbox-sheet{width:min(94vw,620px)}
+.inbox-toolbar{display:flex;justify-content:flex-end;align-items:center;gap:4px;border-bottom:1px solid var(--outline-variant);padding-bottom:8px}
+.notification-list{display:grid;gap:8px;max-height:min(62vh,620px);overflow:auto;padding:2px}
+.notification-item{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:2px 12px;padding:12px 14px;border-radius:var(--r-card);background:var(--surface-low);text-align:left;cursor:pointer}
+.notification-item > span > .icon{color:var(--primary);margin-top:2px}
+.notification-main{display:grid;gap:3px;min-width:0}
+.notification-item h3{margin:0;font-size:.98rem;font-weight:600;color:var(--on-surface)}
+.notification-item p{margin:0;color:var(--on-surface-variant);white-space:pre-wrap;font-size:.9rem}
+.notification-meta{color:var(--outline);font-size:.74rem;font-weight:500}
+.notification-head{display:flex;align-items:baseline;gap:8px;justify-content:space-between}
+.notification-side{display:grid;justify-items:end;align-content:start;gap:2px}
+.notification-dot{width:8px;height:8px;border-radius:50%;background:var(--primary);flex:none;margin:6px 14px 0 0}
+.notification-delete{color:var(--on-surface-variant);width:36px;height:36px}
+.notification-delete:hover{color:var(--error)}
+.notification-empty{text-align:center;color:var(--on-surface-variant);padding:34px 12px}
+/* ---- 底部导航：安卓同款悬浮毛玻璃胶囊 ---- */
+.bottom-nav { position:fixed; z-index:20; left:50%; transform:translateX(-50%); bottom:max(10px, env(safe-area-inset-bottom)); width:min(calc(100% - 28px),480px); height:66px; display:grid; grid-template-columns:repeat(3,1fr); padding:8px; border-radius:30px; background:var(--nav-glass-bg); -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px); border:1px solid var(--glass-border); box-shadow:0 8px 24px rgba(0,0,0,.14); }
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) { .bottom-nav { background:var(--surface-low); } }
+.bottom-nav button { position:relative; display:grid; justify-items:center; align-content:center; gap:2px; border-radius:22px; color:var(--on-surface-variant); font-size:.72rem; font-weight:500; transition:color .18s ease; }
+.bottom-nav button::before { content:""; position:absolute; inset:7px 12%; border-radius:22px; background:transparent; transition:background-color .2s ease; }
+.bottom-nav button > * { position:relative; }
+.bottom-nav button .icon { width:24px; height:24px; }
+.bottom-nav button .icon-fill { display:none; }
+.bottom-nav button.active { color:var(--primary); font-weight:700; }
+.bottom-nav button.active::before { background:var(--secondary-container); animation:pill-in .26s var(--ease-spring); }
+.bottom-nav button.active .icon-fill { display:block; }
+.bottom-nav button.active .icon-line { display:none; }
+@keyframes pill-in { 0% { transform:scaleX(.72); opacity:.4; } 100% { transform:scaleX(1); opacity:1; } }
+/* ---- SnackBar（悬浮、r12、inverseSurface） ---- */
+.floating-message { position:fixed; z-index:25; bottom:calc(92px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(calc(100% - 40px),560px); min-height:0; margin:0; padding:0; pointer-events:none; }
+.floating-message:not(:empty) { background:var(--inverse-surface); color:var(--inverse-on-surface); border-radius:var(--r-snackbar); padding:12px 16px; box-shadow:0 4px 14px rgba(0,0,0,.22); animation:toast-in .28s var(--ease-spring); }
+.floating-message.leaving { animation:toast-out .3s ease forwards; }
+@keyframes toast-in { from { opacity:0; transform:translate(-50%,14px); } }
+@keyframes toast-out { to { opacity:0; transform:translate(-50%,10px); } }
+/* ---- 弹窗（居中 dialog r22 surfaceContainerHigh；详情为底部弹层） ---- */
+dialog { width:min(calc(100% - 28px),520px); max-height:86vh; max-height:86dvh; border:0; border-radius:var(--r-dialog); padding:0; background:var(--surface-high); color:var(--on-surface); box-shadow:0 24px 60px rgba(0,0,0,.24); overscroll-behavior:contain; }
+dialog[open] { animation:dialog-in .3s var(--ease-spring); }
+dialog.closing { animation:dialog-out .22s ease-in forwards; }
+@keyframes dialog-in { from { opacity:0; transform:translateY(26px) scale(.95); } }
+@keyframes dialog-out { to { opacity:0; transform:translateY(16px) scale(.96); } }
+dialog::backdrop { background:rgba(0,0,0,.4); }
+dialog[open]::backdrop { animation:backdrop-in .28s ease; }
+dialog.closing::backdrop { animation:backdrop-out .22s ease forwards; }
+@keyframes backdrop-in { from { opacity:0; } }
+@keyframes backdrop-out { to { opacity:0; } }
+.dialog-form { padding:22px 24px; display:grid; gap:14px; overflow:auto; max-height:inherit; }
+.dialog-form a { color:var(--primary); }
+.dialog-heading { justify-content:space-between; gap:8px; }
+.dialog-heading h2 { font-size:1.22rem; font-weight:600; }
+.dialog-heading small { color:var(--on-surface-variant); }
+.dialog-close { display:inline-grid; place-items:center; width:36px; height:36px; border-radius:50%; color:var(--on-surface-variant); background:transparent; transition:background-color .15s ease, transform .12s var(--ease-out); flex:none; }
+.dialog-close:hover { background:var(--hover); }
+.dialog-close:active { transform:scale(.88); }
+.dialog-actions { justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+/* 课程详情：手机上为底部弹层（安卓 CourseDetailSheet） */
+.sheet-handle { display:none; }
+@media (max-width:699px) {
+  dialog.sheet { width:100%; max-width:100%; margin:auto 0 0; border-radius:var(--r-sheet) var(--r-sheet) 0 0; max-height:82vh; max-height:82dvh; background:var(--surface-low); padding-bottom:env(safe-area-inset-bottom); }
+  dialog.sheet[open] { animation:sheet-in .3s var(--ease-out); }
+  dialog.sheet.closing { animation:sheet-out .22s ease-in forwards; }
+  dialog.sheet .sheet-handle { display:block; width:32px; height:4px; border-radius:2px; background:color-mix(in srgb, var(--on-surface-variant) 40%, transparent); margin:0 auto -6px; }
+}
+@keyframes sheet-in { from { transform:translateY(48px); opacity:.5; } }
+@keyframes sheet-out { to { transform:translateY(60px); opacity:0; } }
+/* 课程详情内容（对齐安卓 CourseDetailSheet 结构） */
+.detail-head { display:flex; gap:12px; align-items:center; }
+.detail-icon { display:grid; place-items:center; width:44px; height:44px; border-radius:14px; flex:none; background:var(--course-chip-bg); color:var(--course-base); }
+.detail-head h2 { font-size:1.25rem; font-weight:700; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.detail-head small { color:var(--outline); }
+.detail-divider { height:1px; background:var(--outline-variant); margin:0 -24px; }
+.detail-row { display:flex; gap:9px; align-items:flex-start; padding:4px 0; font-size:.95rem; }
+.detail-row .icon { width:18px; height:18px; color:var(--primary); margin-top:2px; flex:none; }
+.detail-slot { background:var(--surface-c); border-radius:14px; padding:10px 12px; margin-bottom:8px; }
+.schedule-menu-sheet { gap:6px; }
+.schedule-menu-sheet .settings-group { margin:4px 0 0; }
+.slot-heading { display:flex; justify-content:space-between; align-items:center; }
+.course-slot-list { display:grid; gap:10px; }
+.course-slot-editor { display:grid; gap:9px; padding:12px; border:1px solid var(--outline-variant); border-radius:14px; background:var(--surface-c); }
+.course-slot-editor .remove-slot { justify-self:end; color:var(--error); }
+.share-code-display { display:block; text-align:center; font-size:1.9rem; letter-spacing:.18em; font-weight:800; color:var(--on-surface); padding:10px 0 4px; }
+.share-expire { text-align:center; color:var(--on-surface-variant); font-size:.8rem; margin:0 0 6px; }
+.guide ol { display:grid; gap:13px; padding-left:24px; margin:0; }
+.guide li { padding-left:3px; }
+.guide li b,.guide li span { display:block; }
+.guide li span { color:var(--on-surface-variant); font-size:.88rem; margin-top:3px; line-height:1.5; }
+.about-sheet { text-align:center; }
+.about-loading { padding:34px 16px; color:var(--on-surface-variant); }
+.about-content { display:grid; justify-items:center; gap:14px; animation:about-in .3s var(--ease-out); }
+@keyframes about-in { from { opacity:0; transform:translateY(8px); } }
+.about-avatar { width:108px; height:108px; border-radius:50%; object-fit:cover; background:var(--secondary-container); }
+.about-version { margin:2px 0 0; color:var(--on-surface-variant); font-size:.8rem; font-weight:600; }
+.about-content h3 { margin:0; color:var(--primary); font-size:1.35rem; }
+.about-intro { width:100%; margin:0; padding:16px; border-radius:16px; background:var(--surface-c); color:var(--on-surface); line-height:1.7; text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; }
+.about-link { width:100%; display:flex; justify-content:space-between; align-items:center; gap:8px; padding:14px 16px; border-radius:14px; background:var(--surface-c); color:var(--on-surface); font-weight:600; text-decoration:none; }
+.about-link .icon { width:18px; height:18px; color:var(--primary); }
+.about-payment { width:100%; padding-top:8px; border-top:1px solid var(--outline-variant); }
+.about-payment img { display:block; width:min(100%,320px); max-height:360px; margin:10px auto; object-fit:contain; border-radius:14px; }
+.about-payment p { color:var(--on-surface-variant); font-size:.82rem; }
+.notification-consent-sheet p { margin:0; color:var(--on-surface); line-height:1.65; }
+.privacy-link { width:100%; }
+.privacy-sheet { text-align:left; }
+.privacy-sheet h3 { margin:.35rem 0 0; color:var(--primary); font-size:1rem; }
+.privacy-sheet p { margin:0; color:var(--on-surface); line-height:1.65; }
+.privacy-sheet a { color:var(--primary); }
+.visually-hidden { clip:rect(0 0 0 0); clip-path:inset(50%); width:1px; height:1px; overflow:hidden; position:absolute; }
+@media (prefers-reduced-motion:reduce) { .week-slide-next,.week-slide-prev,.week-slide-out-next,.week-slide-out-prev,.week-course,.empty-state,.login-shell,.app-shell,.about-content,.bottom-nav button.active::before { animation:none !important; } *,*::before,*::after { transition-duration:.01ms !important; } }
+@media (min-width:700px) { .app-shell { padding-left:34px; padding-right:34px; } .app-header { margin:0 -34px; padding-left:38px; padding-right:38px; } .schedule-list.week-grid-host { margin:0; } .week-grid { grid-template-columns:64px repeat(7,minmax(0,1fr)); border:1px solid var(--outline-variant); border-radius:18px; overflow:clip; } }
+/* 大屏/平板：课表区放宽（文字页保持窄列易读） */
+@media (min-width:1100px) { .schedule-active .app-shell { width:min(100%,1080px); } }
+@media (max-width:699px) {
+  input,select,textarea { font-size:16px; }
+  .app-shell { padding-left:12px; padding-right:12px; }
+  .app-header { margin:0 -12px; padding-left:16px; padding-right:16px; }
+  .card { padding:16px 14px; }
+  .schedule-list.week-grid-host { margin-left:-12px; margin-right:-12px; }
+}
+@supports (height:100svh) {
+  @media (display-mode:browser) {
+    .schedule-active .app-shell { height:100svh; }
+  }
+}
+/* ---- 每节课时间弹窗 ---- */
+.time-row{display:grid;grid-template-columns:60px minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--outline-variant)}
+.time-row strong{font-weight:600}
+.time-row label{color:var(--on-surface-variant);font-size:.8rem}
+.time-row input{min-width:0;width:100%;box-sizing:border-box;font-size:14px;padding:8px 8px}
+.time-row input::-webkit-calendar-picker-indicator{margin:0;padding:0;width:16px}
+#time-summer,#time-winter{font-size:.85rem;padding:8px 6px;min-height:38px}
+.time-auto-label{display:flex;align-items:center;gap:10px}
+.time-auto-label input{width:auto}
+#time-error{color:var(--error);margin:0;font-size:.85rem}
+#section-time-dialog{max-height:90dvh;overflow:auto}
+/* 原生文件选择控件（保持可直接触摸） */
+.native-file-choice { position:relative; }
+.native-file-choice input[type=file] { position:absolute; inset:0; width:100%; height:100%; margin:0; padding:0; opacity:0; cursor:pointer; }
+.native-file-choice:focus-within { outline:2px solid var(--primary); outline-offset:2px; }
+/* 共同空闲模块壳对话框 */
+#availability-module-dialog { background:var(--surface); color:var(--on-surface); }
+.module-back { display:inline-flex; align-items:center; gap:6px; margin:10px 12px 6px; min-height:40px; padding:8px 14px; border-radius:99px; color:var(--primary); font-weight:600; }
+.module-back:hover { background:color-mix(in srgb, var(--primary) 8%, transparent); }
+.module-back .icon { width:20px; height:20px; }
+/* ---- 日程（AI 日程 2.0）：周视图块 / 日视图卡 / 列表行 ---- */
+.week-event { z-index:2; display:flex; flex-direction:column; gap:2px; min-width:0; min-height:0; margin:2px 1px; padding:3px 4px; overflow:hidden; border:1.2px solid var(--event-border); border-radius:var(--r-course); background:var(--event-bg); color:var(--event-text); text-align:left; transition:transform .12s var(--ease-out); }
+:root[data-theme="dark"] .week-event { background:var(--event-bg-d); color:var(--event-text-d); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .week-event { background:var(--event-bg-d); color:var(--event-text-d); } }
+.week-event:active { transform:scale(.95); }
+.week-event .event-head { display:flex; align-items:flex-start; gap:3px; min-width:0; }
+.week-event .event-head i { display:block; flex:none; opacity:.85; }
+.week-event .event-head .icon { display:block; width:11px; height:11px; margin-top:1px; }
+.week-event strong { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:var(--event-title-lines,3); overflow:hidden; overflow-wrap:break-word; font-size:var(--event-title-size,.6rem); line-height:1.12; font-weight:600; color:inherit; }
+.week-event .event-time { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; margin-top:auto; font-size:.5rem; font-weight:600; opacity:.82; }
+.week-event:focus-visible { outline:2px solid var(--primary); outline-offset:-1px; }
+.event-card .slot-color { background:var(--event-base); }
+.event-chip { display:inline-block; padding:0 6px; border-radius:99px; background:var(--event-chip-bg); color:var(--event-chip-text); font-size:.68rem; font-weight:700; }
+.event-list { display:grid; gap:8px; margin:10px 0 2px; }
+.event-row { display:grid; grid-template-columns:4px minmax(0,1fr) auto; gap:10px; align-items:center; width:100%; padding:10px 12px; border-radius:14px; background:var(--surface-c); text-align:left; color:inherit; transition:background-color .15s ease; }
+.event-row:active { background:var(--surface-high); }
+.event-row .event-bar { width:4px; align-self:stretch; border-radius:2px; background:var(--event-base); }
+.event-row .event-main { display:grid; gap:2px; min-width:0; }
+.event-row .event-main strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.event-row .event-main small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--on-surface-variant); font-size:.78rem; }
+.event-card-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+.ai-schedule-actions { display:flex; gap:10px; align-items:stretch; }
+.ai-schedule-actions .file-choice { flex:0 0 auto; }
+.ai-schedule-actions .btn { flex:1 1 auto; }
+.ai-schedule-status { margin:0; color:var(--primary); font-size:.84rem; font-weight:600; }
+.op-list { display:grid; gap:8px; }
+.op-row { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px 12px; border-radius:14px; background:var(--surface-c); }
+.op-row > b { padding:2px 8px; border-radius:99px; background:var(--secondary-container); color:var(--on-secondary-container); font-size:.72rem; }
+.op-main { display:grid; gap:2px; min-width:0; }
+.op-main small { color:var(--on-surface-variant); font-size:.78rem; }
+.op-hint { color:var(--outline); font-size:.76rem; font-weight:600; }
+.confirm-transcript { margin:0; padding:10px 14px; border-radius:12px; background:var(--surface-c); color:var(--on-surface-variant); font-size:.82rem; line-height:1.5; }
+.event-type-row { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
+.event-type-row button { min-height:40px; border:1px solid var(--outline-variant); border-radius:var(--r-control); color:var(--on-surface); font-size:.86rem; font-weight:600; }
+#event-form [data-event-type].active { background:var(--secondary-container); color:var(--on-secondary-container); font-weight:700; }
+</style>
+    <title>邗上课表网页版</title>
+  </head>
+  <body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="i-add_circle" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></symbol><symbol id="i-f-add_circle" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></symbol><symbol id="i-f-calendar_month" viewBox="0 -960 960 960"><path fill="currentColor" d="M480-400q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-188.5-11.5Q280-423 280-440t11.5-28.5Q303-480 320-480t28.5 11.5Q360-457 360-440t-11.5 28.5Q337-400 320-400t-28.5-11.5ZM640-400q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-188.5-11.5Q280-263 280-280t11.5-28.5Q303-320 320-320t28.5 11.5Q360-297 360-280t-11.5 28.5Q337-240 320-240t-28.5-11.5ZM640-240q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240ZM200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Z"/></symbol><symbol id="i-f-download" viewBox="0 -960 960 960"><path fill="currentColor" d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></symbol><symbol id="i-f-person" viewBox="0 -960 960 960"><path fill="currentColor" d="M367-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z"/></symbol><symbol id="i-add" viewBox="0 -960 960 960"><path fill="currentColor" d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></symbol><symbol id="i-add_photo_alternate" viewBox="0 -960 960 960"><path fill="currentColor" d="M480-480ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h320v80H200v560h560v-320h80v320q0 33-23.5 56.5T760-120H200Zm40-160h480L570-480 450-320l-90-120-120 160Zm440-320v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80Z"/></symbol><symbol id="i-alternate_email" viewBox="0 -960 960 960"><path fill="currentColor" d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480v58q0 59-40.5 100.5T740-280q-35 0-66-15t-52-43q-29 29-65.5 43.5T480-280q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480v58q0 26 17 44t43 18q26 0 43-18t17-44v-58q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93h200v80H480Zm85-315q35-35 35-85t-35-85q-35-35-85-35t-85 35q-35 35-35 85t35 85q35 35 85 35t85-35Z"/></symbol><symbol id="i-arrow_back" viewBox="0 -960 960 960"><path fill="currentColor" d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></symbol><symbol id="i-auto_awesome" viewBox="0 -960 960 960"><path fill="currentColor" d="m760-600-50-110-110-50 110-50 50-110 50 110 110 50-110 50-50 110Zm0 560-50-110-110-50 110-50 50-110 50 110 110 50-110 50-50 110ZM360-160 260-380 40-480l220-100 100-220 100 220 220 100-220 100-100 220Zm0-194 40-86 86-40-86-40-40-86-40 86-86 40 86 40 40 86Zm0-126Z"/></symbol><symbol id="i-brightness_auto" viewBox="0 -960 960 960"><path fill="currentColor" d="M312-320h64l32-92h146l32 92h62L512-680h-64L312-320Zm114-144 52-150h4l52 150H426Zm54 436L346-160H160v-186L28-480l132-134v-186h186l134-132 134 132h186v186l132 134-132 134v186H614L480-28Zm0-112 100-100h140v-140l100-100-100-100v-140H580L480-820 380-720H240v140L140-480l100 100v140h140l100 100Zm0-340Z"/></symbol><symbol id="i-calendar_add_on" viewBox="0 -960 960 960"><path fill="currentColor" d="M680-80v-120H560v-80h120v-120h80v120h120v80H760v120h-80Zm-480-80q-33 0-56.5-23.5T120-240v-480q0-33 23.5-56.5T200-800h40v-80h80v80h240v-80h80v80h40q33 0 56.5 23.5T760-720v244q-20-3-40-3t-40 3v-84H200v320h280q0 20 3 40t11 40H200Zm0-480h480v-80H200v80Zm0 0v-80 80Z"/></symbol><symbol id="i-calendar_month" viewBox="0 -960 960 960"><path fill="currentColor" d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-188.5-11.5Q280-423 280-440t11.5-28.5Q303-480 320-480t28.5 11.5Q360-457 360-440t-11.5 28.5Q337-400 320-400t-28.5-11.5ZM640-400q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-188.5-11.5Q280-263 280-280t11.5-28.5Q303-320 320-320t28.5 11.5Q360-297 360-280t-11.5 28.5Q337-240 320-240t-28.5-11.5ZM640-240q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240Z"/></symbol><symbol id="i-check" viewBox="0 -960 960 960"><path fill="currentColor" d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></symbol><symbol id="i-chevron_left" viewBox="0 -960 960 960"><path fill="currentColor" d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z"/></symbol><symbol id="i-chevron_right" viewBox="0 -960 960 960"><path fill="currentColor" d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z"/></symbol><symbol id="i-close" viewBox="0 -960 960 960"><path fill="currentColor" d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></symbol><symbol id="i-cloud_off" viewBox="0 -960 960 960"><path fill="currentColor" d="M792-56 686-160H260q-92 0-156-64T40-380q0-77 47.5-137T210-594q3-8 6-15.5t6-16.5L56-792l56-56 736 736-56 56ZM260-240h346L284-562q-2 11-3 21t-1 21h-20q-58 0-99 41t-41 99q0 58 41 99t99 41Zm185-161Zm419 191-58-56q17-14 25.5-32.5T840-340q0-42-29-71t-71-29h-60v-80q0-83-58.5-141.5T480-720q-27 0-52 6.5T380-693l-58-58q35-24 74.5-36.5T480-800q117 0 198.5 81.5T760-520q69 8 114.5 59.5T920-340q0 39-15 72.5T864-210ZM593-479Z"/></symbol><symbol id="i-cloud_sync" viewBox="0 -960 960 960"><path fill="currentColor" d="M160-160v-80h109q-51-44-80-106t-29-134q0-112 68-197.5T400-790v84q-70 25-115 86.5T240-480q0 54 21.5 99.5T320-302v-98h80v240H160Zm440 0q-50 0-85-35t-35-85q0-48 33-82.5t81-36.5q17-36 50.5-58.5T720-480q53 0 91.5 34.5T858-360q42 0 72 29t30 70q0 42-29 71.5T860-160H600Zm116-360q-7-41-27-76t-49-62v98h-80v-240h240v80H691q43 38 70.5 89T797-520h-81ZM600-240h260q8 0 14-6t6-14q0-8-6-14t-14-6h-70v-50q0-29-20.5-49.5T720-400q-29 0-49.5 20.5T650-330v10h-50q-17 0-28.5 11.5T560-280q0 17 11.5 28.5T600-240Zm120-80Z"/></symbol><symbol id="i-coffee" viewBox="0 -960 960 960"><path fill="currentColor" d="M440-240q-117 0-198.5-81.5T160-520v-240q0-33 23.5-56.5T240-840h500q58 0 99 41t41 99q0 58-41 99t-99 41h-20v40q0 117-81.5 198.5T440-240ZM240-640h400v-120H240v120Zm200 320q83 0 141.5-58.5T640-520v-40H240v40q0 83 58.5 141.5T440-320Zm280-320h20q25 0 42.5-17.5T800-700q0-25-17.5-42.5T740-760h-20v120ZM160-120v-80h640v80H160Zm280-440Z"/></symbol><symbol id="i-content_copy" viewBox="0 -960 960 960"><path fill="currentColor" d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0 33-23.5 56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"/></symbol><symbol id="i-dark_mode" viewBox="0 -960 960 960"><path fill="currentColor" d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q14 0 27.5 1t26.5 3q-41 29-65.5 75.5T444-660q0 90 63 153t153 63q55 0 101-24.5t75-65.5q2 13 3 26.5t1 27.5q0 150-105 255T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z"/></symbol><symbol id="i-delete" viewBox="0 -960 960 960"><path fill="currentColor" d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></symbol><symbol id="i-delete_sweep" viewBox="0 -960 960 960"><path fill="currentColor" d="M600-240v-80h160v80H600Zm0-320v-80h280v80H600Zm0 160v-80h240v80H600ZM120-640H80v-80h160v-60h160v60h160v80h-40v360q0 33-23.5 56.5T440-200H200q-33 0-56.5-23.5T120-280v-360Zm80 0v360h240v-360H200Zm0 0v360-360Z"/></symbol><symbol id="i-download" viewBox="0 -960 960 960"><path fill="currentColor" d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></symbol><symbol id="i-edit" viewBox="0 -960 960 960"><path fill="currentColor" d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/></symbol><symbol id="i-error" viewBox="0 -960 960 960"><path fill="currentColor" d="M508.5-291.5Q520-303 520-320t-11.5-28.5Q497-360 480-360t-28.5 11.5Q440-337 440-320t11.5 28.5Q463-280 480-280t28.5-11.5ZM440-440h80v-240h-80v240Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></symbol><symbol id="i-event_available" viewBox="0 -960 960 960"><path fill="currentColor" d="M438-226 296-368l58-58 84 84 168-168 58 58-226 226ZM200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Z"/></symbol><symbol id="i-group" viewBox="0 -960 960 960"><path fill="currentColor" d="M40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm720 0v-120q0-44-24.5-84.5T666-434q51 6 96 20.5t84 35.5q36 20 55 44.5t19 53.5v120H760ZM247-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47Zm466 0q-47 47-113 47-11 0-28-2.5t-28-5.5q27-32 41.5-71t14.5-81q0-42-14.5-81T544-792q14-5 28-6.5t28-1.5q66 0 113 47t47 113q0 66-47 113ZM120-240h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q440-607 440-640t-23.5-56.5Q393-720 360-720t-56.5 23.5Q280-673 280-640t23.5 56.5Q327-560 360-560t56.5-23.5ZM360-240Zm0-400Z"/></symbol><symbol id="i-group_add" viewBox="0 -960 960 960"><path fill="currentColor" d="M500-482q29-32 44.5-73t15.5-85q0-44-15.5-85T500-798q60 8 100 53t40 105q0 60-40 105t-100 53Zm220 322v-120q0-36-16-68.5T662-406q51 18 94.5 46.5T800-280v120h-80Zm80-280v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80Zm-593-87q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47ZM0-160v-112q0-34 17.5-62.5T64-378q62-31 126-46.5T320-440q66 0 130 15.5T576-378q29 15 46.5 43.5T640-272v112H0Zm320-400q33 0 56.5-23.5T400-640q0-33-23.5-56.5T320-720q-33 0-56.5 23.5T240-640q0 33 23.5 56.5T320-560ZM80-240h480v-32q0-11-5.5-20T540-306q-54-27-109-40.5T320-360q-56 0-111 13.5T100-306q-9 5-14.5 14T80-272v32Zm240-400Zm0 400Z"/></symbol><symbol id="i-hourglass_top" viewBox="0 -960 960 960"><path fill="currentColor" d="M320-160h320v-120q0-66-47-113t-113-47q-66 0-113 47t-47 113v120ZM160-80v-80h80v-120q0-61 28.5-114.5T348-480q-51-32-79.5-85.5T240-680v-120h-80v-80h640v80h-80v120q0 61-28.5 114.5T612-480q51 32 79.5 85.5T720-280v120h80v80H160Z"/></symbol><symbol id="i-image" viewBox="0 -960 960 960"><path fill="currentColor" d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm40-80h480L570-480 450-320l-90-120-120 160Zm-40 80v-560 560Z"/></symbol><symbol id="i-info" viewBox="0 -960 960 960"><path fill="currentColor" d="M440-280h80v-240h-80v240Zm68.5-331.5Q520-623 520-640t-11.5-28.5Q497-680 480-680t-28.5 11.5Q440-657 440-640t11.5 28.5Q463-600 480-600t28.5-11.5ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></symbol><symbol id="i-key" viewBox="0 -960 960 960"><path fill="currentColor" d="M223.5-423.5Q200-447 200-480t23.5-56.5Q247-560 280-560t56.5 23.5Q360-513 360-480t-23.5 56.5Q313-400 280-400t-56.5-23.5ZM280-240q-100 0-170-70T40-480q0-100 70-170t170-70q67 0 121.5 33t86.5 87h352l120 120-180 180-80-60-80 60-85-60h-47q-32 54-86.5 87T280-240Zm0-80q56 0 98.5-34t56.5-86h125l58 41 82-61 71 55 75-75-40-40H435q-14-52-56.5-86T280-640q-66 0-113 47t-47 113q0 66 47 113t113 47Z"/></symbol><symbol id="i-light_mode" viewBox="0 -960 960 960"><path fill="currentColor" d="M565-395q35-35 35-85t-35-85q-35-35-85-35t-85 35q-35 35-35 85t35 85q35 35 85 35t85-35Zm-226.5 56.5Q280-397 280-480t58.5-141.5Q397-680 480-680t141.5 58.5Q680-563 680-480t-58.5 141.5Q563-280 480-280t-141.5-58.5ZM200-440H40v-80h160v80Zm720 0H760v-80h160v80ZM440-760v-160h80v160h-80Zm0 720v-160h80v160h-80ZM256-650l-101-97 57-59 96 100-52 56Zm492 496-97-101 53-55 101 97-57 59Zm-98-550 97-101 59 57-100 96-56-52ZM154-212l101-97 55 53-97 101-59-57Zm326-268Z"/></symbol><symbol id="i-link" viewBox="0 -960 960 960"><path fill="currentColor" d="M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z"/></symbol><symbol id="i-link_off" viewBox="0 -960 960 960"><path fill="currentColor" d="m770-302-60-62q40-11 65-42.5t25-73.5q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 57-29.5 105T770-302ZM634-440l-80-80h86v80h-6ZM792-56 56-792l56-56 736 736-56 56ZM440-280H280q-83 0-141.5-58.5T80-480q0-69 42-123t108-71l74 74h-24q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h65l79 80H320Z"/></symbol><symbol id="i-lock" viewBox="0 -960 960 960"><path fill="currentColor" d="M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm296.5-143.5Q560-327 560-360t-23.5-56.5Q513-440 480-440t-56.5 23.5Q400-393 400-360t23.5 56.5Q447-280 480-280t56.5-23.5ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z"/></symbol><symbol id="i-logout" viewBox="0 -960 960 960"><path fill="currentColor" d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/></symbol><symbol id="i-mail" viewBox="0 -960 960 960"><path fill="currentColor" d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm320-280L160-640v400h640v-400L480-440Zm0-80 320-200H160l320 200ZM160-640v-80 480-400Z"/></symbol><symbol id="i-mark_email_unread" viewBox="0 -960 960 960"><path fill="currentColor" d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h404q-4 20-4 40t4 40H160l320 200 146-91q14 13 30.5 22.5T691-572L480-440 160-640v400h640v-324q23-5 43-14t37-22v360q0 33-23.5 56.5T800-160H160Zm0-560v480-480Zm515 45q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35Z"/></symbol><symbol id="i-menu_book" viewBox="0 -960 960 960"><path fill="currentColor" d="M560-564v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-600q-38 0-73 9.5T560-564Zm0 220v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-380q-38 0-73 9t-67 27Zm0-110v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-490q-38 0-73 9.5T560-454ZM260-320q47 0 91.5 10.5T440-278v-394q-41-24-87-36t-93-12q-36 0-71.5 7T120-692v396q35-12 69.5-18t70.5-6Zm260 42q44-21 88.5-31.5T700-320q36 0 70.5 6t69.5 18v-396q-33-14-68.5-21t-71.5-7q-47 0-93 12t-87 36v394Zm-40 118q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740q51-30 106.5-45T700-800q52 0 102 12t96 36q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59ZM280-494Z"/></symbol><symbol id="i-more_vert" viewBox="0 -960 960 960"><path fill="currentColor" d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z"/></symbol><symbol id="i-notes" viewBox="0 -960 960 960"><path fill="currentColor" d="M120-240v-80h480v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z"/></symbol><symbol id="i-notifications" viewBox="0 -960 960 960"><path fill="currentColor" d="M160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z"/></symbol><symbol id="i-notifications_active" viewBox="0 -960 960 960"><path fill="currentColor" d="M80-560q0-100 44.5-183.5T244-882l47 64q-60 44-95.5 111T160-560H80Zm720 0q0-80-35.5-147T669-818l47-64q75 55 119.5 138.5T880-560h-80ZM160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z"/></symbol><symbol id="i-notifications_none" viewBox="0 -960 960 960"><path fill="currentColor" d="M160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z"/></symbol><symbol id="i-open_in_new" viewBox="0 -960 960 960"><path fill="currentColor" d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h560v-280h80v280q0 33-23.5 56.5T760-120H200Zm188-212-56-56 372-372H560v-80h280v280h-80v-144L388-332Z"/></symbol><symbol id="i-password" viewBox="0 -960 960 960"><path fill="currentColor" d="M80-200v-80h800v80H80Zm46-242-52-30 34-60H40v-60h68l-34-58 52-30 34 58 34-58 52 30-34 58h68v60h-68l34 60-52 30-34-60-34 60Zm320 0-52-30 34-60h-68v-60h68l-34-58 52-30 34 58 34-58 52 30-34 58h68v60h-68l34 60-52 30-34-60-34 60Zm320 0-52-30 34-60h-68v-60h68l-34-58 52-30 34 58 34-58 52 30-34 58h68v60h-68l34 60-52 30-34-60-34 60Z"/></symbol><symbol id="i-people_alt" viewBox="0 -960 960 960"><path fill="currentColor" d="M40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm720 0v-120q0-44-24.5-84.5T666-434q51 6 96 20.5t84 35.5q36 20 55 44.5t19 53.5v120H760ZM247-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47Zm466 0q-47 47-113 47-11 0-28-2.5t-28-5.5q27-32 41.5-71t14.5-81q0-42-14.5-81T544-792q14-5 28-6.5t28-1.5q66 0 113 47t47 113q0 66-47 113ZM120-240h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q440-607 440-640t-23.5-56.5Q393-720 360-720t-56.5 23.5Q280-673 280-640t23.5 56.5Q327-560 360-560t56.5-23.5ZM360-240Zm0-400Z"/></symbol><symbol id="i-person" viewBox="0 -960 960 960"><path fill="currentColor" d="M367-527q-47-47-47-113t47-113q47-47 113-47t113 47q47 47 47 113t-47 113q-47 47-113 47t-113-47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Zm80-80h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm296.5-343.5Q560-607 560-640t-23.5-56.5Q513-720 480-720t-56.5 23.5Q400-673 400-640t23.5 56.5Q447-560 480-560t56.5-23.5ZM480-640Zm0 400Z"/></symbol><symbol id="i-pin" viewBox="0 -960 960 960"><path fill="currentColor" d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm100-200h46v-240h-36l-70 50 24 36 36-26v180Zm124 0h156v-40h-94l-2-2q21-20 34.5-34t21.5-22q18-18 27-36t9-38q0-29-22-48.5T458-600q-26 0-47 15t-29 39l40 16q5-13 14.5-20.5T458-558q15 0 24.5 8t9.5 20q0 11-4 20.5T470-486l-32 32-54 54v40Zm296 0q36 0 58-20t22-52q0-18-10-32t-28-22v-2q14-8 22-20.5t8-29.5q0-27-21-44.5T678-600q-25 0-46.5 14.5T604-550l40 16q4-12 13-19t21-7q13 0 21.5 7.5T708-534q0 14-10 22t-26 8h-18v40h20q20 0 31 8t11 22q0 13-11 22.5t-25 9.5q-17 0-26-7.5T638-436l-40 16q7 29 28.5 44.5T680-360ZM160-240h640v-480H160v480Zm0 0v-480 480Z"/></symbol><symbol id="i-playlist_add" viewBox="0 -960 960 960"><path fill="currentColor" d="M120-320v-80h280v80H120Zm0-160v-80h440v80H120Zm0-160v-80h440v80H120Zm520 480v-160H480v-80h160v-160h80v160h160v80H720v160h-80Z"/></symbol><symbol id="i-privacy_tip" viewBox="0 -960 960 960"><path fill="currentColor" d="M440-280h80v-240h-80v240Zm68.5-331.5Q520-623 520-640t-11.5-28.5Q497-680 480-680t-28.5 11.5Q440-657 440-640t11.5 28.5Q463-600 480-600t28.5-11.5ZM480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Zm0-84q104-33 172-132t68-220v-189l-240-90-240 90v189q0 121 68 220t172 132Zm0-316Z"/></symbol><symbol id="i-refresh" viewBox="0 -960 960 960"><path fill="currentColor" d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-110h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 139-44t87-116h84q-28 106-114 173t-196 67Z"/></symbol><symbol id="i-schedule" viewBox="0 -960 960 960"><path fill="currentColor" d="m612-292 56-56-148-148v-184h-80v216l172 172ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z"/></symbol><symbol id="i-school" viewBox="0 -960 960 960"><path fill="currentColor" d="M480-120 200-272v-240L40-600l440-240 440 240v320h-80v-276l-80 44v240L480-120Zm0-332 274-148-274-148-274 148 274 148Zm0 241 200-108v-151L480-360 280-470v151l200 108Zm0-241Zm0 90Zm0 0Z"/></symbol><symbol id="i-search" viewBox="0 -960 960 960"><path fill="currentColor" d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></symbol><symbol id="i-send" viewBox="0 -960 960 960"><path fill="currentColor" d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z"/></symbol><symbol id="i-settings" viewBox="0 -960 960 960"><path fill="currentColor" d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></symbol><symbol id="i-share" viewBox="0 -960 960 960"><path fill="currentColor" d="M680-80q-50 0-85-35t-35-85q0-6 3-28L282-392q-16 15-37 23.5t-45 8.5q-50 0-85-35t-35-85q0-50 35-85t85-35q24 0 45 8.5t37 23.5l281-164q-2-7-2.5-13.5T560-760q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35q-24 0-45-8.5T598-672L317-508q2 7 2.5 13.5t.5 14.5q0 8-.5 14.5T317-452l281 164q16-15 37-23.5t45-8.5q50 0 85 35t35 85q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T720-200q0-17-11.5-28.5T680-240q-17 0-28.5 11.5T640-200q0 17 11.5 28.5T680-160ZM200-440q17 0 28.5-11.5T240-480q0-17-11.5-28.5T200-520q-17 0-28.5 11.5T160-480q0 17 11.5 28.5T200-440Zm508.5-291.5Q720-743 720-760t-11.5-28.5Q697-800 680-800t-28.5 11.5Q640-777 640-760t11.5 28.5Q663-720 680-720t28.5-11.5ZM680-200ZM200-480Zm480-280Z"/></symbol><symbol id="i-smartphone" viewBox="0 -960 960 960"><path fill="currentColor" d="M280-40q-33 0-56.5-23.5T200-120v-720q0-33 23.5-56.5T280-920h400q33 0 56.5 23.5T760-840v124q18 7 29 22t11 34v80q0 19-11 34t-29 22v404q0 33-23.5 56.5T680-40H280Zm0-80h400v-720H280v720Zm0 0v-720 720Zm228.5-611.5Q520-743 520-760t-11.5-28.5Q497-800 480-800t-28.5 11.5Q440-777 440-760t11.5 28.5Q463-720 480-720t28.5-11.5Z"/></symbol><symbol id="i-sync" viewBox="0 -960 960 960"><path fill="currentColor" d="M160-160v-80h110l-16-14q-52-46-73-105t-21-119q0-111 66.5-197.5T400-790v84q-72 26-116 88.5T240-478q0 45 17 87.5t53 78.5l10 10v-98h80v240H160Zm400-10v-84q72-26 116-88.5T720-482q0-45-17-87.5T650-648l-10-10v98h-80v-240h240v80H690l16 14q49 49 71.5 106.5T800-482q0 111-66.5 197.5T560-170Z"/></symbol><symbol id="i-table_chart" viewBox="0 -960 960 960"><path fill="currentColor" d="M760-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120ZM200-640h560v-120H200v120Zm100 80H200v360h100v-360Zm360 0v360h100v-360H660Zm-80 0H380v360h200v-360Z"/></symbol><symbol id="i-today" viewBox="0 -960 960 960"><path fill="currentColor" d="M289-329q-29-29-29-71t29-71q29-29 71-29t71 29q29 29 29 71t-29 71q-29 29-71 29t-71-29ZM200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Z"/></symbol><symbol id="i-undo" viewBox="0 -960 960 960"><path fill="currentColor" d="M280-200v-80h284q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l104 104-56 56-200-200 200-200 56 56-104 104h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H280Z"/></symbol><symbol id="i-visibility" viewBox="0 -960 960 960"><path fill="currentColor" d="M607.5-372.5Q660-425 660-500t-52.5-127.5Q555-680 480-680t-127.5 52.5Q300-575 300-500t52.5 127.5Q405-320 480-320t127.5-52.5Zm-204-51Q372-455 372-500t31.5-76.5Q435-608 480-608t76.5 31.5Q588-545 588-500t-31.5 76.5Q525-392 480-392t-76.5-31.5ZM214-281.5Q94-363 40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200q-146 0-266-81.5ZM480-500Zm207.5 160.5Q782-399 832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280q113 0 207.5-59.5Z"/></symbol><symbol id="i-vpn_lock" viewBox="0 -960 960 960"><path fill="currentColor" d="M325-111.5q-73-31.5-127.5-86t-86-127.5Q80-398 80-480.5t31.5-155q31.5-72.5 86-127t127.5-86Q398-880 480-880q32 0 61.5 4.5T600-862v102q0 33-23.5 56.5T520-680h-80v80q0 17-11.5 28.5T400-560h-80v80h240q17 0 28.5 11.5T600-440v120h40q27 0 47.5 16t28.5 40q39-44 61.5-98.5T800-480q0-11-1-20t-3-20h82q2 11 2 20v20q0 82-31.5 155t-86 127.5q-54.5 54.5-127 86T480.5-80Q398-80 325-111.5ZM440-162v-78q-33 0-56.5-23.5T360-320v-40L168-552q-3 18-5.5 36t-2.5 36q0 124 80.5 213.5T440-162Zm280-438q-17 0-28.5-11.5T680-640v-120q0-17 11.5-28.5T720-800v-40q0-33 23.5-56.5T800-920q33 0 56.5 23.5T880-840v40q17 0 28.5 11.5T920-760v120q0 17-11.5 28.5T880-600H720Zm40-200h80v-40q0-17-11.5-28.5T800-880q-17 0-28.5 11.5T760-840v40Z"/></symbol></svg>
+    <main id="boot-view" class="login-shell boot-shell">
+      <div class="boot-card" role="status" aria-live="polite">
+        <div class="boot-spinner" aria-hidden="true"></div>
+        <p>正在恢复登录状态…</p>
+        <button id="boot-retry" class="btn-text hidden" type="button">重试</button>
+      </div>
+    </main>
+    <noscript><style>#boot-view{display:none} #login-view{display:block!important}</style></noscript>
+
+    <main id="login-view" class="login-shell hidden">
+      <header class="welcome">
+        <img class="brand-icon" src="./icon-192.png" alt="邗上课表 App 图标" width="72" height="72" />
+        <p class="eyebrow">邗上课表网页版</p>
+        <h1>你的扬大课表<br />现在也在 iPhone 上</h1>
+        <p class="subtle">添加到主屏幕后，可像 App 一样查看课表、导入、分享并接收上课提醒。</p>
+      </header>
+      <section class="card auth-card">
+        <h2>登录邗上课表</h2>
+        <form id="login-form">
+          <label>用户名或邮箱<span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-person"/></svg><input name="account" autocomplete="username" required /></span></label>
+          <label>账号密码<span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><input name="password" type="password" autocomplete="current-password" required /></span></label>
+          <button type="submit" class="btn">登录</button>
+          <button type="button" id="forgot-link" class="btn-text">忘记密码？</button>
+        </form>
+        <details>
+          <summary>还没有账号？免费注册</summary>
+          <form id="register-form">
+            <label>用户名<span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-person"/></svg><input name="username" minlength="3" maxlength="32" autocomplete="username" required /></span></label>
+            <label>邮箱<span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><input name="email" type="email" autocomplete="email" required /></span></label>
+            <label>设置密码<span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><input name="password" type="password" minlength="8" autocomplete="new-password" required /></span></label>
+            <button type="submit" class="btn">注册并登录</button>
+          </form>
+        </details>
+      </section>
+      <p id="login-message" class="message" role="status"></p>
+      <p class="security-note">密码不会写入网页存储；登录续期由服务器签发的 Secure + HttpOnly Cookie 完成，页面脚本无法读取。</p>
+    </main>
+
+    <main id="app-view" class="app-shell hidden">
+      <header class="app-header">
+        <div><p id="page-eyebrow" class="eyebrow">邗上课表</p><h1 id="page-title">我的课表</h1></div>
+        <span id="sync-hint" class="sync-hint hidden" role="status"></span>
+        <button id="header-action" class="icon-button" type="button" aria-label="课表菜单"><svg class="icon" aria-hidden="true"><use href="#i-more_vert"/></svg></button>
+      </header>
+
+      <section id="schedule-page" class="page active">
+        <div class="schedule-toolbar">
+          <button id="prev-week" class="icon-button small" type="button" aria-label="上一周"><svg class="icon" aria-hidden="true"><use href="#i-chevron_left"/></svg></button>
+          <span class="week-heading"><strong id="week-label">第 1 周</strong><small id="week-range"></small></span>
+          <button id="next-week" class="icon-button small" type="button" aria-label="下一周"><svg class="icon" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+          <div class="segmented" aria-label="课表视图">
+            <button type="button" data-view-mode="week" class="active">周</button>
+            <button type="button" data-view-mode="day">日</button>
+          </div>
+        </div>
+        <div id="day-selector" class="day-selector hidden"></div>
+        <p id="time-transition" class="security-note hidden">本周作息切换：时间栏上行为切换前，下行为切换后</p><div id="schedule-list" class="schedule-list"></div>
+        <div id="schedule-empty" class="empty-state hidden"><span class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-playlist_add"/></svg></span><h2>还没有课程</h2><p>从“添加”页读取教务课表、记一条日程，或点右上角手动添加。</p><button id="empty-add" class="btn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-add"/></svg>手动添加课程</button></div>
+      </section>
+
+      <section id="import-page" class="page">
+<section id="education-preview-card" class="card hidden">
+          <div class="title-row"><svg class="icon" aria-hidden="true"><use href="#i-menu_book"/></svg><div><h2>识别结果预览</h2><span class="badge">保存前请核对</span></div></div>
+          <div id="education-course-list"></div>
+          <form id="education-semester-form">
+            <label>学期名称<input name="semester_name" value="当前学期" maxlength="64" required /></label>
+            <div class="form-row"><label>第一周的周一<input name="semester_start" type="date" required /></label><label>总周数<input name="total_weeks" type="number" value="20" min="1" max="30" required /></label></div>
+            <p class="semester-hint">提示：本学期第一周的周一是 <button id="semester-start-suggest" class="hint-fill" type="button">2026-08-31</button>（点按填入；导入其他学期请手动选择）。</p>
+            <button id="save-education-button" class="btn" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>保存到我的课表</button>
+          </form>
+        </section>
+        <div class="import-choice-heading"><h2>导入课表</h2><p>选择适合你的导入方式。</p></div>
+        <section class="entry-list">
+          <label id="choose-schedule-image" class="entry-card" for="schedule-image-input">
+            <svg class="icon" aria-hidden="true"><use href="#i-image"/></svg>
+            <div><strong>截图导入</strong><small>上传完整课表截图</small></div>
+            <svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg>
+            <input id="schedule-image-input" class="visually-hidden" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" aria-label="选择课表截图" />
+          </label>
+          <div class="entry-row">
+            <label id="choose-schedule-table" class="entry-card" for="schedule-table-input">
+              <svg class="icon" aria-hidden="true"><use href="#i-table_chart"/></svg>
+              <div><strong>表格导入</strong><small>上传表格文件导入课表</small></div>
+              <input id="schedule-table-input" class="visually-hidden" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" aria-label="选择 Excel 表格" />
+            </label>
+            <button id="entry-share-code" class="entry-card" type="button">
+              <svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg>
+              <div><strong>分享口令</strong><small>同学分享的 6 位口令</small></div>
+            </button>
+          </div>
+        </section>
+<section id="file-import-card" class="card hidden">
+          <div class="title-row"><svg class="icon" aria-hidden="true"><use href="#i-auto_awesome"/></svg><div><h2>识别所选文件</h2><span class="badge">AI 识别</span></div></div>
+          
+          <p id="file-selection" class="file-selection" aria-live="polite">尚未选择文件</p>
+          <p id="android-file-hint" class="file-selection hidden">点没有反应？部分安卓「添加到主屏幕」的外壳不支持系统文件选择器，请改用浏览器打开本站后再选文件。</p>
+          <form id="file-import-form" class="file-import-meta">
+            <label class="file-consent"><input name="ai_consent" type="checkbox" required /><span>我已核对文件内容，并同意将该文件用于本次小米 MiMo 智能识别。</span></label>
+            <button id="file-parse-button" class="btn" type="submit" disabled><svg class="icon" aria-hidden="true"><use href="#i-auto_awesome"/></svg>AI 识别并预览</button>
+          </form>
+          <div id="file-import-progress" class="file-import-progress hidden" role="status" aria-live="polite">
+            <div class="ai-motion" aria-hidden="true"><i class="ai-motion-ring"></i><i class="ai-motion-ring second"></i><span class="ai-motion-core"><svg class="icon" aria-hidden="true"><use href="#i-auto_awesome"/></svg></span></div>
+            <strong id="file-progress-title">正在识别课表</strong><span id="file-progress-eta">正在估算剩余时间</span>
+            <div id="file-progress-meter" class="progress-meter" role="progressbar" aria-label="识别进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8"><i id="file-progress-bar"></i></div>
+            <p id="file-progress-stage" class="progress-stage">正在安全上传文件…</p>
+            <button id="file-progress-privacy" class="btn-text btn-sm progress-privacy" type="button"><svg class="icon" aria-hidden="true"><use href="#i-privacy_tip"/></svg>文件仅用于本次识别 · 查看隐私政策</button>
+          </div>
+          <div id="file-import-error" class="file-import-error hidden" role="alert">
+            <h3 id="file-error-title">暂时没有识别成功</h3><p id="file-error-detail"></p>
+            <div class="file-error-actions"><button id="file-import-retry" class="btn-outline btn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>重新识别</button><button id="file-import-reselect" class="btn-text" type="button">选择其他文件</button></div>
+          </div>
+          <p class="file-privacy">文件仅用于本次解析，不保存到服务器。截图会发送给小米 MiMo；Excel/CSV 会先在服务器只读提取并脱敏单元格文本。建议上传前裁掉姓名、学号等无关区域。</p>
+        </section><section id="share-preview-card" class="card hidden"><h2 id="preview-title">课表预览</h2><p id="preview-meta" class="subtle"></p><div id="share-course-list"></div><p id="claim-warning" class="warning hidden"></p><button id="claim-button" class="btn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>导入我的课表</button></section>
+        <dialog id="code-dialog" class="sheet"><div class="dialog-form"><div class="sheet-handle" aria-hidden="true"></div><div class="dialog-heading"><h2>分享口令导入</h2><button type="button" class="dialog-close" data-close="code-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+          <p class="subtle">输入 6 位口令，核对课程后创建一份独立副本。</p>
+          <form id="code-form"><label class="visually-hidden" for="share-code">6 位课表口令</label><span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><input id="share-code" maxlength="6" pattern="[A-Za-z0-9]{6}" placeholder="例如 K7M2QP" autocomplete="one-time-code" required /></span><button type="submit" class="btn btn-tonal"><svg class="icon" aria-hidden="true"><use href="#i-visibility"/></svg>查看课表预览</button></form>
+        </div></dialog>
+        <div class="settings-divider" role="separator"></div>
+        <div class="import-choice-heading with-action"><h2>添加日程</h2><button id="new-event-button" class="btn-text" type="button"><svg class="icon" aria-hidden="true"><use href="#i-add"/></svg>手动添加</button></div>
+        <p class="import-subtitle">已接入 AI 识别：自然语言说安排，怎么说都能理解。</p>
+<section id="ai-schedule-card" class="card">
+          
+                    <form id="ai-schedule-form">
+            <textarea id="ai-schedule-text" class="ai-textarea" maxlength="500" placeholder="例如：明天下午三点，小组讨论。"></textarea>
+            <div class="ai-schedule-actions">
+              <label id="ai-schedule-photo-choice" class="file-choice tonal native-file-choice"><svg class="icon" aria-hidden="true"><use href="#i-add_photo_alternate"/></svg><span>拍照</span><input id="ai-schedule-photo-input" type="file" accept="image/*" capture="environment" aria-label="拍照记录日程" /></label>
+              <label id="ai-schedule-image-choice" class="file-choice tonal native-file-choice"><svg class="icon" aria-hidden="true"><use href="#i-image"/></svg><span>图片</span><input id="ai-schedule-image-input" type="file" accept="image/*" aria-label="选择日程图片" /></label>
+              <button id="ai-schedule-submit" class="btn ai-submit" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-arrow_back"/></svg>识别</button>
+            </div>
+            <p class="ai-hint-line">语音录入请在 Android App 中使用；网页版支持文字与图片识别。</p>
+            <p id="ai-schedule-selection" class="file-selection" aria-live="polite">也可以只发一张日程截图（照片会压缩后上传）。</p>
+            <button id="ai-schedule-clear" class="btn-text btn-sm hidden" type="button">清除已选图片</button>
+            <label class="file-consent"><input name="ai_consent" type="checkbox" /><span>选择图片时请勾选：我已核对内容，并同意将该图片用于本次小米 MiMo 智能识别。</span></label>
+            <p id="ai-schedule-status" class="ai-schedule-status hidden" role="status" aria-live="polite"></p>
+          </form>
+          <p class="file-privacy">文字与图片只用于本次识别，不保存到服务器；请求会附带当天日期、当前学期周次与课程名，帮助模型理解「周三」「下周」。网页版负责录入与同步，日程提醒由 Android App 发送。</p>
+        </section>
+        <div class="import-choice-heading"><h2>即将进行</h2></div>
+<section id="my-events-card" class="card">
+          <div class="my-events-head"><span class="badge" id="my-events-count">暂无</span></div>
+          <div id="my-events-list" class="event-list"></div>
+          <div class="event-card-actions"><button id="all-events-button" class="btn-text" type="button">查看全部日程</button></div>
+        </section>
+      </section>
+
+      <section id="profile-page" class="page">
+        <section class="profile-card">
+          <button id="profile-avatar-button" class="avatar-button" type="button" aria-label="更换头像"><span class="avatar" id="profile-avatar" aria-hidden="true">邗</span><span class="avatar-edit" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></span></button>
+          <div><h2 id="profile-name-row"><span id="profile-name">用户</span><button id="profile-name-edit" class="icon-button small" type="button" aria-label="修改用户名"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg></button></h2><p>邗上课表账号 · 数据与 Android 共享</p></div>
+          <input id="profile-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" />
+        </section>
+        <section class="settings-group">
+          <button id="refresh-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-cloud_sync"/></svg><div><strong>立即同步</strong><small>重新从云端读取最新课表</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+          <div class="theme-row" role="group" aria-label="外观">
+            <div class="theme-seg">
+              <button id="theme-system" type="button"><svg class="icon" aria-hidden="true"><use href="#i-brightness_auto"/></svg>跟随系统</button>
+              <button id="theme-light" type="button"><svg class="icon" aria-hidden="true"><use href="#i-light_mode"/></svg>浅色</button>
+              <button id="theme-dark" type="button"><svg class="icon" aria-hidden="true"><use href="#i-dark_mode"/></svg>深色</button>
+            </div>
+          </div>
+          <button id="card-detail-toggle" class="setting-row" type="button" role="switch" aria-checked="false"><svg class="icon" aria-hidden="true"><use href="#i-person"/></svg><div><strong>卡片显示教师与校区</strong><small>默认收起，点开课程查看完整详情</small></div><span class="toggle-state">已收起</span></button>
+          <button id="shared-availability-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-people_alt"/></svg><div><strong>共同空闲</strong><small>邀请同学或朋友，一起找都有空的节次</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+          <button id="share-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-share"/></svg><div><strong>分享当前课表</strong><small>生成 7 天有效的 6 位口令</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+          <button id="holiday-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-event_available"/></svg><div><strong>调休课表</strong><small>放假与补课安排 · 与 App 同步</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+          <button id="section-time-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-schedule"/></svg><div><strong>每节课时间</strong><small>扬大默认作息 · 自定义上下课时间</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+          <button id="notification-inbox-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><div><strong>账户通知</strong><small id="notification-inbox-summary">查看邀请与系统消息</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+          <button id="notification-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-notifications"/></svg><div><strong>课程通知</strong><small id="notification-status">iPhone 请用 Safari 添加到主屏幕后开启</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+          <button id="guide-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-smartphone"/></svg><div><strong>iPhone 使用指南</strong><small>安装到桌面与开启通知</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+          <button id="about-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><div><strong>关于邗上课表</strong><small id="about-row-summary">开发者介绍与支持信息</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+        </section>
+        <div class="settings-divider" role="separator"></div>
+        <button id="logout-button" class="btn-outline btn" type="button" style="width:100%"><svg class="icon" aria-hidden="true"><use href="#i-logout"/></svg>退出登录</button>
+        <footer class="beian-footer">
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">苏ICP备2026057230号</a>
+          <span aria-hidden="true">|</span>
+          <a href="https://beian.mps.gov.cn/" target="_blank" rel="noopener noreferrer"><img src="./gongan-logo.png" alt="" />苏公网安备32100302011719号</a>
+        </footer>
+      </section>
+
+      <p id="app-message" class="message floating-message" role="status"></p>
+      <nav class="bottom-nav" aria-label="主导航">
+        <button class="active" type="button" data-page="schedule"><svg class="icon icon-line" aria-hidden="true"><use href="#i-calendar_month"/></svg><svg class="icon icon-fill" aria-hidden="true"><use href="#i-f-calendar_month"/></svg><span>课表</span></button>
+        <button type="button" data-page="import"><svg class="icon icon-line" aria-hidden="true"><use href="#i-add_circle"/></svg><svg class="icon icon-fill" aria-hidden="true"><use href="#i-f-add_circle"/></svg><span>添加</span></button>
+        <button type="button" data-page="profile"><svg class="icon icon-line" aria-hidden="true"><use href="#i-person"/></svg><svg class="icon icon-fill" aria-hidden="true"><use href="#i-f-person"/></svg><span>我的</span></button>
+      </nav>
+    </main>
+
+    <dialog id="schedule-menu-dialog"><div class="dialog-form schedule-menu-sheet"><div class="dialog-heading"><h2>课表菜单</h2><button type="button" class="dialog-close" data-close="schedule-menu-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><section class="settings-group"><button id="menu-add-course" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-add"/></svg><div><strong>添加课程</strong><small>手动创建课程与上课时间</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button><button id="menu-add-event" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-event_available"/></svg><div><strong>新建日程</strong><small>考试、待办、每周安排都能记</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button><button id="semester-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><div><strong id="semester-name">尚未设置学期</strong><small id="semester-meta">点此设置</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button><button id="export-calendar" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-calendar_add_on"/></svg><div><strong>导出到日历</strong><small>生成文件一次性添加到系统日历</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button>
+          <button id="today-button" class="setting-row" type="button"><svg class="icon" aria-hidden="true"><use href="#i-today"/></svg><div><strong>回到本周</strong><small>跳回当前日期所在周</small></div><svg class="icon chev" aria-hidden="true"><use href="#i-chevron_right"/></svg></button></section></div></dialog>
+    <dialog id="course-detail-dialog" class="sheet"><div class="dialog-form"><div class="sheet-handle" aria-hidden="true"></div><div class="dialog-heading"><h2 id="course-detail-title">课程详情</h2><button type="button" class="dialog-close" data-close="course-detail-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div id="course-detail-body"></div><div class="dialog-actions"><button id="detail-delete-course" class="btn-text btn-danger" type="button"><svg class="icon" aria-hidden="true"><use href="#i-delete"/></svg>删除</button><button id="detail-edit-course" class="btn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>编辑</button></div></div></dialog><dialog id="holiday-dialog" class="sheet"><div class="dialog-form"><div class="sheet-handle" aria-hidden="true"></div><div class="dialog-heading"><h2>调休课表</h2><button type="button" class="dialog-close" data-close="holiday-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+          <p class="subtle">放假当天不显示课程；补课按所选星期显示课表（如周六补周三的课）。</p>
+          <div id="holiday-list" class="holiday-list"></div>
+          <div class="holiday-ai-actions">
+            <label id="holiday-image-choice" class="file-choice tonal native-file-choice"><svg class="icon" aria-hidden="true"><use href="#i-add_photo_alternate"/></svg><span>上传通知截图</span><input id="holiday-image-input" class="visually-hidden" type="file" accept="image/*" aria-label="上传调休通知截图" /></label>
+            <button id="holiday-text-toggle" class="file-choice tonal" type="button"><svg class="icon" aria-hidden="true"><use href="#i-notes"/></svg><span>粘贴通知文字</span></button>
+          </div>
+          <div id="holiday-text-wrap" class="hidden">
+            <textarea id="holiday-text" class="ai-textarea" maxlength="2000" placeholder="例如：9月25日至10月7日放假，9月20日补周二的课"></textarea>
+            <button id="holiday-text-submit" class="btn btn-tonal" type="button"><svg class="icon" aria-hidden="true"><use href="#i-auto_awesome"/></svg>AI 识别</button>
+          </div>
+          <div id="holiday-ai-status" class="holiday-ai-status hidden" role="status" aria-live="polite"></div>
+          <div id="holiday-ai-result" class="holiday-ai-result hidden"></div>
+          <form id="holiday-form">
+            <div class="form-row"><label>日期<input name="holiday_date" type="date" required /></label><label>类型<select name="holiday_kind"><option value="off">放假</option><option value="makeup">补课</option></select></label></div>
+            <div class="form-row" id="holiday-weekday-row" style="display:none"><label>补哪一天的课<select name="holiday_weekday"><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option></select></label></div>
+            <label>备注（可选）<input name="holiday_note" maxlength="30" placeholder="如：国庆假期" /></label>
+            <button class="btn btn-tonal" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-add"/></svg>添加/覆盖该日期</button>
+          </form>
+        </div></dialog>
+        <dialog id="conflict-detail-dialog" class="sheet"><div class="dialog-form"><div class="sheet-handle" aria-hidden="true"></div><div class="dialog-heading"><h2 id="conflict-detail-title">同一时段的活动</h2><button type="button" class="dialog-close" data-close="conflict-detail-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div id="conflict-detail-body" class="conflict-detail-body"></div></div></dialog>
+    <dialog id="course-dialog"><form id="course-form" class="dialog-form"><div class="dialog-heading"><h2 id="course-dialog-title">添加课程</h2><button type="button" class="dialog-close" data-close="course-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><input name="course_uuid" type="hidden" /><label>课程名称<input name="name" maxlength="128" required /></label><label>教师<input name="teacher" maxlength="128" /></label><div class="slot-heading"><strong>上课时间段</strong><button id="add-slot" class="btn-text" type="button"><svg class="icon" aria-hidden="true"><use href="#i-add"/></svg>加一段</button></div><div id="course-slot-list" class="course-slot-list"></div><label>备注<textarea name="note" maxlength="1000"></textarea></label><div class="dialog-actions"><button id="delete-course" class="btn-text btn-danger hidden" type="button">删除课程</button><button type="submit" class="btn">保存课程</button></div></form></dialog>
+    <dialog id="semester-dialog"><div class="dialog-form"><div class="dialog-heading"><h2>课表管理</h2><button type="button" class="dialog-close" data-close="semester-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><button id="new-semester-button" class="btn-text" type="button"><svg class="icon" aria-hidden="true"><use href="#i-add"/></svg>新建课表</button><div id="semester-list" class="semester-list"></div><form id="semester-form"><div class="dialog-heading"><h3 id="semester-form-title">新建课表</h3></div><label>课表名称<input name="name" maxlength="64" required /></label><label>第一周的周一<input name="start_date" type="date" required /></label><label>总周数<input name="total_weeks" type="number" value="20" min="1" max="30" required /></label><button type="submit" class="btn">保存课表</button><button id="delete-semester-button" class="btn-text btn-danger hidden" type="button">删除此课表</button></form></div></dialog>
+<dialog id="forgot-dialog"><form id="forgot-form" class="dialog-form"><div class="dialog-heading"><h2>找回密码</h2><button type="button" class="dialog-close" data-close="forgot-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><p style="margin:0">用注册邮箱接收 6 位验证码，10 分钟内有效。为保护账号，无论邮箱是否注册过都会提示已发送。</p><label>邮箱<span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg><input name="email" type="email" autocomplete="email" required /></span></label><button type="button" id="send-reset-code" class="btn-outline btn">发送验证码</button><label>6 位验证码<span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required /></span></label><label>新密码<span class="input-wrap"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg><input name="new_password" type="password" minlength="8" autocomplete="new-password" required /></span></label><p id="forgot-message" class="message" role="status"></p><div class="dialog-actions"><button type="button" class="btn-text" data-close="forgot-dialog">取消</button><button type="submit" class="btn">重置密码</button></div></form></dialog>
+    <dialog id="share-dialog"><div class="dialog-form"><div class="dialog-heading"><h2>分享给同学</h2><button type="button" class="dialog-close" data-close="share-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><p style="margin:0">同学登录邗上课表网页版后输入这个口令，即可领取一份可独立编辑的课表。</p><strong id="created-share-code" class="share-code-display">------</strong><p class="share-expire">口令 7 天内有效</p><div class="dialog-actions"><button id="copy-share-code" class="btn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-content_copy"/></svg>复制口令</button></div></div></dialog>
+    <dialog id="first-visit-guide"><div class="dialog-form guide"><div class="dialog-heading"><h2>把邗上课表装进 iPhone</h2><button type="button" class="dialog-close" data-close="first-visit-guide" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><ol><li><b>必须使用 Safari 打开</b><span>需要 iOS/iPadOS 16.4 或更高版本。微信、QQ 等内置浏览器以及普通 Chrome 标签页不能完成本产品的 iPhone 通知设置。</span></li><li><b>添加到主屏幕</b><span>在 Safari 点分享按钮，再选“添加到主屏幕”，名称保留“邗上课表”。</span></li><li><b>必须从桌面图标重新打开</b><span>不要继续停留在 Safari 普通标签页；从主屏幕图标进入后才是可申请通知的网页 App。</span></li><li><b>再开启课程通知</b><span>进入“我的 → 课程通知”点击开启，并在系统弹窗选择“允许”。若曾拒绝，请到“设置 → 通知 → 邗上课表”重新开启。</span></li></ol><p class="security-note">密码不写入网页存储；登录续期使用 Secure + HttpOnly Cookie，页面脚本无法读取。iCloud 钥匙串是否保存密码由你和 iOS 管理。</p><button id="guide-close" class="btn" type="button">我知道了</button></div></dialog>
+    <dialog id="notification-consent-dialog"><div class="dialog-form notification-consent-sheet"><div class="dialog-heading"><h2>及时接收课程与账户通知</h2></div><p>开启后可收到课前提醒和管理员发送给当前账户的重要消息。只有你选择允许后，才会继续申请系统通知权限；拒绝不影响课表基本功能。</p><div class="dialog-actions"><button id="notification-consent-later" class="btn-text" type="button">暂不开启</button><button id="notification-consent-allow" class="btn" type="button">允许通知</button></div></div></dialog>
+    <dialog id="notification-inbox-dialog"><div class="dialog-form notification-inbox-sheet"><div class="dialog-heading"><div><h2>通知中心</h2><small id="notification-unread-label">正在读取…</small></div><button type="button" class="dialog-close" data-close="notification-inbox-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div class="inbox-toolbar"><button id="notification-read-all" class="btn-text btn-sm" type="button">全部已读</button><button id="notification-clear-all" class="icon-button" type="button" aria-label="清空全部通知"><svg class="icon" aria-hidden="true"><use href="#i-delete_sweep"/></svg></button></div><div id="notification-inbox-list" class="notification-list"><p class="subtle">正在读取通知…</p></div><button id="notification-load-more" class="btn-text hidden" type="button">加载更多</button></div></dialog>
+    <dialog id="about-dialog"><div class="dialog-form about-sheet"><div class="dialog-heading"><h2>关于邗上课表</h2><button type="button" class="dialog-close" data-close="about-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div id="about-loading" class="about-loading">正在读取最新介绍…</div><div id="about-content" class="about-content hidden"><img id="about-avatar" class="about-avatar" alt="关于页头像" /><h3 id="about-name">邗上课表</h3><p id="about-version" class="about-version hidden"></p><p id="about-intro" class="about-intro hidden"></p><a id="about-website" class="about-link hidden" target="_blank" rel="noopener noreferrer">访问官方网站 <svg class="icon" aria-hidden="true"><use href="#i-open_in_new"/></svg></a><section id="about-payment" class="about-payment hidden"><h3>支持作者</h3><img id="about-payment-qr" alt="支持作者收款码" /><p>请在确认收款人信息后自愿支持</p></section></div><button id="privacy-button" class="btn-text privacy-link" type="button">查看隐私政策</button><button id="about-retry" class="btn btn-tonal hidden" type="button">重新加载</button></div></dialog>
+    <dialog id="privacy-consent-dialog"><div class="dialog-form"><h2>欢迎使用邗上课表</h2></div><p>使用前请阅读并同意<a href="#" id="privacy-consent-link">《邗上课表隐私政策》</a>。<b>政策已于 2026 年 9 月 22 日 更新至第 7 版，统一 App、网页版与官网的政策文本：补充网页版 AI 日程的文字与图片录入说明，订正共同空闲的用户名搜索描述，合并此前分散的说明。已同意用户无需再次确认。</b>我们仅为提供账号登录、课表导入与同步、课程提醒处理必要信息，不出售个人信息。</p><p class="security-note">首次同意前不会发起业务网络请求，也不会写入登录 Cookie。</p><div class="dialog-actions"><button id="privacy-consent-decline" class="btn-text" type="button">不同意</button><button id="privacy-consent-accept" class="btn" type="button">同意并继续</button></div></div></dialog>
+    <dialog id="privacy-dialog"><div class="dialog-form privacy-sheet"><h2>邗上课表隐私政策</h2><button type="button" class="dialog-close" data-close="privacy-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><p><b>生效日期：2026 年 9 月 22 日（第 7 版）</b></p><h3>我们处理的信息</h3><p>为提供账号登录、课表导入与同步、课程与日程提醒、账户通知、共同空闲和安全保障，我们处理以下必要信息：</p><p>① 账号信息：你主动提供的用户名和邮箱，用于登录、找回密码、用户名邀请和识别通知归属。登录密码只以 bcrypt 不可逆哈希存储，包括管理员在内的任何人都无法取得明文；② 课表数据：你主动创建或导入的学期、课程、周次、地点与时间安排，用于展示、提醒、多设备同步和你主动使用的分享功能；③ 日程数据：你通过文字、图片、语音或手动创建并确认保存的个人日程（标题、时间、地点），用于展示、提醒与多设备同步；在「共同空闲」中日程只以「忙碌/空闲」状态参与计算，配对对象看不到日程内容；④ 共同空闲数据：邀请、连接关系和每节课的忙闲结果；⑤ 账户通知：通知标题、正文、业务类型、发送与读取状态，供 App 和网页版收件箱展示；⑥ 安全与会话信息：登录刷新令牌、受限功能会话凭证以及必要的访问时间、请求大小、耗时和错误码等安全运行日志。</p><h3>教务账号与密码</h3><p>我们不接收、不传输、不存储你的教务系统账号和密码。你在网页或 App 内登录学校系统时，账号密码只经过你的设备与学校系统服务器；我们的服务器没有接收教务密码的接口。</p><h3>截图、表格与页面 AI 导入</h3><p>AI 解析仅在你主动选择文件或主动确认解析后触发，每用户每天限 10 次。</p><p>① 课表截图：截图会经服务器转交第三方大模型小米 MiMo 作一次识别。截图无法在上传前可靠自动遮盖身份信息，请先裁掉姓名、学号等与课表无关的区域；② Excel/CSV 表格：XLSX、XLS、CSV 文件只读解析。服务器只提取有界的单元格文本，并对姓名、学号、手机号等常见身份信息脱敏后，再交给 MiMo；③ 课表页面兜底解析：仅在本地解析失败且你主动确认后使用。设备端先移除常见身份字段和长数字串，服务器收到后再次脱敏，只提取课表结构用于一次解析；④ 不留存原始内容：原始文件、页面原文、提取文本和模型响应不写入数据库或业务日志，处理完成后从内存丢弃；日志只记录文件类型、大小、数量、耗时和错误码等运行元数据。</p><p>不使用相应的 AI 导入功能，就不会上传上述截图、表格或页面内容。</p><h3>AI 日程与文字、图片、语音录入</h3><p>AI 日程仅在你主动输入文字、选择图片（拍照或相册）或按住麦克风说话后触发，每用户每天限 30 次。语音录入目前仅在 Android App 提供，网页版支持文字与图片。</p><p>① 语音即转即删：录音在你松手后上传服务器一次，经小米 MiMo 语音识别转写为文字；音频与转写文本不写入数据库、不写入日志，识别完成即从内存丢弃；② 图片与文字：你选择的图片经压缩后上传服务器一次，与输入的文字一样交由小米 MiMo 识别为结构化日程；图片、文字与识别结果不写入数据库、不写入日志，识别完成即从内存丢弃。选择图片前页面会请你确认已核对内容；③ 文本理解：转写文本、输入文字或图片识别结果，经与本政策第三节相同的身份脱敏规则处理后，交由小米 MiMo 大模型提取时间、地点与事项。为正确理解「周三」「下周」「那节课」，请求会附带当天日期、你当前学期的周次与课程名列表作为上下文，除此之外不包含任何身份信息；④ 确认后才保存：识别结果在预览页展示，由你确认或修改后才保存为日程；⑤ 麦克风权限：仅语音录入需要，拒绝授权不影响文字与图片输入及其他全部功能。</p><h3>共同空闲与用户名搜索</h3><p>共同空闲用于连接同学、朋友或小组成员的课表，查找双方都没有课程的节次。你可以直接输入用户名发送邀请，也可以输入至少 2 个字符进行用户名开头匹配；每次最多返回 5 个结果，结果中只包含用户名，不提供邮箱、用户编号或其他账号资料。搜索和邀请接口均设置频率限制。</p><p>你也可以生成 8 位、15 分钟有效的邀请码。服务器只保存邀请码的不可逆摘要，原码只在生成方当前页面中短暂显示。对方明确接受用户名邀请或主动输入邀请码后才建立连接。</p><p>连接建立后，服务器只向连接双方提供每节课的忙闲结果和用户名，不提供课程名、教师、教室或备注。邀请可撤回或拒绝，连接可由任一方随时解除，解除后立即停止共享。</p><h3>通知、更新提醒与第三方 SDK</h3><p>通知仅在你授权后启用。Android App 使用杭州阿里云智能科技有限公司提供的 EMAS 移动推送 SDK，网页版使用浏览器 Web Push；相关服务可能按其规则处理设备标识、应用信息、网络信息和推送日志。拒绝通知不影响课表基本功能。</p><p>新版本默认通过一条账户通知或系统通知告知，由你主动打开详情并决定是否更新，不因一般功能更新强制遮挡课表界面。账户通知可以在收件箱中标记已读或删除。</p><p>激励视频广告仅在你进入「支持作者」并主动确认后初始化穿山甲广告联盟 SDK；广告由第三方投放，播放过程中 SDK 可能处理设备标识、应用信息和网络信息。不观看广告不影响任何课表功能。</p><h3>设备权限</h3><p>网络权限用于登录、导入和同步；通知、开机恢复提醒、闹钟、唤醒锁、振动和前台服务能力用于你主动开启的提醒与推送。文件通过系统选择器获得单个文件的一次性访问授权，不申请读写全部外部存储，也不索取通讯录、定位、相机或蓝牙权限。麦克风仅在你于 Android App「AI 日程」页按住说话时用于录音，录音实时转写后即删、不保存音频；网页版不申请麦克风权限。选择图片时由系统文件选择器或浏览器相机接管，我们同样只获得你选中的那一张图片。拒绝授权不影响文字输入与其他功能。</p><h3>远程功能与安全</h3><p>服务器签名的功能清单可以启用当前 APK 已允许的原生入口或受限网页模块，但不能下载并执行新的 Dart 或原生代码。原生功能使用账号访问令牌；网页模块使用仅限单个功能、15 分钟有效的会话凭证。</p><p>不同账号的数据按用户标识隔离，服务端对每次读取和写入重新鉴权。共同空闲、通知和课表接口只返回当前账号有权访问的数据。</p><h3>保存、共享与跨设备同步</h3><p>账号、课表与日程数据存储于境内的阿里云服务器，用于多设备同步和你主动使用的分享功能，仅在提供功能及安全审计所需期限内保存。网页版会在本机保存当前账号的课表，供断网时查看，退出登录时清除这份缓存。我们不出售个人信息；除上述云服务基础设施、小米 MiMo、推送和广告服务（处理范围以本政策为限），以及法律法规要求外，不向无关第三方共享。</p><p>账号注销后，除依法需要保留的安全日志外，其余关联数据会删除。</p><h3>你的权利</h3><p>你可以退出登录、关闭通知、删除账户通知、撤销邀请或连接，并通过 hanshangdeveloper@163.com 联系管理员查询、更正或删除账号及云端数据。</p><h3>政策更新</h3><p>政策发生重大变化时，我们会通过 App 内提示、网站公告或推送告知，并在法律要求或处理目的发生重大变化时请求你重新同意。</p><p>本次第 7 版把 App、网页版与官网的政策统一为同一份文本：补充网页版 AI 日程的文字与图片录入说明，订正共同空闲的用户名搜索描述，并合并此前分散的说明。本次不新增处理目的、不新增系统权限，已同意用户无需再次确认。</p></div></dialog>
+    <dialog id="section-time-dialog"><form id="section-time-form" class="dialog-form">
+<div class="dialog-heading"><h2>每节课时间</h2><button type="button" class="dialog-close" data-close="section-time-dialog" aria-label="关闭每节课时间"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+<label class="time-auto-label"><input id="time-auto" type="checkbox" />使用扬大默认作息</label>
+<p style="margin:0">默认按上课日期切换：10 月 1 日起下午首节 14:00，5 月 1 日起 14:30，后续各节相应调整 30 分钟。</p>
+<p class="security-note">自定义时间全年固定，适用于当前浏览器所有课表，独立于 Android 设置。已开启的本设备网页提醒同步调整；手机日历需重新导出并替换旧日历。</p>
+<div class="form-row"><button id="time-summer" type="button" class="btn-outline btn">填入春夏时间</button><button id="time-winter" type="button" class="btn-outline btn">填入秋冬时间</button></div>
+<div id="time-rows"></div><p id="time-error" role="alert"></p><button id="time-save" class="btn" type="submit">保存时间</button></form></dialog>
+
+    <dialog id="event-detail-dialog" class="sheet"><div class="dialog-form"><div class="sheet-handle" aria-hidden="true"></div><div class="dialog-heading"><h2 id="event-detail-title">日程详情</h2><button type="button" class="dialog-close" data-close="event-detail-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div><div id="event-detail-body"></div><div class="dialog-actions"><button id="event-detail-delete" class="btn-text btn-danger" type="button"><svg class="icon" aria-hidden="true"><use href="#i-delete"/></svg>删除</button><button id="event-detail-edit" class="btn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-edit"/></svg>编辑</button></div></div></dialog>
+
+    <dialog id="event-dialog"><form id="event-form" class="dialog-form">
+<div class="dialog-heading"><h2 id="event-dialog-title">新建日程</h2><button type="button" class="dialog-close" data-close="event-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+<label>标题<input name="title" maxlength="128" required placeholder="例如：小组讨论" /></label>
+<div class="event-type-row" role="group" aria-label="日程类型"><button type="button" data-event-type="event">日程</button><button type="button" data-event-type="ddl">待办</button><button type="button" data-event-type="exam">考试</button><button type="button" data-event-type="recurring">每周</button></div>
+<label>日期<input data-field="date" name="date" type="date" /></label>
+<label>每周<select data-field="weekday" name="weekday"><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option></select></label>
+<div class="form-row"><label>开始时间<input name="start_time" type="time" /></label><label>结束时间<input name="end_time" type="time" /></label></div>
+<label>地点<input name="location" maxlength="255" placeholder="例如：文津楼N204" /></label>
+<p class="security-note" style="text-align:left;margin:0">留空时间即全天/待办，不会占用课表格子；日程提醒由 Android App 发送。</p>
+<div class="dialog-actions"><button id="event-form-delete" class="btn-text btn-danger hidden" type="button">删除日程</button><button class="btn" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>保存</button></div>
+</form></dialog>
+
+    <dialog id="event-list-dialog"><div class="dialog-form">
+<div class="dialog-heading"><h2>全部日程</h2><button type="button" class="dialog-close" data-close="event-list-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+<div id="all-events-list" class="event-list"></div>
+<div class="dialog-actions"><button id="event-list-new" class="btn btn-tonal" type="button"><svg class="icon" aria-hidden="true"><use href="#i-add"/></svg>新建日程</button></div>
+</div></dialog>
+
+    <dialog id="ai-ops-dialog"><div class="dialog-form">
+<div class="dialog-heading"><h2>识别到多条安排</h2><button type="button" class="dialog-close" data-close="ai-ops-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+<p id="ai-ops-transcript" class="confirm-transcript hidden"></p>
+<p class="security-note" style="text-align:left;margin:0">网页版目前只支持新增日程；调课、取消请在 Android App 的 AI 日程里完成。</p>
+<div id="ai-ops-list" class="op-list"></div>
+<div class="dialog-actions"><button class="btn-text" type="button" data-close="ai-ops-dialog">关闭</button></div>
+</div></dialog>
+
+    <dialog id="event-confirm-dialog"><form id="event-confirm-form" class="dialog-form">
+<div class="dialog-heading"><h2>确认日程</h2><button type="button" class="dialog-close" data-close="event-confirm-dialog" aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></div>
+<p class="security-note" style="text-align:left;margin:0">请核对识别结果，可直接修改后再保存。类型：<b id="event-confirm-type">日程</b></p>
+<p id="event-confirm-transcript" class="confirm-transcript hidden"></p>
+<label>事项<input name="title" maxlength="128" required placeholder="例如：小组讨论" /></label>
+<label>日期<input name="date" type="date" /></label>
+<div class="form-row"><label>开始时间<input name="start_time" type="time" /></label><label>结束时间<input name="end_time" type="time" /></label></div>
+<label>地点<input name="location" maxlength="255" /></label>
+<div class="dialog-actions"><button id="event-confirm-cancel" class="btn-text" type="button">取消</button><button class="btn" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>确认添加</button></div>
+</form></dialog>
+<script type="module" src="./app.js?v=72"></script>
+<script src="./csp-handlers.js?v=20261002"></script>
+  </body>
+</html>

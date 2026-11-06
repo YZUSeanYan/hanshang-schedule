@@ -1,0 +1,14 @@
+{
+  "modelVersion": "5.0.0",
+  "dependencies": {},
+  "execution": {
+    // "analyze": "normal",              // 开启静态检查
+    // "daemon": true,                   // 开启 daemon 进程
+    // "incremental": true,              // 开启增量构建
+    // "parallel": true,                 // 开启并行任务
+    // "typeCheck": false,               // 关闭类型检查
+  },
+  "logging": {},
+  "debugging": {},
+  "nodeOptions": {}
+}

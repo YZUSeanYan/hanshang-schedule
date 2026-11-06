@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#087b58" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="邗上课表" />
+    <meta name="description" content="邗上课表网页版：在 iPhone 上导入、管理和查看扬大课表。" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png" />
+    <link rel="preconnect" href="https://api.seanyan.store" />
+    <style>
+:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; background: #f4faf6; color: #13271e; --primary:#087b58; --surface:#fff; --muted:#5d7468; --line:#dcebe2; --radius-lg:20px; --radius-md:14px; --shadow-card:0 10px 30px #164a3510; --shadow-dialog:0 30px 80px #10281d45; --ease-spring:cubic-bezier(.2,.9,.25,1.12); --ease-out:cubic-bezier(.22,.8,.3,1); -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+* { box-sizing: border-box; }
+html,body { width:100%; min-height:100%; }
+body { margin: 0; min-height: 100vh; min-height:100dvh; overflow-x:hidden; background: linear-gradient(180deg,#eef9f2 0,#f8fbf9 240px); }
+html.schedule-active,body.schedule-active { height:100%; overflow:hidden; overscroll-behavior:none; }
+button,input,select,textarea { font: inherit; }
+button { cursor: pointer; }
+.hidden { display: none !important; }
+.login-shell,.app-shell { animation:view-in .32s var(--ease-out); }
+@keyframes view-in { from { opacity:0; transform:translateY(10px); } }
+.login-shell { width:min(100% - 32px,520px); margin:auto; padding:48px 0 calc(40px + env(safe-area-inset-bottom)); }
+.boot-shell { display:flex; align-items:center; justify-content:center; width:100%; min-height:100vh; min-height:100dvh; padding:24px; }
+.boot-card { text-align:center; color:var(--muted); }
+.boot-spinner { width:34px; height:34px; margin:0 auto 14px; border:3px solid #cfe3d8; border-top-color:var(--primary); border-radius:50%; animation:boot-spin .9s linear infinite; }
+@keyframes boot-spin { to { transform:rotate(360deg); } }
+.welcome { text-align:center; margin-bottom:24px; }
+.brand-mark,.avatar { display:grid; place-items:center; width:64px; height:64px; margin:0 auto 14px; border-radius:20px; color:white; background:linear-gradient(135deg,#09956a,#075d45); font-size:30px; font-weight:800; box-shadow:0 12px 30px #087b5840; }
+.brand-icon { display:block; width:72px; height:72px; margin:0 auto 14px; border-radius:19px; object-fit:cover; box-shadow:0 12px 30px #087b5840; }
+.eyebrow { margin:0 0 4px; color:var(--primary); font-weight:750; font-size:.88rem; }
+h1 { margin:0; font-size:clamp(1.8rem,7vw,2.7rem); line-height:1.18; }
+h2 { margin:0; font-size:1.2rem; }
+p { line-height:1.55; }
+.subtle,.security-note,.card p,.profile-card p { color:var(--muted); }
+.card,.settings-group,.profile-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); }
+.card { margin:14px 0; padding:20px; }
+.auth-card h2 { margin-bottom:18px; }
+form,label { display:grid; gap:7px; }
+form { gap:14px; }
+label { color:#2b4036; font-size:.9rem; font-weight:650; }
+input,select,textarea { width:100%; min-width:0; border:1px solid #adc9b9; border-radius:12px; background:#fff; padding:12px; color:#13271e; transition:border-color .18s ease; }
+textarea { min-height:76px; resize:vertical; }
+input:focus,select:focus,textarea:focus { outline:3px solid #0b8b6222; border-color:var(--primary); }
+button:not(.icon-button):not(.text-button):not(.bottom-nav button):not(.setting-row):not(.segmented button):not(.dialog-close):not(.week-course):not(.slot-card):not(.day-selector button) { border:0; border-radius:12px; padding:12px 16px; background:var(--primary); color:#fff; font-weight:750; transition:transform .15s var(--ease-out),background-color .18s ease,box-shadow .18s ease; }
+button:not(.icon-button):not(.text-button):not(.bottom-nav button):not(.setting-row):not(.segmented button):not(.dialog-close):not(.week-course):not(.slot-card):not(.day-selector button):hover:not(:disabled) { background:#0a9168; }
+button:not(.icon-button):not(.text-button):not(.bottom-nav button):not(.setting-row):not(.segmented button):not(.dialog-close):not(.week-course):not(.slot-card):not(.day-selector button):active:not(:disabled) { transform:scale(.97); }
+button:disabled { opacity:.55; cursor:not-allowed; }
+details { margin-top:18px; border-top:1px solid var(--line); padding-top:14px; }
+summary { font-weight:700; cursor:pointer; margin-bottom:14px; }
+.message { min-height:22px; color:var(--primary); text-align:center; }
+.message.error,.warning,.danger-text { color:#a62a2a !important; }
+.security-note { font-size:.8rem; line-height:1.55; text-align:center; }
+.import-note { font-size:.8rem; line-height:1.55; color:#8a5a00; background:#fff4d6; border:1px solid #f0d48a; border-radius:10px; padding:10px 12px; margin:10px 0 0; }
+.manual-steps { margin:10px 0 14px; padding-left:20px; color:#2b4036; font-size:.88rem; line-height:1.7; }
+.manual-steps b { color:var(--primary); }
+.vpn-fallback-hint { margin:8px 0 0; color:var(--muted); font-size:.84rem; text-align:center; animation:about-in .3s var(--ease-out); }
+.vpn-fallback-link { padding:0 2px; color:var(--primary); font-weight:750; text-decoration:underline; text-underline-offset:2px; }
+.server-import-details summary { font-weight:700; cursor:pointer; padding:4px 0; color:#2b4036; }
+.semester-list { display:grid; gap:6px; margin:10px 0 14px; }
+.semester-list .setting-row { text-align:left; grid-template-columns:minmax(0,1fr) auto auto; }
+.semester-list .setting-row .text-button { color:var(--primary); font-weight:750; white-space:nowrap; padding:8px 10px; border:1px solid #bfe0d0; border-radius:10px; background:#f2faf5; }
+.semester-current { background:#eef9f2; border-color:#74c9aa !important; }
+#semester-form { border-top:1px solid var(--line); padding-top:14px; margin-top:4px; }
+#delete-semester-button { margin-top:10px; }
+.server-import-details[open] summary { margin-bottom:10px; }
+.app-shell { width:min(100%,760px); min-height:100vh; min-height:100dvh; margin:auto; padding:max(16px,env(safe-area-inset-top)) 16px calc(94px + env(safe-area-inset-bottom)); overflow-x:hidden; }
+.schedule-active .app-shell { height:100dvh; min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr); overflow:hidden; }
+.app-header { display:flex; justify-content:space-between; align-items:center; padding:8px 4px 15px; }
+.schedule-active .app-header { padding:2px 4px 8px; }
+.app-header h1 { font-size:1.65rem; }
+.schedule-active .app-header h1 { font-size:1.42rem; }
+.icon-button { border:0; width:44px; height:44px; border-radius:50%; color:var(--primary); background:#fff; font-size:1.65rem; box-shadow:0 5px 18px #164a3518; transition:transform .15s var(--ease-out),box-shadow .18s ease; }
+.icon-button:active { transform:scale(.9); }
+.icon-button.small { width:34px; height:34px; font-size:1.4rem; box-shadow:none; border:1px solid var(--line); }
+.page { display:none; min-width:0; animation:fade .18s ease; }
+.page.active { display:block; }
+.schedule-active #schedule-page.active { display:flex; flex-direction:column; min-height:0; }
+@keyframes fade { from { opacity:.35; transform:translateY(4px); } }
+.semester-bar,.schedule-toolbar,.title-row,.form-row,.dialog-heading,.dialog-actions,.profile-card { display:flex; align-items:center; gap:12px; }
+.semester-bar { justify-content:space-between; background:#fff; border:1px solid var(--line); border-radius:16px; padding:8px 10px 8px 14px; }
+.text-button { border:0; background:transparent; padding:5px; color:#173329; text-align:left; }
+.text-button span,.text-button small { display:block; }
+.text-button span { font-weight:800; }
+.text-button small { margin-top:2px; color:var(--muted); }
+.chip,.badge { border-radius:99px !important; padding:6px 10px !important; background:#e6f5ed !important; color:#087052 !important; font-size:.78rem; }
+.schedule-toolbar { flex:0 0 auto; margin:5px 0 7px; justify-content:center; }
+.week-heading { min-width:82px; display:grid; justify-items:center; line-height:1.15; }
+#week-label { text-align:center; }
+.week-range { margin-top:2px; color:var(--muted); font-size:.65rem; font-weight:650; }
+.segmented { display:flex; margin-left:auto; padding:3px; border-radius:10px; background:#e7f1eb; }
+.segmented button { border:0; min-width:38px; padding:6px; border-radius:8px; background:transparent; color:var(--muted); transition:background-color .18s ease,color .18s ease,box-shadow .18s ease; }
+.segmented button.active { background:#fff; color:var(--primary); font-weight:800; box-shadow:0 2px 8px #17332918; }
+.day-selector { display:flex; gap:6px; padding:0 1px 11px; }
+.day-selector button { flex:1 1 0; min-width:0; border:1px solid var(--line); border-radius:12px; padding:8px 4px; background:#fff; color:var(--muted); transition:background-color .18s ease,color .18s ease,border-color .18s ease,transform .12s var(--ease-out); }
+.day-selector button:active { transform:scale(.94); }
+.day-selector button.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+.schedule-list { display:grid; gap:11px; min-height:0; overflow-y:auto; }
+.schedule-list.week-grid-host { display:block; flex:1 1 auto; min-height:0; margin:0 -16px; overflow:hidden; touch-action:pan-y; }
+.week-grid { position:relative; display:grid; width:100%; height:100%; grid-template-columns:58px repeat(7,minmax(0,1fr)); grid-template-rows:46px repeat(var(--section-count),minmax(28px,1fr)); background:#fbfdfb; border-block:1px solid #cbdcd2; isolation:isolate; }
+.week-grid-corner,.week-grid-day,.week-grid-section,.week-grid-cell { min-width:0; border-right:1px solid #dbe7df; border-bottom:1px solid #d3e1d8; }
+.week-grid-corner { display:grid; place-items:center; color:#62776c; background:#f2f8f4; font-size:.68rem; font-weight:750; }
+.week-grid-day { display:grid; place-items:center; align-content:center; gap:2px; color:#33483d; background:#f5faf7; }
+.week-grid-day b { font-size:.78rem; }
+.week-grid-day span { font-size:1rem; font-weight:850; color:#172b21; }
+.week-grid-day.today { background:#dff4e9; color:#086c4e; }
+.week-grid-day.today span { color:#075f45; }
+.week-grid-section { display:grid; place-items:center; align-content:center; gap:2px; color:#5b7065; background:#f7fbf8; }
+.week-grid-section b { color:#15281f; font-size:1rem; }
+.week-grid-section span { font-size:.52rem; white-space:nowrap; letter-spacing:-.01em; }
+.week-grid-cell { background:#fff; }
+.week-course { z-index:2; display:flex; min-width:0; min-height:0; flex-direction:column; justify-content:space-between; margin:3px 1px; padding:4px 3px; overflow:hidden; border:1px solid var(--course-border); border-left-width:3px; border-radius:8px; background:var(--course-bg); color:var(--course-text); text-align:left; box-shadow:0 2px 8px #17332912; animation:course-pop .26s var(--ease-out); transition:transform .12s var(--ease-out),box-shadow .18s ease; }
+@keyframes course-pop { from { opacity:0; transform:scale(.92); } }
+.week-course:active { transform:scale(.95); }
+.week-course strong,.week-course span { display:-webkit-box; overflow:hidden; overflow-wrap:break-word; word-break:normal; line-break:strict; -webkit-box-orient:vertical; }
+.week-course strong { flex:0 1 auto; white-space:pre-line; -webkit-line-clamp:var(--course-title-lines,3); color:var(--course-text); font-size:var(--course-title-size,.62rem); line-height:1.08; font-weight:850; }
+.week-course span { flex:0 1 auto; margin-top:3px; -webkit-line-clamp:2; color:var(--course-secondary); font-size:clamp(.5rem,2vw,.66rem); line-height:1.14; font-weight:700; }
+/* 单节课程卡也显示教师/地点（小字号单行），不再整行隐藏 */
+.week-course.single-section span { -webkit-line-clamp:1; font-size:.5rem; margin-top:2px; }
+.week-course:focus-visible { outline:3px solid #087b5855; outline-offset:-2px; }
+.week-slide-next { animation:week-slide-next .2s ease-out; }
+.week-slide-prev { animation:week-slide-prev .2s ease-out; }
+.week-slide-out-next { animation:week-slide-out-next .14s ease-in forwards; }
+.week-slide-out-prev { animation:week-slide-out-prev .14s ease-in forwards; }
+@keyframes week-slide-next { from { opacity:.25; transform:translateX(22px); } }
+@keyframes week-slide-prev { from { opacity:.25; transform:translateX(-22px); } }
+@keyframes week-slide-out-next { to { opacity:0; transform:translateX(-26px); } }
+@keyframes week-slide-out-prev { to { opacity:0; transform:translateX(26px); } }
+.day-group { background:#fff; border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+.schedule-list:not(.week-grid-host) .day-group { animation:day-in .3s var(--ease-out) backwards; }
+.schedule-list:not(.week-grid-host) .day-group:nth-child(2) { animation-delay:.05s; }
+.schedule-list:not(.week-grid-host) .day-group:nth-child(3) { animation-delay:.1s; }
+.schedule-list:not(.week-grid-host) .day-group:nth-child(4) { animation-delay:.15s; }
+.schedule-list:not(.week-grid-host) .day-group:nth-child(5) { animation-delay:.2s; }
+.schedule-list:not(.week-grid-host) .day-group:nth-child(6) { animation-delay:.25s; }
+.schedule-list:not(.week-grid-host) .day-group:nth-child(7) { animation-delay:.3s; }
+@keyframes day-in { from { opacity:0; transform:translateY(12px); } }
+.day-group h3 { margin:0; padding:10px 14px; color:#087052; background:#eef8f2; font-size:.95rem; }
+.slot-card { display:grid; grid-template-columns:6px minmax(0,1fr) auto; gap:9px; max-width:100%; padding:12px 14px; overflow:hidden; border-top:1px solid #e8f1ec; background:#fff; text-align:left; width:100%; color:inherit; }
+.slot-color { border-radius:9px; background:var(--primary); }
+.slot-main,.slot-main span { display:grid; min-width:0; gap:3px; }
+.slot-main strong,.slot-main span { min-width:0; overflow-wrap:anywhere; word-break:break-word; }
+.slot-main strong { color:#13271e; }
+.slot-main span { color:#294c3d; font-size:.82rem; font-weight:650; }
+.slot-time { align-self:start; color:#35584a; font-size:.76rem; font-weight:650; text-align:right; white-space:nowrap; }
+@media (max-width:420px) {
+  .slot-card { grid-template-columns:5px minmax(0,1fr); }
+  .slot-time { grid-column:2; justify-self:start; text-align:left; }
+}
+.empty-day { padding:12px 14px; color:#82978c; font-size:.85rem; }
+.empty-state { text-align:center; padding:58px 22px; color:var(--muted); }
+.empty-state span { font-size:48px; display:inline-block; animation:empty-float 3.2s ease-in-out infinite; }
+@keyframes empty-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-7px); } }
+.empty-state h2 { color:#243a30; margin-top:12px; }
+.title-row { align-items:flex-start; }
+.title-row div { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.card-icon { display:grid; place-items:center; width:42px; height:42px; border-radius:13px; background:#eaf7f0; font-size:20px; }
+.badge { font-weight:800; }
+.badge.neutral { background:#edf0f4 !important; color:#52606b !important; }
+.form-row { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr); }
+.form-row > * { min-width:0; }
+#share-code { text-align:center; font-size:1.45rem; font-weight:850; letter-spacing:.2em; text-transform:uppercase; }
+.course { display:grid; gap:4px; padding:12px 0; border-top:1px solid var(--line); }
+.course span { color:var(--muted); font-size:.88rem; }
+.profile-card { padding:20px; margin-bottom:14px; }
+.profile-card .avatar { width:54px; height:54px; margin:0; border-radius:17px; font-size:24px; }
+.profile-app-icon { width:58px; height:58px; flex:0 0 58px; border-radius:17px; object-fit:cover; box-shadow:0 7px 18px #164a3526; }
+.profile-card p { margin:5px 0 0; font-size:.86rem; }
+.settings-group { margin:14px 0; overflow:hidden; }
+.setting-row { width:100%; display:grid; grid-template-columns:34px 1fr auto; align-items:center; gap:10px; padding:14px 16px; border:0; border-top:1px solid var(--line); background:#fff; color:#21362c; text-align:left; transition:background-color .15s ease; }
+.setting-row:active { background:#eef7f1; }
+.setting-row:first-child { border-top:0; }
+.setting-row > span { display:grid; place-items:center; width:34px; height:34px; border-radius:10px; background:#eef7f2; font-size:1.05rem; }
+.setting-row div { display:grid; gap:3px; }
+.setting-row small { color:var(--muted); }
+.setting-row b:last-child { color:#8aa096; font-size:1.3rem; }
+.bottom-nav { position:fixed; z-index:20; bottom:0; left:50%; transform:translateX(-50%); width:min(100%,760px); display:grid; grid-template-columns:repeat(3,1fr); padding:8px 10px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); background:#fffffff2; -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); }
+.bottom-nav button { border:0; background:transparent; color:#71877c; display:grid; justify-items:center; gap:2px; font-size:.75rem; transition:color .18s ease; }
+.bottom-nav button span { font-size:1.35rem; display:inline-block; }
+.bottom-nav button.active { color:var(--primary); font-weight:800; }
+.bottom-nav button.active span { animation:nav-pop .3s var(--ease-spring); }
+@keyframes nav-pop { 0% { transform:scale(.7); } 60% { transform:scale(1.15); } 100% { transform:scale(1); } }
+.floating-message { position:fixed; z-index:25; bottom:calc(78px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(calc(100% - 40px),560px); min-height:0; margin:0; padding:0; pointer-events:none; }
+.floating-message:not(:empty) { background:#163b2fef; color:white; border-radius:12px; padding:10px 14px; box-shadow:0 8px 25px #0002; animation:toast-in .28s var(--ease-spring); }
+.floating-message.leaving { animation:toast-out .3s ease forwards; }
+@keyframes toast-in { from { opacity:0; transform:translate(-50%,14px); } }
+@keyframes toast-out { to { opacity:0; transform:translate(-50%,10px); } }
+dialog { width:min(calc(100% - 28px),520px); max-height:86vh; border:0; border-radius:22px; padding:0; box-shadow:var(--shadow-dialog); }
+dialog[open] { animation:dialog-in .34s var(--ease-spring); }
+dialog.closing { animation:dialog-out .22s ease-in forwards; }
+@keyframes dialog-in { from { opacity:0; transform:translateY(26px) scale(.93); } }
+@keyframes dialog-out { to { opacity:0; transform:translateY(16px) scale(.95); } }
+dialog::backdrop { background:#10281d66; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); }
+dialog[open]::backdrop { animation:backdrop-in .28s ease; }
+dialog.closing::backdrop { animation:backdrop-out .22s ease forwards; }
+@keyframes backdrop-in { from { opacity:0; } }
+@keyframes backdrop-out { to { opacity:0; } }
+.dialog-form { padding:22px; display:grid; gap:14px; overflow:auto; }
+.dialog-heading { justify-content:space-between; }
+.dialog-close { border:0; background:#edf4f0; width:34px; height:34px; border-radius:50%; font-size:1.25rem; color:#456154; transition:background-color .15s ease,transform .12s var(--ease-out); }
+.dialog-close:hover { background:#dfece5; }
+.dialog-close:active { transform:scale(.88); }
+.dialog-actions { justify-content:flex-end; }
+.schedule-menu-sheet { gap:6px; }
+.schedule-menu-sheet .settings-group { margin:8px 0 0; }
+.slot-heading { display:flex; justify-content:space-between; align-items:center; }
+.course-slot-list { display:grid; gap:10px; }
+.course-slot-editor { display:grid; gap:9px; padding:12px; border:1px solid var(--line); border-radius:14px; background:#f8fbf9; }
+.course-slot-editor .remove-slot { justify-self:end; color:#a62a2a; }
+.dialog-actions .danger-button { margin-right:auto; background:#fff0f0 !important; color:#a62a2a !important; }
+.share-code-display { text-align:center; font-size:2.3rem; letter-spacing:.18em; color:var(--primary); padding:15px; background:#eef8f2; border-radius:14px; }
+.guide ol { display:grid; gap:13px; padding-left:24px; }
+.guide li { padding-left:3px; }
+.guide li b,.guide li span { display:block; }
+.guide li span { color:var(--muted); font-size:.88rem; margin-top:3px; line-height:1.5; }
+.about-sheet { text-align:center; }
+.about-loading { padding:34px 16px; color:var(--muted); }
+.about-content { display:grid; justify-items:center; gap:14px; animation:about-in .3s var(--ease-out); }
+@keyframes about-in { from { opacity:0; transform:translateY(8px); } }
+.about-avatar { width:108px; height:108px; border-radius:50%; object-fit:cover; background:#e6f5ed; border:3px solid #dff5eb; box-shadow:0 10px 28px #164a3524; }
+.about-version { margin:2px 0 0; color:var(--muted); font-size:.8rem; font-weight:650; }
+.about-content h3 { margin:0; color:var(--primary); font-size:1.35rem; }
+.about-intro { width:100%; margin:0; padding:16px; border-radius:16px; background:#f5faf7; color:#294c3d; line-height:1.7; text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; }
+.about-link { width:100%; display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-radius:14px; background:#f5faf7; color:#173329; font-weight:750; text-decoration:none; }
+.about-payment { width:100%; padding-top:8px; border-top:1px solid var(--line); }
+.about-payment img { display:block; width:min(100%,320px); max-height:360px; margin:10px auto; object-fit:contain; border-radius:14px; }
+.about-payment p { color:var(--muted); font-size:.82rem; }
+.notification-consent-sheet p {
+  margin:0;
+  color:#294c3d;
+  line-height:1.65;
+}
+.privacy-link { width:100%; }
+.privacy-sheet { text-align:left; }
+.privacy-sheet h3 {
+  margin:.35rem 0 0;
+  color:var(--primary);
+  font-size:1rem;
+}
+.privacy-sheet p {
+  margin:0;
+  color:#294c3d;
+  line-height:1.65;
+}
+.privacy-sheet a { color:var(--primary); }
+.visually-hidden { clip:rect(0 0 0 0); clip-path:inset(50%); width:1px; height:1px; overflow:hidden; position:absolute; }
+@media (prefers-reduced-motion:reduce) { .week-slide-next,.week-slide-prev,.week-slide-out-next,.week-slide-out-prev,.week-course,.day-group,.empty-state span,.login-shell,.app-shell,.about-content,.bottom-nav button.active span { animation:none !important; } *,*::before,*::after { transition-duration:.01ms !important; } }
+@media (min-width:700px) { .app-shell { padding-left:34px; padding-right:34px; } .schedule-list.week-grid-host { margin:0; } .week-grid { grid-template-columns:64px repeat(7,minmax(0,1fr)); border:1px solid #cbdcd2; border-radius:18px; overflow:hidden; } }
+@media (max-width:699px) {
+  input,select,textarea { font-size:16px; }
+  .app-shell { padding-left:12px; padding-right:12px; }
+  .card { padding:18px 16px; }
+  .schedule-list.week-grid-host { margin-left:-12px; margin-right:-12px; }
+  .bottom-nav button { min-height:48px; }
+}
+@supports (height:100svh) {
+  @media (display-mode:browser) {
+    .schedule-active .app-shell { height:100svh; }
+  }
+}
+    </style>
+    <title>邗上课表网页版</title>
+  </head>
+  <body>
+    <main id="boot-view" class="login-shell boot-shell">
+      <div class="boot-card" role="status" aria-live="polite">
+        <div class="boot-spinner" aria-hidden="true"></div>
+        <p>正在恢复登录状态…</p>
+        <button id="boot-retry" class="text-button hidden" type="button">重试</button>
+      </div>
+    </main>
+    <noscript><style>#boot-view{display:none} #login-view{display:block!important}</style></noscript>
+
+    <main id="login-view" class="login-shell hidden">
+      <header class="welcome">
+        <img class="brand-icon" src="./icon-192.png" alt="邗上课表 App 图标" width="72" height="72" />
+        <p class="eyebrow">邗上课表网页版</p>
+        <h1>你的扬大课表<br />现在也在 iPhone 上</h1>
+        <p class="subtle">添加到主屏幕后，可像 App 一样查看课表、导入、分享并接收上课提醒。</p>
+      </header>
+      <section class="card auth-card">
+        <h2>登录邗上课表</h2>
+        <form id="login-form">
+          <label>用户名或邮箱<input name="account" autocomplete="username" required /></label>
+          <label>账号密码<input name="password" type="password" autocomplete="current-password" required /></label>
+          <button type="submit">登录</button>
+        </form>
+        <details>
+          <summary>还没有账号？免费注册</summary>
+          <form id="register-form">
+            <label>用户名<input name="username" minlength="3" maxlength="32" autocomplete="username" required /></label>
+            <label>邮箱<input name="email" type="email" autocomplete="email" required /></label>
+            <label>设置密码<input name="password" type="password" minlength="8" autocomplete="new-password" required /></label>
+            <button type="submit">注册并登录</button>
+          </form>
+        </details>
+      </section>
+      <p id="login-message" class="message" role="status"></p>
+      <p class="security-note">密码不会写入网页存储；登录续期由服务器签发的 Secure + HttpOnly Cookie 完成，页面脚本无法读取。</p>
+    </main>
+
+    <main id="app-view" class="app-shell hidden">
+      <header class="app-header">
+        <div><p id="page-eyebrow" class="eyebrow">邗上课表</p><h1 id="page-title">我的课表</h1></div>
+        <button id="header-action" class="icon-button" type="button" aria-label="课表菜单">⋮</button>
+      </header>
+
+      <section id="schedule-page" class="page active">
+        <div class="schedule-toolbar">
+          <button id="prev-week" class="icon-button small" type="button" aria-label="上一周">‹</button>
+          <span class="week-heading"><strong id="week-label">第 1 周</strong><small id="week-range"></small></span>
+          <button id="next-week" class="icon-button small" type="button" aria-label="下一周">›</button>
+          <div class="segmented" aria-label="课表视图">
+            <button type="button" data-view-mode="week" class="active">周</button>
+            <button type="button" data-view-mode="day">日</button>
+          </div>
+        </div>
+        <div id="day-selector" class="day-selector hidden"></div>
+        <div id="schedule-list" class="schedule-list"></div>
+        <div id="schedule-empty" class="empty-state hidden"><span>📅</span><h2>还没有课程</h2><p>从“导入”页读取教务课表，或点右上角手动添加。</p><button id="empty-add" type="button">手动添加课程</button></div>
+      </section>
+
+      <section id="import-page" class="page">
+        <section id="education-preview-card" class="card hidden">
+          <h2>教务课表预览</h2><div id="education-course-list"></div>
+          <button id="save-education-button" type="button">保存到我的课表</button>
+        </section>
+        <section class="card">
+          <div class="title-row"><span class="card-icon">🌐</span><div><h2>iPhone 手动导入</h2><span class="badge neutral">VPN 直连</span></div></div>
+          <p>用 Safari 亲自登录 VPN 后，把课表复制回来。分三步：</p>
+          <ol class="manual-steps">
+            <li>点下方按钮，在新标签页打开 VPN 并登录（学号/统一认证账号）</li>
+            <li>在 VPN 页面找到<b>校内资源</b>，选择<b>教务系统学生端</b>；进入后点击<b>“我的”</b>，再点击<b>“本学期课表”</b>，进入显示全部课程清单的页面后，长按选择<b>全选 → 拷贝</b></li>
+            <li>回到本页，把内容粘贴到下方并点「解析课表」</li>
+          </ol>
+          <button id="open-vpn-button" type="button">打开 VPN 登录页</button>
+          <p id="vpn-fallback-hint" class="vpn-fallback-hint hidden">没有跳转？链接已复制，粘贴到浏览器地址栏打开即可；<button id="copy-vpn-link" type="button" class="text-button vpn-fallback-link">点此重新复制</button></p>
+          <form id="manual-import-form">
+            <label>粘贴的课表内容<textarea name="manual_text" rows="8" placeholder="在课表页全选拷贝后粘贴到这里…" required></textarea></label>
+            <label>学期名称<input name="semester_name" value="当前学期" maxlength="64" required /></label>
+            <div class="form-row"><label>第一周的周一<input name="semester_start" type="date" required /></label><label>总周数<input name="total_weeks" type="number" value="20" min="1" max="30" required /></label></div>
+            <button type="submit">解析课表</button>
+          </form>
+        </section>
+        <section class="card">
+          <div class="title-row"><span class="card-icon">🔑</span><div><h2>口令导入</h2><span class="badge neutral">同学分享</span></div></div>
+          <p>输入 6 位口令，核对课程后创建一份独立副本。</p>
+          <form id="code-form"><label class="visually-hidden" for="share-code">6 位课表口令</label><input id="share-code" maxlength="6" pattern="[A-Za-z0-9]{6}" placeholder="例如 K7M2QP" autocomplete="one-time-code" required /><button type="submit">查看课表预览</button></form>
+        </section>
+        <section id="share-preview-card" class="card hidden"><h2 id="preview-title">课表预览</h2><p id="preview-meta" class="subtle"></p><div id="share-course-list"></div><p id="claim-warning" class="warning hidden"></p><button id="claim-button" type="button">导入我的课表</button></section>
+      </section>
+
+      <section id="profile-page" class="page">
+        <section class="profile-card"><img class="profile-app-icon" src="./icon-192.png" alt="邗上课表 App 图标" /><div><h2 id="profile-name">用户</h2><p>邗上课表账号 · 数据与 Android 共享</p></div></section>
+        <section class="settings-group">
+          <button id="refresh-button" class="setting-row" type="button"><span>☁️</span><div><strong>立即同步</strong><small>重新从云端读取最新课表</small></div><b>›</b></button>
+          <button id="share-button" class="setting-row" type="button"><span>🔗</span><div><strong>分享当前课表</strong><small>生成 7 天有效的 6 位口令</small></div><b>›</b></button>
+          <button id="pair-button" class="setting-row" type="button"><span>⌚</span><div><strong>手表配对</strong><small>给 Vela 手表生成 6 位登录配对码</small></div><b>›</b></button>
+          <button id="notification-button" class="setting-row" type="button"><span>🔔</span><div><strong>课程通知</strong><small id="notification-status">iPhone 请用 Safari 添加到主屏幕后开启</small></div><b>›</b></button>
+          <button id="guide-button" class="setting-row" type="button"><span>📱</span><div><strong>iPhone 使用指南</strong><small>安装到桌面与开启通知</small></div><b>›</b></button>
+          <button id="about-button" class="setting-row" type="button"><span>ⓘ</span><div><strong>关于邗上课表</strong><small id="about-row-summary">开发者介绍与支持信息</small></div><b>›</b></button>
+        </section>
+        <section class="settings-group"><button id="logout-button" class="setting-row danger-text" type="button"><span>↪</span><div><strong>退出登录</strong><small>撤销当前网页会话并清除安全 Cookie</small></div><b>›</b></button></section>
+        <p class="security-note">只通过 HTTPS 同源代理连接生产 API；密码和教务凭据不落地，长期刷新令牌仅存于脚本无法读取的 HttpOnly Cookie，Service Worker 不缓存 API。</p>
+      </section>
+
+      <p id="app-message" class="message floating-message" role="status"></p>
+      <nav class="bottom-nav" aria-label="主导航">
+        <button class="active" type="button" data-page="schedule"><span>▦</span>课表</button>
+        <button type="button" data-page="import"><span>⇩</span>导入</button>
+        <button type="button" data-page="profile"><span>●</span>我的</button>
+      </nav>
+    </main>
+
+    <dialog id="schedule-menu-dialog"><div class="dialog-form schedule-menu-sheet"><div class="dialog-heading"><h2>课表菜单 <small style="font-size:10px;opacity:0.5">v25</small></h2><button type="button" class="dialog-close" data-close="schedule-menu-dialog">×</button></div><section class="settings-group"><button id="menu-add-course" class="setting-row" type="button"><span>＋</span><div><strong>添加课程</strong><small>手动创建课程与上课时间</small></div><b>›</b></button><button id="semester-button" class="setting-row" type="button"><span>⚙</span><div><strong id="semester-name">尚未设置学期</strong><small id="semester-meta">点此设置</small></div><b>›</b></button><button id="export-calendar" class="setting-row" type="button" onclick="if(typeof window.exportToCalendar==='function')window.exportToCalendar();else alert('导出模块未加载成功，请强制刷新页面');"><span>📅</span><div><strong>导出到日历</strong><small>生成文件一次性添加到系统日历</small></div><b>›</b></button>
+          <button id="today-button" class="setting-row" type="button"><span>◎</span><div><strong>回到本周</strong><small>跳回当前日期所在周</small></div><b>›</b></button></section></div></dialog>
+    <dialog id="course-detail-dialog"><div class="dialog-form"><div class="dialog-heading"><h2 id="course-detail-title">课程详情</h2><button type="button" class="dialog-close" data-close="course-detail-dialog">×</button></div><div id="course-detail-body" style="margin:8px 0 4px"></div><div class="dialog-actions"><button id="detail-edit-course" type="button">编辑课程</button><button id="detail-delete-course" class="danger-button" type="button">删除课程</button></div></div></dialog>
+    <dialog id="course-dialog"><form id="course-form" class="dialog-form"><div class="dialog-heading"><h2 id="course-dialog-title">添加课程</h2><button type="button" class="dialog-close" data-close="course-dialog">×</button></div><input name="course_uuid" type="hidden" /><label>课程名称<input name="name" maxlength="128" required /></label><label>教师<input name="teacher" maxlength="128" /></label><div class="slot-heading"><strong>上课时间段</strong><button id="add-slot" class="text-button" type="button">＋ 加一段</button></div><div id="course-slot-list" class="course-slot-list"></div><label>备注<textarea name="note" maxlength="1000"></textarea></label><div class="dialog-actions"><button id="delete-course" class="danger-button hidden" type="button">删除课程</button><button type="submit">保存课程</button></div></form></dialog>
+    <dialog id="semester-dialog"><div class="dialog-form"><div class="dialog-heading"><h2>课表管理</h2><button type="button" class="dialog-close" data-close="semester-dialog">×</button></div><button id="new-semester-button" class="text-button" type="button">＋ 新建课表</button><div id="semester-list" class="semester-list"></div><form id="semester-form"><div class="dialog-heading"><h3 id="semester-form-title">新建课表</h3></div><label>课表名称<input name="name" maxlength="64" required /></label><label>第一周的周一<input name="start_date" type="date" required /></label><label>总周数<input name="total_weeks" type="number" value="20" min="1" max="30" required /></label><button type="submit">保存课表</button><button id="delete-semester-button" class="danger-button hidden" type="button">删除此课表</button></form></div></dialog>
+    <dialog id="share-dialog"><div class="dialog-form"><div class="dialog-heading"><h2>分享当前课表</h2><button type="button" class="dialog-close" data-close="share-dialog">×</button></div><p>把下面的口令发给同学，对方可在 7 天内导入独立副本。</p><strong id="created-share-code" class="share-code-display">------</strong><button id="copy-share-code" type="button">复制口令</button></div></dialog>
+    <dialog id="pair-dialog"><div class="dialog-form"><div class="dialog-heading"><h2>手表配对</h2><button type="button" class="dialog-close" data-close="pair-dialog">×</button></div><p>在手表「邗上课表」登录页选择「配对码」，输入下方 6 位数字即可完成登录。配对码 10 分钟内有效，仅可领取一次。</p><strong id="pair-code-display" class="share-code-display">------</strong><button id="copy-pair-code" type="button">复制配对码</button><button id="pair-regenerate" class="text-button" type="button">重新生成</button></div></dialog>
+    <dialog id="first-visit-guide"><div class="dialog-form guide"><div class="dialog-heading"><h2>把邗上课表装进 iPhone</h2><button type="button" class="dialog-close" data-close="first-visit-guide">×</button></div><ol><li><b>必须使用 Safari 打开</b><span>需要 iOS/iPadOS 16.4 或更高版本。微信、QQ 等内置浏览器以及普通 Chrome 标签页不能完成本产品的 iPhone 通知设置。</span></li><li><b>添加到主屏幕</b><span>在 Safari 点分享按钮，再选“添加到主屏幕”，名称保留“邗上课表”。</span></li><li><b>必须从桌面图标重新打开</b><span>不要继续停留在 Safari 普通标签页；从主屏幕图标进入后才是可申请通知的网页 App。</span></li><li><b>再开启课程通知</b><span>进入“我的 → 课程通知”点击开启，并在系统弹窗选择“允许”。若曾拒绝，请到“设置 → 通知 → 邗上课表”重新开启。</span></li></ol><p class="security-note">密码不写入网页存储；登录续期使用 Secure + HttpOnly Cookie，页面脚本无法读取。iCloud 钥匙串是否保存密码由你和 iOS 管理。</p><button id="guide-close" type="button">我知道了</button></div></dialog>
+    <dialog id="notification-consent-dialog"><div class="dialog-form notification-consent-sheet"><div class="dialog-heading"><h2>及时接收课程与账户通知</h2></div><p>开启后可收到课前提醒和管理员发送给当前账户的重要消息。只有你选择允许后，才会继续申请系统通知权限；拒绝不影响课表基本功能。</p><div class="dialog-actions"><button id="notification-consent-later" class="text-button" type="button">暂不开启</button><button id="notification-consent-allow" type="button">允许通知</button></div></div></dialog>
+    <dialog id="about-dialog"><div class="dialog-form about-sheet"><div class="dialog-heading"><h2>关于邗上课表</h2><button type="button" class="dialog-close" data-close="about-dialog">×</button></div><div id="about-loading" class="about-loading">正在读取最新介绍…</div><div id="about-content" class="about-content hidden"><img id="about-avatar" class="about-avatar" alt="关于页头像" /><h3 id="about-name">邗上课表</h3><p id="about-version" class="about-version hidden"></p><p id="about-intro" class="about-intro hidden"></p><a id="about-website" class="about-link hidden" target="_blank" rel="noopener noreferrer">访问官方网站 <span>↗</span></a><section id="about-payment" class="about-payment hidden"><h3>支持作者</h3><img id="about-payment-qr" alt="支持作者收款码" /><p>请在确认收款人信息后自愿支持</p></section></div><button id="privacy-button" class="privacy-link" type="button">查看隐私政策</button><button id="about-retry" class="hidden" type="button">重新加载</button></div></dialog>
+    <dialog id="privacy-consent-dialog"><div class="dialog-form"><div class="dialog-heading"><h2>欢迎使用邗上课表</h2></div><p>使用前请阅读并同意<a href="#" id="privacy-consent-link">《邗上课表隐私政策》</a>。<b>政策已于 2026 年 9 月 2 日更新至第 2 版（进一步明确：不收集姓名、学号、教务密码），老用户也需重新阅读并同意。</b>我们仅为提供账号登录、课表导入与同步、课程提醒处理必要信息：用户名、邮箱、加密会话与你主动创建的学期、课程安排；不会索取通讯录、定位、相机或麦克风权限，不出售个人信息。</p><p class="security-note">同意前不会发起任何网络请求，也不会写入 Cookie。</p><div class="dialog-actions"><button id="privacy-consent-decline" class="text-button" type="button">不同意</button><button id="privacy-consent-accept" type="button">同意并继续</button></div></div></dialog>
+    <dialog id="privacy-dialog"><div class="dialog-form privacy-sheet"><div class="dialog-heading"><h2>邗上课表隐私政策</h2><button type="button" class="dialog-close" data-close="privacy-dialog">×</button></div><p><b>生效日期：2026 年 9 月 2 日（第 2 版）</b></p><h3>我们处理的信息</h3><p>为提供账号登录、课表导入与同步、课程提醒、账户通知和安全保障，我们处理：① 账号信息——用户名、邮箱（用于登录与找回密码），登录密码只以 bcrypt 不可逆哈希存储，任何人（含管理员）都无法得知明文；② 课表数据——你主动创建或导入的学期、课程与时间安排，存储于服务器用于多设备同步与口令分享；③ 会话凭证——登录刷新令牌，网页版使用 Secure + HttpOnly Cookie，页面脚本无法读取。</p><h3>我们不收集的信息</h3><p>我们不收集、不传输、不存储你的姓名、学号、教务系统账号密码和课表页面原文。技术上如何实现：课表导入在你的设备上本地完成——你在网页或 App 内登录学校系统时，账号密码只经过你的设备与学校系统服务器；我们的服务器上不存在任何接收教务密码的接口（内测期间的凭据同步与服务器代抓接口已于 2026 年 9 月 2 日永久下线，相关请求会被直接拒绝且不读取请求内容）。</p><h3>AI 智能解析</h3><p>仅在你主动确认后触发（每用户每天限 10 次）。上传前在设备端抹除身份信息：① JSON 数据中的身份字段（xm、xh、学号、证件号等键名，不影响课程名）；②「姓名/学号：值」形式的文本；③ 9 位及以上纯数字串。服务器收到后按同一规则再次脱敏，只提取课程表格结构（约 5KB）交由第三方大模型（小米 MiMo）解析一次；页面原文与清洗结果不写入数据库、不写入日志，解析完成即从内存丢弃，服务器日志只记录请求大小与耗时等元数据。不使用该功能则不会有任何页面上传。</p><h3>通知与第三方 SDK</h3><p>仅在你明确同意并授予通知权限后启用 Web Push；Android App 同意后会使用杭州阿里云智能科技有限公司提供的 EMAS 移动推送 SDK。SDK 可能按其个人信息处理规则处理设备标识、应用信息、网络信息及推送日志。拒绝通知不影响基本功能。</p><h3>权限、保存和共享</h3><p>网络权限用于登录与同步，通知权限用于课程和账户消息。我们不会索取通讯录、定位、相机、麦克风或蓝牙权限。数据存储于境内的阿里云服务器，仅在实现功能和安全审计所需期限内保存，不出售个人信息；除上述云服务基础设施及依法要求外，不向无关第三方共享。</p><h3>你的权利</h3><p>你可以退出登录、关闭通知，并通过 hanshangdeveloper@163.com 联系管理员查询、更正或删除账号及云端数据。注销后依法需保留的安全日志除外，其余关联数据会删除。</p><h3>政策更新</h3><p>本政策发生重大变化时，将通过 App 内提示、网站公告或推送告知，并可能要求你重新阅读并同意（本次第 2 版更新即为例证）。</p></div></dialog>
+    <script type="module" src="./app.js?v=31"></script>
+  </body>
+</html>
