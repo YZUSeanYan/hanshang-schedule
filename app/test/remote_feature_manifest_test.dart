@@ -269,6 +269,20 @@ void main() {
     expect(manifest.modules, isEmpty);
     expect(manifest.privacyPolicy.id, 'privacy-v7');
   });
+  test('offline refresh cannot reactivate signed cached manifest below remembered revision', () async {
+    SharedPreferences.setMockInitialValues({});
+    final key = await Ed25519().newKeyPair();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(RemoteFeatureStore.highestRevisionKey, 9);
+    await prefs.setString(RemoteFeatureStore.cacheKey, await sign(payload(revision: 4), key));
+    final manifest = await RemoteFeatureStore(
+      publicKey: (await key.extractPublicKey()).bytes,
+      endpoint: Uri.parse('http://localhost/disabled'),
+    ).load(build: 35);
+    expect(manifest.revision, 0);
+    expect(manifest.modules, isEmpty);
+  });
+
 }
 
 class _ManifestAdapter implements HttpClientAdapter {

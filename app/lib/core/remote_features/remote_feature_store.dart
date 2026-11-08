@@ -102,7 +102,11 @@ class RemoteFeatureStore {
     final cached = prefs.getString(cacheKey);
     if (cached != null) {
       try {
-        active = await verify(cached, build: build, allowExpired: true);
+        final verified = await verify(cached, build: build, allowExpired: true);
+        final highest = prefs.getInt(highestRevisionKey) ?? 0;
+        if (verified.revision >= highest) {
+          active = verified;
+        }
       } catch (_) {
         // Corrupt or incompatible cached data never reaches the UI.
       }
