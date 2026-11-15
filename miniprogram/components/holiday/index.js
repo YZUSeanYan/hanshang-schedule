@@ -116,8 +116,6 @@ Component({
       const ok = await ui.confirm("删除调休安排", `删除 ${row.date} 的${overrideLabelText(row)}？`, "删除");
       if (!ok) return;
       try {
-        await sync.push({ overrides: [sync.buildOverride(row, row, 0)] });
-        // buildOverride 不带 deleted，这里补上墓碑标记
         await sync.push({ overrides: [Object.assign({}, row, { deleted: true, updated_at: Date.now() })] });
         this.refresh();
         this.triggerEvent("saved");

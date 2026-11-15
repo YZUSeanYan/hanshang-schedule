@@ -201,7 +201,11 @@ async def import_file_via_llm(
             # 因此带上当前学期开学日与用户名；规则未命中时大模型分支不用它们。
             semester = (
                 db.query(SyncSemester)
-                .filter(SyncSemester.user_id == user.id, SyncSemester.is_current.is_(True))
+                .filter(
+                    SyncSemester.user_id == user.id,
+                    SyncSemester.is_current.is_(True),
+                    SyncSemester.deleted.is_(False),
+                )
                 .order_by(SyncSemester.synced_at.desc())
                 .first()
             )

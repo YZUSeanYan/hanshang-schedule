@@ -965,7 +965,10 @@ function renderWeekGrid(container) {
     const range = eventSectionRange(event);
     return range ? [range[1]] : [];
   });
-  const sectionCount = Math.max(12, Math.min(20, ...activeSlots.map(({ slot }) => slot.end_section), ...eventEndSections, 12));
+  const sectionCount = Math.min(
+    20,
+    Math.max(12, ...activeSlots.map(({ slot }) => Number(slot.end_section) || 0), ...eventEndSections)
+  );
   const grid = document.createElement("div");
   grid.className = "week-grid";
   grid.style.setProperty("--section-count", sectionCount);
@@ -1062,7 +1065,7 @@ function renderWeekGrid(container) {
       } else {
         const item = group[0];
         if (item.event) renderEventBlock(item.event, dayDate, day, lanes[0], 1);
-        else renderCourseButton(item.course, item.slot, lanes[0], 1);
+        else renderCourseButton(item.course, item.slot, day, lanes[0], 1);
       }
       index = next;
     }
@@ -1146,7 +1149,7 @@ function renderWeekGrid(container) {
         const wrap = document.createElement("div");
         wrap.className = "conflict-item";
         if (item.event) renderEventBlock(item.event, dayDate, 1, 0, 1, wrap);
-        else renderCourseButton(item.course, item.slot, 0, 1, wrap);
+        else renderCourseButton(item.course, item.slot, 1, 0, 1, wrap);
         // 弹层里的卡片点击进入对应详情：先关弹层
         wrap.addEventListener("click", () => closeDialog("conflict-detail-dialog"), true);
         cell.append(caption, wrap);
@@ -1201,10 +1204,10 @@ function renderWeekGrid(container) {
     (target || grid).append(button);
   }
 
-  function renderCourseButton(course, slot, lane, laneCount, target) {
+  function renderCourseButton(course, slot, colDay, lane, laneCount, target) {
     const start = Math.max(1, Math.min(sectionCount, Number(slot.start_section) || 1));
     const end = Math.max(start, Math.min(sectionCount, Number(slot.end_section) || start));
-    const day = Math.max(1, Math.min(7, Number(slot.day_of_week) || 1));
+    const day = Math.max(1, Math.min(7, Number(colDay || slot.day_of_week) || 1));
     const compact = laneCount > 1;
     const button = document.createElement("button");
     button.type = "button";

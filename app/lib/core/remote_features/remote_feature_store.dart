@@ -99,10 +99,16 @@ class RemoteFeatureStore {
     final prefs = await SharedPreferences.getInstance();
     final installationId = await _installationId(prefs);
     var active = RemoteFeatureManifest.bundled;
+    final highest = prefs.getInt(highestRevisionKey) ?? 0;
     final cached = prefs.getString(cacheKey);
     if (cached != null) {
       try {
-        active = await verify(cached, build: build, allowExpired: true);
+        final verified = await verify(cached, build: build, allowExpired: true);
+        if (verified.revision >= highest) {
+          active = verified;
+        } else {
+          await prefs.remove(cacheKey);
+        }
       } catch (_) {
         // Corrupt or incompatible cached data never reaches the UI.
       }

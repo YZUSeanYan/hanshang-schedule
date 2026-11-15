@@ -77,6 +77,11 @@ void main() {
     expect((await load(null)).revision, 0);
     expect((await load(await signed(2))).revision, 0);
     expect((await load(await signed(4))).revision, 4);
+
+    await prefs.setString(ImportRuntimeStore.cacheKey, await signed(2));
+    expect((await load(null)).revision, 0);
+    expect(prefs.getString(ImportRuntimeStore.cacheKey), isNull);
+    expect((await load(await signed(3))).revision, 0);
   });
 }
 

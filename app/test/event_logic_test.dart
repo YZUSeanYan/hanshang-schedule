@@ -82,7 +82,7 @@ void main() {
 
   group('parseBusySections', () {
     test('解析、去重、排序、过滤越界', () {
-      expect(parseBusySections('10,8,9,8,0,13,31,abc'), [8, 9, 10]);
+      expect(parseBusySections('10,8,9,8,0,13,21,31,abc'), [8, 9, 10, 13]);
       expect(parseBusySections(''), isEmpty);
     });
   });

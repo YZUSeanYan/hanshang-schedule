@@ -90,3 +90,23 @@ def test_holiday_parse_empty_result_is_422(monkeypatch):
 
 def test_holiday_parse_requires_auth():
     assert client.post("/api/schedule-ai/holiday-parse", json={"text": "x"}).status_code == 401
+
+
+def test_parse_holiday_strips_markdown_code_fence():
+    import asyncio
+    from app.services.llm_event_parse import MimoEventGateway
+
+    gateway = MimoEventGateway(
+        base_url="https://api.example.invalid/v1",
+        api_key="test-key",
+        model="mimo-v2.6-flash",
+        asr_model="mimo-v2.5-asr",
+        timeout_seconds=10.0,
+    )
+
+    async def fake_chat(messages, json_mode=True):
+        return '```json\n{"adjustments": [{"date": "2026-10-01", "kind": "off", "weekday": 0, "note": "国庆"}]}\n```'
+
+    gateway._chat = fake_chat
+    items = asyncio.run(gateway.parse_holiday(text="10月1日放假", image_b64=None, year=2026))
+    assert items == [{"date": "2026-10-01", "kind": "off", "weekday": 0, "note": "国庆"}]

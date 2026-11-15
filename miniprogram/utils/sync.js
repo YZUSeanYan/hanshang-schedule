@@ -129,6 +129,11 @@ function buildEvent(input, existing, offset) {
     busy_sections: String(input.busy_sections || ""),
     location: String(input.location || ""),
     note: String(input.note || "").trim(),
+    color: input.color != null ? Number(input.color) : (existing && existing.color != null ? Number(existing.color) : 0),
+    remind_minutes: input.remind_minutes != null
+      ? Number(input.remind_minutes)
+      : (existing && existing.remind_minutes != null ? Number(existing.remind_minutes) : -1),
+    source: String(input.source || (existing && existing.source) || "manual"),
     updated_at: Date.now() + (offset || 0),
     deleted: input.deleted === true,
   };

@@ -27,6 +27,7 @@ from app.models.about_content import AboutContent
 from app.models.credential_vault import CredentialVault
 from app.models.notification import UserNotification, UserPushDevice
 from app.models.couple_schedule import CoupleMembership
+from app.models.personal_event import SyncEvent, SyncOverride
 from app.schemas.admin import (
     AdminConfirmIn,
     AdminLoginIn,
@@ -810,7 +811,13 @@ def clear_sync_data(
     if not secrets.compare_digest(data.confirm, user.username):
         raise HTTPException(status_code=400, detail={"code": 40010, "message": "确认文字与用户名不一致"})
     counts = {}
-    for model, name in ((SyncSchedule, "schedules"), (SyncCourse, "courses"), (SyncSemester, "semesters")):
+    for model, name in (
+        (SyncSchedule, "schedules"),
+        (SyncCourse, "courses"),
+        (SyncSemester, "semesters"),
+        (SyncEvent, "events"),
+        (SyncOverride, "overrides"),
+    ):
         result = db.execute(delete(model).where(model.user_id == user_id))
         counts[name] = result.rowcount or 0
     _audit(db, "user.sync_data.clear", user_id, str(counts))

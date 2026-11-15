@@ -19,7 +19,7 @@ from app.api.v1.endpoints.push import _week_is_active
 from app.core.config import get_settings
 from app.core.ratelimit import RateLimiter
 from app.db.session import get_db
-from app.models.personal_event import SyncEvent
+from app.models.personal_event import SyncEvent, SyncOverride
 from app.models.sync_data import SyncCourse, SyncSchedule, SyncSemester
 from app.models.user import User
 from app.schemas.schedule_ai import (
@@ -134,6 +134,7 @@ def _build_context(db: Session, user_id: int) -> EventContext:
         except ValueError:
             start = None
         if start is not None:
+            start -= timedelta(days=start.weekday())
             delta_weeks = (today - start).days // 7
             if 0 <= delta_weeks < semester.total_weeks:
                 semester_start = semester.start_date
@@ -321,6 +322,18 @@ def _event_time_text(day: date, event: SyncEvent) -> str:
     return "全天"
 
 
+def _effective_weekday(
+    overrides: list[SyncOverride], default_weekday: int
+) -> int | None:
+    if any(ov.kind == "off" for ov in overrides):
+        return None
+    makeup = next(
+        (ov.weekday for ov in overrides if ov.kind == "makeup" and 1 <= ov.weekday <= 7),
+        0,
+    )
+    return makeup or default_weekday
+
+
 def _build_today_agenda(db: Session, user_id: int) -> str:
     """当前用户今日（Asia/Shanghai）课程与日程摘要，注入对话 system prompt。
 
@@ -330,6 +343,14 @@ def _build_today_agenda(db: Session, user_id: int) -> str:
     """
     today = datetime.now(_SHANGHAI).date()
     weekday = today.isoweekday()
+    today_overrides = db.scalars(
+        select(SyncOverride).where(
+            SyncOverride.user_id == user_id,
+            SyncOverride.date == today.isoformat(),
+            SyncOverride.deleted.is_(False),
+        )
+    ).all()
+    effective_weekday = _effective_weekday(today_overrides, weekday)
     lines: list[str] = []
 
     semester = db.scalar(
@@ -342,11 +363,13 @@ def _build_today_agenda(db: Session, user_id: int) -> str:
         .order_by(SyncSemester.updated_at.desc())
         .limit(1)
     )
-    if semester is not None:
+    if semester is not None and effective_weekday is not None:
         try:
             start = date.fromisoformat(semester.start_date)
         except ValueError:
             start = None
+        if start is not None:
+            start -= timedelta(days=start.weekday())
         week_no = ((today - start).days // 7 + 1) if start is not None else 0
         if 1 <= week_no <= semester.total_weeks:
             courses = db.scalars(
@@ -362,7 +385,7 @@ def _build_today_agenda(db: Session, user_id: int) -> str:
                     select(SyncSchedule).where(
                         SyncSchedule.user_id == user_id,
                         SyncSchedule.course_uuid.in_(courses_by_uuid),
-                        SyncSchedule.day_of_week == weekday,
+                        SyncSchedule.day_of_week == effective_weekday,
                         SyncSchedule.deleted.is_(False),
                     )
                 ).all()
@@ -517,6 +540,7 @@ def _build_week_schedule(db: Session, user_id: int) -> str:
         start = date.fromisoformat(semester.start_date)
     except ValueError:
         return ""
+    start -= timedelta(days=start.weekday())
     week_no = (today - start).days // 7 + 1
     if not (1 <= week_no <= semester.total_weeks):
         return ""
@@ -537,24 +561,46 @@ def _build_week_schedule(db: Session, user_id: int) -> str:
             SyncSchedule.deleted.is_(False),
         )
     ).all()
+    week_monday = start + timedelta(weeks=week_no - 1)
+    week_dates = {
+        (week_monday + timedelta(days=offset)).isoformat(): offset + 1
+        for offset in range(7)
+    }
+    overrides_by_day: dict[int, list[SyncOverride]] = {}
+    for ov in db.scalars(
+        select(SyncOverride).where(
+            SyncOverride.user_id == user_id,
+            SyncOverride.date.in_(week_dates.keys()),
+            SyncOverride.deleted.is_(False),
+        )
+    ).all():
+        cal_weekday = week_dates.get(ov.date)
+        if cal_weekday is not None:
+            overrides_by_day.setdefault(cal_weekday, []).append(ov)
     lines: list[str] = []
-    for schedule in sorted(
-        schedules, key=lambda s: (s.day_of_week, s.start_section, s.end_section)
-    ):
-        if not _week_is_active(schedule.weeks_type, schedule.custom_weeks, week_no):
+    for day_no in range(1, 8):
+        eff_weekday = _effective_weekday(overrides_by_day.get(day_no, []), day_no)
+        if eff_weekday is None:
             continue
-        course = courses_by_uuid.get(schedule.course_uuid)
-        if course is None:
-            continue
-        day = start + timedelta(weeks=week_no - 1, days=schedule.day_of_week - 1)
-        time_text = _section_text(schedule.start_section, schedule.end_section)
-        span = _section_span(day, schedule.start_section, schedule.end_section)
-        if span is not None:
-            time_text = f"{time_text} {span[0]}-{span[1]}"
-        parts = [f"星期{_WEEKDAY_LABELS[schedule.day_of_week - 1]}", course.name, time_text]
-        if schedule.location:
-            parts.append(f"@ {schedule.location}")
-        lines.append(" ".join(parts))
+        day = week_monday + timedelta(days=day_no - 1)
+        day_schedules = sorted(
+            (s for s in schedules if s.day_of_week == eff_weekday),
+            key=lambda s: (s.start_section, s.end_section),
+        )
+        for schedule in day_schedules:
+            if not _week_is_active(schedule.weeks_type, schedule.custom_weeks, week_no):
+                continue
+            course = courses_by_uuid.get(schedule.course_uuid)
+            if course is None:
+                continue
+            time_text = _section_text(schedule.start_section, schedule.end_section)
+            span = _section_span(day, schedule.start_section, schedule.end_section)
+            if span is not None:
+                time_text = f"{time_text} {span[0]}-{span[1]}"
+            parts = [f"星期{_WEEKDAY_LABELS[day_no - 1]}", course.name, time_text]
+            if schedule.location:
+                parts.append(f"@ {schedule.location}")
+            lines.append(" ".join(parts))
     return "\n".join(lines[:60])
 
 
