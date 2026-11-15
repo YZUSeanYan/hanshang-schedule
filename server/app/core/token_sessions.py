@@ -102,17 +102,37 @@ def revoke_refresh_session(
     db: Session,
     *,
     token_identifier: str,
+    user_id: int | None = None,
+    token_version: int = 0,
 ) -> None:
-    """登出撤销：直接删除会话行。
-
-    删除后该设备/浏览器的刷新凭据立即失效（重放必 401），
-    不影响同一账号在其他设备上的独立会话。
-    """
-    db.execute(
-        delete(RefreshTokenSession).where(
-            RefreshTokenSession.token_hash == hash_token_identifier(token_identifier)
+    """登出撤销：标记 revoked_at 墓碑，防止并发重放及未激活的旧版无 jti 令牌继续刷新。"""
+    token_hash = hash_token_identifier(token_identifier)
+    now = utcnow_naive()
+    result = db.execute(
+        update(RefreshTokenSession)
+        .where(
+            RefreshTokenSession.token_hash == token_hash,
+            RefreshTokenSession.revoked_at.is_(None),
         )
+        .values(revoked_at=now)
     )
+    if (result.rowcount or 0) == 0 and user_id is not None:
+        existing = db.scalar(
+            select(RefreshTokenSession.id).where(
+                RefreshTokenSession.token_hash == token_hash
+            )
+        )
+        if existing is None:
+            db.add(
+                RefreshTokenSession(
+                    user_id=user_id,
+                    token_hash=token_hash,
+                    token_version=token_version,
+                    expires_at=now
+                    + timedelta(minutes=get_settings().refresh_token_expire_minutes),
+                    revoked_at=now,
+                )
+            )
 
 
 def invalidate_user_tokens(db: Session, user_id: int) -> int:

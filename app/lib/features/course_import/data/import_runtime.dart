@@ -316,7 +316,15 @@ class ImportRuntimeStore {
     try {
       prefs = await SharedPreferences.getInstance();
       final cached = prefs.getString(cacheKey);
-      if (cached != null) active = await verify(cached, build: build);
+      if (cached != null) {
+        final verified = await verify(cached, build: build);
+        final highest = prefs.getInt('import_runtime_highest_v1') ?? 0;
+        if (verified.revision >= highest) {
+          active = verified;
+        } else {
+          await prefs.remove(cacheKey);
+        }
+      }
     } catch (_) {/* Invalid cache always falls back to compiled defaults. */}
     final dio = clientFactory?.call() ?? Dio(BaseOptions(
         connectTimeout: const Duration(seconds: 2),

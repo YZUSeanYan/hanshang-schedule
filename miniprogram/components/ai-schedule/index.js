@@ -14,7 +14,8 @@ const api = require("../../utils/api");
 const sync = require("../../utils/sync");
 const store = require("../../utils/store");
 const ui = require("../../utils/ui");
-const { eventTypeLabel } = require("../../utils/events");
+const { eventTypeLabel, computeEventBusySections } = require("../../utils/events");
+const { parseDate } = require("../../utils/format");
 
 Component({
   options: { styleIsolation: "apply-shared", multipleSlots: true },
@@ -106,19 +107,34 @@ Component({
       const index = Number(event.currentTarget.dataset.index);
       const op = (this.data.pending || [])[index];
       if (!op) return;
+      const startSection = Number(op.start_section) || 0;
+      const endSection = Number(op.end_section) || startSection;
+      const startTime = op.start_time || "";
+      const endTime = op.end_time || "";
+      const busySections = op.busy_sections || computeEventBusySections(
+        {
+          startSection,
+          endSection,
+          startTime,
+          endTime,
+          date: parseDate(op.date) || new Date(),
+        },
+        store.state.timeConfig
+      ).join(",");
       const row = sync.buildEvent({
-        event_type: op.event_type || "event",
+        event_type: op.type || op.event_type || "event",
         title: op.title || op.target || "未命名",
         short_title: op.short_title || "",
         date: op.date || "",
         weekday: op.weekday || 0,
-        start_time: op.start_time || "",
-        end_time: op.end_time || "",
-        start_section: op.start_section || 0,
-        end_section: op.end_section || 0,
-        busy_sections: op.busy_sections || "",
+        start_time: startTime,
+        end_time: endTime,
+        start_section: startSection,
+        end_section: endSection,
+        busy_sections: busySections,
         location: op.location || "",
         note: op.note || this.data.transcript || "",
+        source: "text",
       }, null, index);
       sync.push({ events: [row] }).then(() => {
         this.setData({ show: false, ops: [], pending: [], text: "" });

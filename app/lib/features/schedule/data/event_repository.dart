@@ -121,12 +121,12 @@ class EventDraft {
 int eventColorOf(LocalEvent event) =>
     event.color != 0 ? event.color : CourseColors.forCourseName(event.title).toARGB32();
 
-/// 解析 busy_sections（"8,9,10"）为有序整数列表。节次域上限 12（SectionTimes.sectionCount）。
+/// 解析 busy_sections（"8,9,10"）为有序整数列表。节次域上限 20（与 Web / 小程序 / 服务端对齐）。
 List<int> parseBusySections(String raw) {
   final result = <int>[];
   for (final piece in raw.split(',')) {
     final value = int.tryParse(piece.trim());
-    if (value != null && value >= 1 && value <= 12) result.add(value);
+    if (value != null && value >= 1 && value <= 20) result.add(value);
   }
   return result.toSet().toList()..sort();
 }

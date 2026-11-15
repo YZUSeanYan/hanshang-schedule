@@ -5,6 +5,7 @@
 服务端推送后，最危险的回归是「误发给已升级用户」（变成骚扰），其次是
 「不知道版本的账号被乱发」。这三条一起锁住边界。
 """
+import json
 import time
 
 import pytest
@@ -288,3 +289,12 @@ def test_管理端一键催更只发给落后账号():
 
     assert stale_id in got
     assert fresh_id not in got, "已升级账号绝不能被一键催更骚扰"
+
+    with SessionLocal() as db:
+        notice = db.scalar(
+            select(UserNotification)
+            .where(UserNotification.user_id == stale_id)
+            .order_by(UserNotification.id.desc())
+        )
+        assert notice is not None
+        assert json.loads(notice.data_json) == {"type": "targeted_app_update"}

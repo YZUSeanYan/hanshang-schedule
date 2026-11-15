@@ -1,5 +1,6 @@
 """个人日程同步（AI 日程 2.0）：推送、LWW、墓碑、多用户隔离、共同空闲并入。"""
 import time
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -112,9 +113,9 @@ def test_event_validation_rejects_bad_values():
     assert resp.status_code == 422
 
 
-def _couple_setup() -> tuple[dict, dict]:
+def _couple_setup(tag: str = "") -> tuple[dict, dict]:
     """注册一对用户并完成配对，返回双方 headers。"""
-    suffix = str(_NOW % 100000)
+    suffix = tag or str(_NOW % 100000)
     name_a, name_b = f"cpa{suffix}", f"cpb{suffix}"
     resp_a = client.post(
         "/api/auth/register",
@@ -207,3 +208,78 @@ def test_couple_week_includes_personal_events():
     assert days[1][2] == "both_free"
     # 周四 DDL 不影响空闲
     assert all(state == "both_free" for state in days[4])
+
+
+def test_couple_week_respects_overrides_and_non_monday_semester_start():
+    ha, hb = _couple_setup(uuid4().hex[:6])
+    module = {"X-App-Module": "couple_schedule"}
+    # 开学日为周二（2026-09-01），规范化后周一起算仍是 2026-08-31
+    sem = {
+        "uuid": "sem-tue",
+        "name": "2026秋",
+        "start_date": "2026-09-01",
+        "total_weeks": 20,
+        "is_current": True,
+        "updated_at": _NOW,
+        "deleted": False,
+    }
+    course = {
+        "uuid": "cou-wed",
+        "semester_uuid": "sem-tue",
+        "name": "高等数学",
+        "teacher": "",
+        "color": 0,
+        "note": "",
+        "updated_at": _NOW,
+        "deleted": False,
+    }
+    sched = {
+        "uuid": "sch-wed",
+        "course_uuid": "cou-wed",
+        "day_of_week": 3,
+        "start_section": 1,
+        "end_section": 2,
+        "weeks_type": 0,
+        "custom_weeks": "",
+        "location": "",
+        "updated_at": _NOW,
+        "deleted": False,
+    }
+    # 2026-09-16（周三）放假，2026-09-19（周六）补周三课
+    overrides = [
+        {
+            "uuid": "ovr-off",
+            "date": "2026-09-16",
+            "kind": "off",
+            "weekday": 0,
+            "note": "放假",
+            "updated_at": _NOW,
+            "deleted": False,
+        },
+        {
+            "uuid": "ovr-makeup",
+            "date": "2026-09-19",
+            "kind": "makeup",
+            "weekday": 3,
+            "note": "补周三",
+            "updated_at": _NOW,
+            "deleted": False,
+        },
+    ]
+    client.post(
+        "/api/sync/push",
+        headers=ha,
+        json={"semesters": [sem], "courses": [course], "schedules": [sched], "overrides": overrides},
+    )
+    client.post("/api/sync/push", headers=hb, json={"semesters": [sem]})
+    week = client.get(
+        "/api/couple-schedule/week",
+        headers={**hb, **module},
+        params={"week_start": "2026-09-14"},
+    )
+    assert week.status_code == 200, week.text
+    days = {d["day"]: d["states"] for d in week.json()["data"]["days"]}
+    # 周三放假：1-2 节不再占满；周六补周三课：1-2 节变成 partner_busy
+    assert days[3][0] == "both_free"
+    assert days[6][0] == "partner_busy"
+    assert days[6][1] == "partner_busy"

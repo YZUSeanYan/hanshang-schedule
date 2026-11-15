@@ -302,3 +302,28 @@ def test_登出撤销Web会话并清除Cookie():
         headers={"Origin": _WEB_ORIGIN, "Cookie": cookie},
     )
     assert replay.status_code == 401
+
+
+def test_登出未曾刷新过的旧版无_jti_令牌也会阻止后续重放():
+    login_data = client.post(
+        "/api/auth/login",
+        json={"account": _USER["username"], "password": "newpassword456"},
+    ).json()["data"]
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    legacy = jwt.encode(
+        {
+            "sub": str(login_data["user"]["id"]),
+            "type": "refresh",
+            "iat": now,
+            "exp": now + timedelta(minutes=5),
+        },
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+    logged_out = client.post("/api/auth/logout", json={"refresh_token": legacy})
+    assert logged_out.status_code == 200
+    assert (
+        client.post("/api/auth/refresh", json={"refresh_token": legacy}).status_code
+        == 401
+    )

@@ -153,7 +153,7 @@ Page({
   },
 
   render() {
-    const { semester, courses } = this.semesterAndCourses();
+    const { snapshot, semester, courses } = this.semesterAndCourses();
     const dark = store.isDark();
     const layout = store.state.layout;
 
@@ -174,7 +174,7 @@ Page({
       ? `${weekStart.getMonth() + 1}/${weekStart.getDate()}–${weekEnd.getMonth() + 1}/${weekEnd.getDate()}`
       : "";
 
-    const hasCourses = Boolean(semester && courses.length);
+    const hasCourses = Boolean(semester && (courses.length || activeEvents(snapshot).length));
     const head = {
       themeClass: store.themeClass(),
       guest: store.isGuest(),
@@ -251,7 +251,11 @@ Page({
     courses.forEach((course) => (course.slots || []).forEach((slot) => {
       if (slotIsActiveInWeek(slot, this.selectedWeek)) activeAll.push({ course, slot });
     }));
-    const sectionCount = Math.max(12, Math.min(20, ...activeAll.map(({ slot }) => slot.end_section), 12));
+    const eventEndSections = activeEvents(store.activeSnapshot()).map((ev) => (eventSectionRange(ev) || [0, 0])[1]);
+    const sectionCount = Math.min(
+      20,
+      Math.max(12, ...activeAll.map(({ slot }) => Number(slot.end_section) || 0), ...eventEndSections)
+    );
 
     const sectionColW = Math.round(width * SECTION_COL_RATIO);
     const dayColW = (width - sectionColW) / 7;
@@ -610,6 +614,13 @@ Page({
       return;
     }
     this.openCourseDetail(event);
+  },
+
+  openCourseDetail(event) {
+    const uuid = event.currentTarget.dataset.uuid;
+    if (!uuid || !this.semester) return;
+    const detail = this.selectComponent("#courseDetail");
+    if (detail) detail.open(uuid, this.semester, this.selectedWeek);
   },
 
   // 日程详情

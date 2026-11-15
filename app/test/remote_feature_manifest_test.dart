@@ -227,6 +227,16 @@ void main() {
     expect((await load(null)).revision, 6);
     expect((await load(await sign(livePayload(5), key))).revision, 6);
     expect((await load(await sign(livePayload(7), key))).revision, 7);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      RemoteFeatureStore.cacheKey,
+      await sign(livePayload(5), key),
+    );
+    expect((await load(null)).revision, 0);
+    expect(prefs.getString(RemoteFeatureStore.cacheKey), isNull);
+    expect((await load(await sign(livePayload(6), key))).revision, 0);
+    expect((await load(await sign(livePayload(8), key))).revision, 8);
   });
 
   test('cold launch verifies cached policy without opening a network client', () async {

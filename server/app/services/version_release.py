@@ -265,7 +265,7 @@ def notify_outdated_users(
             user_id=user.id,
             title=title[:64],
             body=body[:500],
-            data_json='{{"type":"targeted_app_update"}}',
+            data_json='{"type":"targeted_app_update"}',
             target_type="ACCOUNT",
             target_label="版本落后的账号",
         )

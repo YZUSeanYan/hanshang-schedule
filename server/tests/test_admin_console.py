@@ -10,6 +10,7 @@ from app.models.credential_vault import CredentialVault
 from app.models.email_code import EmailCode
 from app.models.push_subscription import PushDelivery, PushSubscription
 from app.models.share_code import ShareCode
+from app.models.personal_event import SyncEvent, SyncOverride
 from app.models.sync_data import SyncCourse, SyncSchedule, SyncSemester
 from app.models.token_session import RefreshTokenSession, UserTokenState
 from app.models.user import User
@@ -298,3 +299,62 @@ def test_admin_permanent_delete_requires_exact_confirmation_and_cleans_dependent
     assert deletion["target_user_id"] is None
     assert "delete_target" in deletion["detail"]
     assert "delete-target@example.com" not in deletion["detail"]
+
+
+def test_admin_clear_sync_data_removes_events_and_overrides():
+    from app.api.v1.endpoints.admin_console import _login_limiter
+
+    _login_limiter._hits.clear()
+    registered = client.post(
+        "/api/auth/register",
+        json={
+            "username": "clear_events_target",
+            "email": "clear-events@example.com",
+            "password": "password123",
+        },
+    )
+    assert registered.status_code == 200, registered.text
+    user_id = registered.json()["data"]["user"]["id"]
+    now_ms = int(datetime.now().timestamp() * 1000)
+
+    with SessionLocal() as db:
+        db.add_all(
+            [
+                SyncEvent(
+                    user_id=user_id,
+                    uuid="evt-clear-1",
+                    title="测试日程",
+                    event_type="event",
+                    date="2026-09-16",
+                    updated_at=now_ms,
+                    deleted=False,
+                    synced_at=1,
+                ),
+                SyncOverride(
+                    user_id=user_id,
+                    uuid="ovr-clear-1",
+                    date="2026-10-01",
+                    kind="off",
+                    weekday=0,
+                    updated_at=now_ms,
+                    deleted=False,
+                    synced_at=2,
+                ),
+            ]
+        )
+        db.commit()
+
+    csrf = _login_admin()
+    cleared = client.request(
+        "DELETE",
+        f"/api/admin-console/users/{user_id}/sync-data",
+        headers={"X-CSRF-Token": csrf},
+        json={"confirm": "clear_events_target"},
+    )
+    assert cleared.status_code == 200, cleared.text
+    counts = cleared.json()["data"]
+    assert counts["events"] == 1
+    assert counts["overrides"] == 1
+    with SessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(SyncEvent).where(SyncEvent.user_id == user_id)) == 0
+        assert db.scalar(select(func.count()).select_from(SyncOverride).where(SyncOverride.user_id == user_id)) == 0

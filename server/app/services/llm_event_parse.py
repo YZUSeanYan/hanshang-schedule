@@ -406,20 +406,28 @@ def _operation_from_llm(raw: Any) -> EventOperation | None:
     )
 
 
-def operations_from_llm_content(content: str) -> list[EventOperation]:
-    """把模型回答解析成操作列表；逐条校验，坏条目丢弃，全坏才报错。"""
-    text = content.strip()
+def _parse_json_object(content: str) -> dict[str, Any] | None:
+    """从模型原始文本中剥离 Markdown 代码块并解析最外层 JSON 对象。"""
+    text = (content or "").strip()
     fence = re.search(r"```(?:json)?\s*(.*?)```", text, flags=re.S)
     if fence:
         text = fence.group(1).strip()
     start, end = text.find("{"), text.rfind("}")
     if start == -1 or end <= start:
-        raise EventParseError(502, 50242, "日程理解服务返回异常，请稍后重试")
+        return None
     try:
         data = json.loads(text[start : end + 1])
-    except json.JSONDecodeError as exc:
-        raise EventParseError(502, 50242, "日程理解服务返回异常，请稍后重试") from exc
-    raw_ops = data.get("operations") if isinstance(data, dict) else None
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def operations_from_llm_content(content: str) -> list[EventOperation]:
+    """把模型回答解析成操作列表；逐条校验，坏条目丢弃，全坏才报错。"""
+    data = _parse_json_object(content)
+    if data is None:
+        raise EventParseError(502, 50242, "日程理解服务返回异常，请稍后重试")
+    raw_ops = data.get("operations")
     if not isinstance(raw_ops, list):
         raise EventParseError(502, 50242, "日程理解服务返回异常，请稍后重试")
     operations = [op for op in (_operation_from_llm(item) for item in raw_ops) if op is not None]
@@ -501,18 +509,8 @@ def build_chat_prompt(context: EventContext, agenda: str) -> str:
 
 def chat_result_from_llm_content(content: str) -> tuple[str, list[EventOperation]]:
     """解析对话模型的回答：reply 必填，operations 允许为空数组（无日程意图）。"""
-    text = content.strip()
-    fence = re.search(r"```(?:json)?\s*(.*?)```", text, flags=re.S)
-    if fence:
-        text = fence.group(1).strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start == -1 or end <= start:
-        raise EventParseError(502, 50243, "AI 助手服务返回异常，请稍后重试")
-    try:
-        data = json.loads(text[start : end + 1])
-    except json.JSONDecodeError as exc:
-        raise EventParseError(502, 50243, "AI 助手服务返回异常，请稍后重试") from exc
-    if not isinstance(data, dict):
+    data = _parse_json_object(content)
+    if data is None:
         raise EventParseError(502, 50243, "AI 助手服务返回异常，请稍后重试")
     reply = data.get("reply")
     reply = reply.strip()[:1000] if isinstance(reply, str) else ""
@@ -660,18 +658,8 @@ def goal_plan_result_from_llm_content(
     action=create、date 落在 [today, today+GOAL_TASK_DAYS-1] 窗口内的条目——
     窗口外/非 create 的一律丢弃（客户端按原样落库，服务端必须兜住契约）。
     """
-    text = content.strip()
-    fence = re.search(r"```(?:json)?\s*(.*?)```", text, flags=re.S)
-    if fence:
-        text = fence.group(1).strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start == -1 or end <= start:
-        raise EventParseError(502, 50244, "目标规划服务返回异常，请稍后重试")
-    try:
-        data = json.loads(text[start : end + 1])
-    except json.JSONDecodeError as exc:
-        raise EventParseError(502, 50244, "目标规划服务返回异常，请稍后重试") from exc
-    if not isinstance(data, dict):
+    data = _parse_json_object(content)
+    if data is None:
         raise EventParseError(502, 50244, "目标规划服务返回异常，请稍后重试")
     reply = data.get("reply")
     reply = reply.strip()[:1000] if isinstance(reply, str) else ""
@@ -797,11 +785,8 @@ class MimoEventGateway:
                 {"role": "user", "content": strip_identity_info((text or "").strip())},
             ]
         content = await self._chat(messages, json_mode=True)
-        try:
-            data = json.loads(content)
-        except (json.JSONDecodeError, TypeError):
-            data = {}
-        raw_items = data.get("adjustments") if isinstance(data, dict) else None
+        data = _parse_json_object(content) or {}
+        raw_items = data.get("adjustments")
         if not isinstance(raw_items, list):
             raise EventParseError(422, 42253, "没有识别到调休安排，换张更清晰的截图或换种说法")
         result: list[dict[str, Any]] = []

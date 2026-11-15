@@ -250,6 +250,8 @@ def logout(
             revoke_refresh_session(
                 db,
                 token_identifier=jti if isinstance(jti, str) and jti else refresh_token,
+                user_id=int(payload["sub"]) if payload.get("sub") is not None else None,
+                token_version=int(payload.get("ver", 0)),
             )
             db.commit()
         except Exception:

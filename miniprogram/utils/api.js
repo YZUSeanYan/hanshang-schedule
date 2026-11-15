@@ -137,7 +137,7 @@ function request(path, options) {
 }
 
 // 上传文件（AI 识别课表截图 / Excel）——uploadFile 的域名白名单与 request 分开配置
-function upload(path, filePath, formData, onProgress) {
+function upload(path, filePath, formData, onProgress, retried) {
   return new Promise((resolve, reject) => {
     const task = wx.uploadFile({
       url: API_BASE + path,
@@ -162,6 +162,15 @@ function upload(path, filePath, formData, onProgress) {
       },
     });
     if (task && onProgress && task.onProgressUpdate) task.onProgressUpdate(onProgress);
+  }).catch((error) => {
+    if (error.status !== 401 || retried) throw error;
+    return refreshSession().then(
+      () => upload(path, filePath, formData, onProgress, true),
+      () => {
+        if (onSessionLost) onSessionLost();
+        throw error;
+      }
+    );
   });
 }
 

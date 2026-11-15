@@ -17,7 +17,7 @@ from app.core.security import hash_scoped_secret
 from app.db.session import get_db
 from app.models.couple_schedule import CoupleConnection, CoupleMembership
 from app.models.notification import UserNotification
-from app.models.personal_event import SyncEvent
+from app.models.personal_event import SyncEvent, SyncOverride
 from app.models.sync_data import SyncCourse, SyncSchedule, SyncSemester
 from app.models.user import User
 from app.services.mobile_push import MobilePushUnavailable, send_account_notification
@@ -530,6 +530,7 @@ def _semester_for(db: Session, user_id: int, monday: date) -> tuple[SyncSemester
             start = date.fromisoformat(row.start_date)
         except ValueError:
             continue
+        start -= timedelta(days=start.weekday())
         delta = (monday - start).days
         if delta >= 0 and delta % 7 == 0 and delta // 7 < row.total_weeks:
             return row, delta // 7 + 1
@@ -578,14 +579,43 @@ def _busy_grid(db: Session, user_id: int, monday: date) -> set[tuple[int, int]]:
             ),
         )
     ).all()
+    week_dates = {
+        (monday + timedelta(days=offset)).isoformat(): offset + 1
+        for offset in range(7)
+    }
+    overrides_by_day: dict[int, list[SyncOverride]] = {}
+    for ov in db.scalars(
+        select(SyncOverride).where(
+            SyncOverride.user_id == user_id,
+            SyncOverride.date.in_(week_dates.keys()),
+            SyncOverride.deleted.is_(False),
+        )
+    ).all():
+        day = week_dates.get(ov.date)
+        if day is not None:
+            overrides_by_day.setdefault(day, []).append(ov)
+    effective_days: dict[int, int] = {}
+    for day in range(1, 8):
+        day_ovs = overrides_by_day.get(day, [])
+        if any(ov.kind == "off" for ov in day_ovs):
+            continue
+        makeup = next(
+            (ov.weekday for ov in day_ovs if ov.kind == "makeup" and 1 <= ov.weekday <= 7),
+            0,
+        )
+        effective_days[day] = makeup or day
+
     busy: set[tuple[int, int]] = set()
     for row in rows:
         if not _occurs(row.weeks_type, row.custom_weeks, week):
             continue
         if not 1 <= row.day_of_week <= 7:
             continue
-        for section in range(max(1, row.start_section), min(20, row.end_section) + 1):
-            busy.add((row.day_of_week, section))
+        for target_day, source_day in effective_days.items():
+            if source_day != row.day_of_week:
+                continue
+            for section in range(max(1, row.start_section), min(20, row.end_section) + 1):
+                busy.add((target_day, section))
     return busy
 
 

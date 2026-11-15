@@ -54,16 +54,16 @@ void main() {
     expect(find.text('新URP'), findsWidgets);
     expect(find.text('安康学院'), findsOneWidget);
     expect(find.text('正方教务'), findsWidgets);
-    // 拖到底部 X 组：扬州大学广陵学院与 URP系统
+    // 拖到底部 Y 组：扬州大学广陵学院与 URP系统
     await tester.drag(find.byType(ListView).first, const Offset(0, -2000));
     await tester.pump();
     await tester.drag(find.byType(ListView).first, const Offset(0, -2000));
     await tester.pump();
     expect(find.text('扬州大学广陵学院'), findsOneWidget);
     expect(find.text('URP系统'), findsOneWidget);
-    // 分组字母（安→A、扬/盐/西/徐→X、中/浙→Z）
+    // 分组字母（安→A、扬/盐→Y、中/浙→Z）
     expect(find.text('A'), findsWidgets);
-    expect(find.text('X'), findsWidgets);
+    expect(find.text('Y'), findsWidgets);
   });
 
   testWidgets('搜索过滤学校名称', (tester) async {
@@ -174,7 +174,7 @@ void main() {
 
   test('schoolInitial 首字母映射', () {
     expect(schoolInitial('安康学院'), 'A');
-    expect(schoolInitial('扬州大学广陵学院'), 'X');
+    expect(schoolInitial('扬州大学广陵学院'), 'Y');
     expect(schoolInitial('南京大学'), 'N');
     expect(schoolInitial('苏州大学'), 'S');
     expect(schoolInitial('中国矿业大学'), 'Z');

@@ -178,7 +178,19 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
-    await _storage.clear();
+    final refreshToken = await _storage.readRefreshToken();
+    try {
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        await _dio.post<void>(
+          '/api/auth/logout',
+          data: {'refresh_token': refreshToken},
+        );
+      }
+    } catch (_) {
+      // 服务端撤销刷新令牌为尽力尝试；无论成功与否都必须清理本地凭证。
+    } finally {
+      await _storage.clear();
+    }
   }
 
   /// 修改用户名（昵称），返回更新后的用户
